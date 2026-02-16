@@ -13,6 +13,10 @@ This app provides a one-page SAR PoD workflow with:
 2. Run dev static server: `npm run start`
 3. Open `http://localhost:4173`
 
+## Windows one-click run
+- Double-click `run.bat` from File Explorer, or run it in Command Prompt.
+- On first run it installs dependencies, then starts the app at `http://localhost:4173`.
+
 ## Deploy (GitHub Pages friendly)
 - Static files are served from repo root.
 - Ensure Pages publishes this branch/folder.
