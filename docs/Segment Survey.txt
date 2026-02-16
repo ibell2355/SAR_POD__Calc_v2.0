@@ -1,0 +1,13 @@
+Segment-level survey (dynamic each segment)
+
+- Segment start time (24h HH:MM)
+- Segment end time (24h HH:MM)
+- Time of day: day / dusk_dawn / night
+- Weather: clear / rain / snow
+- Detectability level: 1..5
+- Critical spacing (meters)
+- Area coverage (%)
+
+Notes:
+- Critical spacing (meters) key: critical_spacing_m
+- Area coverage (%) key: area_coverage_pct

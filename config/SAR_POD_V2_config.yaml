@@ -1,0 +1,67 @@
+meta:
+  version: 2
+  title: SAR PoD Config
+
+pod:
+  S_base: 20
+  min_ref: 2
+  max_ref: 120
+  k: 1.3
+  POD_ceiling: 0.95
+  target_hierarchy:
+    - adult
+    - child
+    - large_clues
+    - small_clues
+    - intact_remains
+    - partially_skeletonized
+    - skeletal_remains
+    - large_evidence
+    - small_evidence
+
+factors:
+  time_of_day:
+    day: 1
+    dusk_dawn: 0.75
+    night: 0.5
+  weather:
+    clear: 1
+    rain: 0.78
+    snow: 0.62
+  detectability:
+    "1": 0.45
+    "2": 0.6
+    "3": 0.75
+    "4": 0.9
+    "5": 1
+
+active_responsiveness:
+  cap: 1.35
+  auditory:
+    none: 0
+    possible: 0.07
+    likely: 0.14
+  visual:
+    none: 0
+    possible: 0.08
+    likely: 0.16
+
+targets:
+  adult:
+    S_base: 28
+  child:
+    S_base: 19
+  large_clues:
+    S_base: 17
+  small_clues:
+    S_base: 12
+  intact_remains:
+    S_base: 24
+  partially_skeletonized:
+    S_base: 18
+  skeletal_remains:
+    S_base: 14
+  large_evidence:
+    S_base: 16
+  small_evidence:
+    S_base: 10

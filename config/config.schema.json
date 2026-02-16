@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["pod", "factors", "active_responsiveness", "targets"],
+  "properties": {
+    "pod": {
+      "type": "object",
+      "required": ["S_base", "min_ref", "max_ref", "k", "POD_ceiling", "target_hierarchy"],
+      "properties": {
+        "S_base": { "type": "number", "exclusiveMinimum": 0 },
+        "min_ref": { "type": "number", "minimum": 0 },
+        "max_ref": { "type": "number", "exclusiveMinimum": 0 },
+        "k": { "type": "number", "exclusiveMinimum": 0 },
+        "POD_ceiling": { "type": "number", "minimum": 0, "maximum": 1 },
+        "target_hierarchy": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+      }
+    },
+    "factors": {
+      "type": "object",
+      "required": ["time_of_day", "weather", "detectability"],
+      "properties": {
+        "time_of_day": { "type": "object", "additionalProperties": { "type": "number" } },
+        "weather": { "type": "object", "additionalProperties": { "type": "number" } },
+        "detectability": { "type": "object", "additionalProperties": { "type": "number" } }
+      }
+    },
+    "active_responsiveness": {
+      "type": "object",
+      "required": ["cap", "auditory", "visual"],
+      "properties": {
+        "cap": { "type": "number", "minimum": 1 },
+        "auditory": { "type": "object", "additionalProperties": { "type": "number" } },
+        "visual": { "type": "object", "additionalProperties": { "type": "number" } }
+      }
+    },
+    "targets": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["S_base"],
+        "properties": { "S_base": { "type": "number", "exclusiveMinimum": 0 } }
+      }
+    }
+  }
+}

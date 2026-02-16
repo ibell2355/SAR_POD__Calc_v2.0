@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>SAR PoD Calculator v2</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="stylesheet" href="./src/ui/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>SAR PoD Calculator v2</h1>
+    <div id="profile-switcher"></div>
+  </header>
+
+  <main class="layout">
+    <section class="card pinned" id="search-level-panel"></section>
+    <section class="card" id="segment-panel"></section>
+    <section class="card" id="results-panel"></section>
+  </main>
+
+  <template id="tooltip-template"><span class="tooltip"></span></template>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
