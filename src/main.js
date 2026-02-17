@@ -30,9 +30,13 @@ const defaultSegment = () => ({
 
 const app = {
   config: null,
+  bootAttempted: false,
+  bootSettled: false,
+  fatalError: null,
   version: '0.0.0',
   diagnostics: '',
   online: navigator.onLine,
+  isDev: IS_DEV,
   savedState: 'Saved',
   view: 'landing',
   editingSegmentId: null,
@@ -44,6 +48,7 @@ const app = {
 start();
 
 async function start() {
+  app.bootAttempted = true;
   try {
     const [{ config, diagnostics, path, errors, valid }, version] = await Promise.all([loadConfig(), getVersion()]);
     app.config = config;
@@ -54,10 +59,10 @@ async function start() {
     app.configValid = valid;
 
     const migrationInfo = hydrate();
-    logDevDiagnostics({ configPath: path, configValid: valid, configErrors: errors || [], migrationCount: migrationInfo.count, swVersion: 'v2' });
+    logDevDiagnostics({ configPath: path, configValid: valid, configErrors: errors || [], migrationCount: migrationInfo.count, swVersion: 'v3' });
 
     bindNetwork();
-    render();
+    safeRender();
     registerServiceWorker();
   } catch (error) {
     console.error('[Startup Fatal]', error);
@@ -67,25 +72,70 @@ async function start() {
     app.configErrors = [{ code: 'STARTUP_FATAL', path: app.configPath, message: 'Application startup failed', cause: error.message }];
     app.configValid = false;
     bindNetwork();
-    render();
+    showFatalError(error);
+  } finally {
+    app.bootSettled = true;
+    disableSkeleton();
   }
 }
 
+function ensureMountNodes() {
+  const appRoot = document.querySelector('#app') || document.body.appendChild(Object.assign(document.createElement('div'), { id: 'app' }));
+  let headerRoot = appRoot.querySelector('#app-header');
+  if (!headerRoot) {
+    headerRoot = document.createElement('div');
+    headerRoot.id = 'app-header';
+    appRoot.appendChild(headerRoot);
+  }
+  let mainRoot = appRoot.querySelector('#app-main');
+  if (!mainRoot) {
+    mainRoot = document.createElement('main');
+    mainRoot.id = 'app-main';
+    appRoot.appendChild(mainRoot);
+  }
+  return { appRoot, headerRoot, mainRoot };
+}
+
 function render() {
-  const root = document.querySelector('#app');
+  const { appRoot, headerRoot, mainRoot } = ensureMountNodes();
+  headerRoot.innerHTML = '';
+  headerRoot.className = 'topbar';
+  headerRoot.innerHTML = `
+    <div class="brand">
+      <img src="./assets/logo-placeholder.svg" alt="PSAR Logo" />
+      <div>
+        <h1>PSAR POD Calculator</h1>
+        <p>Parallel Sweep (V1) · v${app.version}</p>
+      </div>
+    </div>
+    <span class="status-pill ${app.online ? 'online' : 'offline'}">${app.online ? 'Online' : 'Offline'} / Offline ready</span>
+  `;
+
   if (app.view === 'segment') {
     const segment = app.segments.find((s) => s.id === app.editingSegmentId);
     if (!segment) {
       app.view = 'landing';
       return render();
     }
-    renderSegmentPage(root, app, segment, { results: segment.results, primaryTarget: segment.primaryTarget });
+    renderSegmentPage(mainRoot, app, segment, { results: segment.results, primaryTarget: segment.primaryTarget });
   } else if (app.view === 'report') {
-    renderReportPage(root, app, format24h(new Date()));
+    renderReportPage(mainRoot, app, format24h(new Date()));
   } else {
-    renderLandingPage(root, app);
+    renderLandingPage(mainRoot, app);
   }
-  bindInputs(root);
+  bindInputs(appRoot);
+}
+
+function safeRender() {
+  try {
+    refreshDevDiagnostics();
+    render();
+    app.fatalError = null;
+  } catch (error) {
+    showFatalError(error);
+  } finally {
+    disableSkeleton();
+  }
 }
 
 function bindInputs(root) {
@@ -118,7 +168,7 @@ function handleInput(input) {
     recomputeAllSegments();
   }
   autosave();
-  render();
+  safeRender();
 }
 
 async function handleAction(action, id) {
@@ -151,8 +201,18 @@ async function handleAction(action, id) {
     app.segments = [];
     app.view = 'landing';
   }
+  if (action === 'reset-local-data') {
+    localStorage.clear();
+    await clearIndexedDbSafe();
+    window.location.reload();
+    return;
+  }
+  if (action === 'force-refresh-assets' && IS_DEV) {
+    await forceRefreshAssets();
+    return;
+  }
   autosave();
-  render();
+  safeRender();
 }
 
 function recomputeAllSegments() {
@@ -160,14 +220,9 @@ function recomputeAllSegments() {
 }
 
 function recomputeSegment(segment) {
-  if (!app.config?.pod || !app.config?.factors) {
-    segment.primaryTarget = null;
-    segment.results = [];
-    return;
-  }
-  const targets = selectedTargets(app.searchLevel);
-  segment.primaryTarget = inferPrimaryTarget(targets, app.config);
-  segment.results = targets.map((target) => computeForTarget({ config: app.config, searchLevel: app.searchLevel, segment, targetKey: target }));
+  const targets = selectedTargets(app.searchLevel || {});
+  segment.primaryTarget = inferPrimaryTarget(targets, app.config || {});
+  segment.results = targets.map((target) => computeForTarget({ config: app.config || {}, searchLevel: app.searchLevel || {}, segment, targetKey: target }));
 }
 
 function autosave() {
@@ -176,7 +231,7 @@ function autosave() {
 }
 
 function hydrate() {
-  const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+  const raw = safeParse(localStorage.getItem(STORAGE_KEY));
   if (!raw) return { count: 0 };
   const migrationInfo = migratePersistedState(raw);
   app.session = migrationInfo.state.session;
@@ -214,17 +269,22 @@ function migratePersistedState(raw) {
       count += 1;
     }
 
-    next.critical_spacing_m = Number(next.critical_spacing_m ?? 15);
-    next.area_coverage_pct = Number(next.area_coverage_pct ?? 100);
-    next.area_coverage_pct = Math.max(0, Math.min(100, next.area_coverage_pct));
+    next.critical_spacing_m = clampNumber(next.critical_spacing_m, 15, 0.1, 10000);
+    next.area_coverage_pct = clampNumber(next.area_coverage_pct, 100, 0, 100);
+    next.results = Array.isArray(next.results) ? next.results : [];
+    next.primaryTarget = next.primaryTarget || null;
     return next;
   });
+
+  const mergedSearch = { ...defaultSearch, ...(raw?.searchLevel || {}) };
+  mergedSearch.active_targets = Array.isArray(mergedSearch.active_targets) ? mergedSearch.active_targets : [...defaultSearch.active_targets];
+  mergedSearch.evidence_classes = Array.isArray(mergedSearch.evidence_classes) ? mergedSearch.evidence_classes : [];
 
   return {
     count,
     state: {
       session: { ...app.session, ...(raw?.session || {}) },
-      searchLevel: { ...defaultSearch, ...(raw?.searchLevel || {}) },
+      searchLevel: mergedSearch,
       segments: migratedSegments
     }
   };
@@ -240,8 +300,8 @@ async function getVersion() {
 }
 
 function bindNetwork() {
-  window.addEventListener('online', () => { app.online = true; render(); });
-  window.addEventListener('offline', () => { app.online = false; render(); });
+  window.addEventListener('online', () => { app.online = true; safeRender(); });
+  window.addEventListener('offline', () => { app.online = false; safeRender(); });
 }
 
 function registerServiceWorker() {
@@ -253,7 +313,7 @@ function registerServiceWorker() {
       worker.addEventListener('statechange', () => {
         if (worker.state === 'installed' && navigator.serviceWorker.controller) {
           app.newVersionAvailable = true;
-          render();
+          safeRender();
           setTimeout(() => window.location.reload(), 1500);
         }
       });
@@ -265,11 +325,102 @@ function registerServiceWorker() {
 
 function logDevDiagnostics({ configPath, configValid, configErrors, migrationCount, swVersion }) {
   if (!IS_DEV) return;
+  app.migrationCount = migrationCount;
+  app.swVersion = swVersion;
+  app.devDiagnostics = {
+    appVersion: app.version,
+    configPath,
+    configValid,
+    migrationCount,
+    segmentsLoaded: app.segments.length,
+    route: app.view,
+    swVersion,
+    configErrorsCount: configErrors.length
+  };
   console.group('[SAR POD Calculator startup diagnostics]');
   console.log('config:', { path: configPath, valid: configValid, errors: configErrors.length });
   console.log('migration count:', migrationCount);
   console.log('service worker version:', swVersion);
   console.groupEnd();
+}
+
+
+function refreshDevDiagnostics() {
+  if (!IS_DEV || !app.devDiagnostics) return;
+  app.devDiagnostics = {
+    ...app.devDiagnostics,
+    appVersion: app.version,
+    configPath: app.configPath,
+    configValid: app.configValid,
+    migrationCount: app.migrationCount || 0,
+    segmentsLoaded: app.segments.length,
+    route: app.view,
+    swVersion: app.swVersion || 'v3'
+  };
+}
+
+function disableSkeleton() {
+  document.body.classList.remove('loading-skeleton');
+  document.querySelector('#app')?.classList.remove('loading-skeleton');
+}
+
+function safeParse(raw) {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function clampNumber(value, fallback, min, max) {
+  const num = Number(value);
+  if (Number.isNaN(num)) return fallback;
+  return Math.max(min, Math.min(max, num));
+}
+
+function showFatalError(error) {
+  const { mainRoot } = ensureMountNodes();
+  app.fatalError = error;
+  mainRoot.innerHTML = `
+    <section class="page-wrap">
+      <article class="card notice notice-error" role="alert">
+        <h2>Fatal startup error</h2>
+        <p>${escapeHtml(error?.message || 'Unknown render error')}</p>
+        <p class="small"><strong>Config path attempted:</strong> ${escapeHtml(app.configPath || './config/SAR_POD_V2_config.yaml')}</p>
+        ${IS_DEV && error?.stack ? `<details><summary>Stack</summary><pre>${escapeHtml(error.stack)}</pre></details>` : ''}
+        <button data-action="reset-local-data" class="btn-danger">Reset local data</button>
+      </article>
+    </section>
+  `;
+  bindInputs(document.querySelector('#app'));
+}
+
+async function clearIndexedDbSafe() {
+  if (!('indexedDB' in window) || !indexedDB?.databases) return;
+  const dbs = await indexedDB.databases();
+  await Promise.all((dbs || []).map((db) => db?.name && new Promise((resolve) => {
+    const req = indexedDB.deleteDatabase(db.name);
+    req.onsuccess = req.onerror = req.onblocked = () => resolve();
+  })));
+}
+
+async function forceRefreshAssets() {
+  if ('caches' in window) {
+    const keys = await caches.keys();
+    await Promise.all(keys.map((key) => caches.delete(key)));
+  }
+  const registration = await navigator.serviceWorker?.getRegistration?.();
+  if (registration) await registration.unregister();
+  window.location.reload();
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
 }
 
 function format24h(date) {
