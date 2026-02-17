@@ -1,103 +1,138 @@
 import { clamp } from '../utils/math.js';
 
-const POD_DEFAULTS = {
-  POD_ceiling: 0.85,
-  S_base: 15,
-  k: 1.6,
-  min_ref: 1,
-  max_ref: 200
-};
+/* ================================================================
+   Safe accessors — pull per-target values from config, with fallbacks
+   ================================================================ */
 
-const FACTOR_DEFAULTS = {
-  time_of_day: { day: 1, dusk_dawn: 1, night: 1 },
-  weather: { clear: 1, rain: 1, snow: 1 },
-  detectability: { 1: 1, 2: 1, 3: 1, 4: 1, 5: 1 }
-};
-
-function safePod(config) {
-  return { ...POD_DEFAULTS, ...(config?.pod || {}) };
+function targetDef(config, targetKey) {
+  return config?.targets?.[targetKey] || {};
 }
 
-function safeFactors(config) {
-  const factors = config?.factors || {};
+function conditionFactor(config, axis, level, targetKey) {
+  return Number(config?.condition_factors?.[axis]?.[String(level)]?.[targetKey] ?? 1);
+}
+
+function refBounds(config, targetKey) {
+  const bounds = config?.reference_spacing_bounds_m || {};
   return {
-    time_of_day: { ...FACTOR_DEFAULTS.time_of_day, ...(factors.time_of_day || {}) },
-    weather: { ...FACTOR_DEFAULTS.weather, ...(factors.weather || {}) },
-    detectability: { ...FACTOR_DEFAULTS.detectability, ...(factors.detectability || {}) }
+    min: Number(bounds.min_by_target?.[targetKey] ?? 1),
+    max: Number(bounds.max_by_target?.[targetKey] ?? 200)
   };
 }
 
-function safeResponsiveness(config) {
-  const r = config?.active_responsiveness || {};
+function responseModel(config) {
+  const rm = config?.response_model || {};
   return {
-    auditory: { none: 0, possible: 0, likely: 0, ...(r.auditory || {}) },
-    visual: { none: 0, possible: 0, likely: 0, ...(r.visual || {}) },
-    cap: Number(r.cap ?? 1.3)
+    enabled_for_groups: rm.enabled_for_groups || ['active_missing_person'],
+    auditory_bonus: rm.auditory_bonus || { none: 0, possible: 0.05, likely: 0.10 },
+    visual_bonus: rm.visual_bonus || { none: 0, possible: 0.03, likely: 0.07 },
+    max_total_multiplier: Number(rm.max_total_multiplier ?? 1.25)
   };
 }
 
-export function inferPrimaryTarget(selectedTargets, config) {
-  const order = config?.pod?.target_hierarchy || [];
-  return order.find((target) => selectedTargets.includes(target)) || selectedTargets[0] || null;
-}
+/* ================================================================
+   Primary target inference
+   ================================================================ */
 
-export function responseMultiplier(searchLevel, config) {
-  if (searchLevel.type_of_search !== 'active_missing_person') return 1;
-  const responsive = safeResponsiveness(config);
-  const aud = responsive.auditory[searchLevel.auditory || 'none'] || 0;
-  const vis = responsive.visual[searchLevel.visual || 'none'] || 0;
-  return Math.min(responsive.cap, 1 + aud + vis);
-}
+export function inferPrimaryTarget(selectedTargets, config, searchType) {
+  const hierarchy = config?.primary_target_hierarchy || {};
 
-export function responseComponents(searchLevel, config) {
-  const responsive = safeResponsiveness(config);
-  if (searchLevel.type_of_search !== 'active_missing_person') {
-    return { auditory_bonus: 0, visual_bonus: 0, cap: responsive.cap, M_resp: 1 };
+  if (searchType === 'evidence_historical') {
+    const order = hierarchy.evidence_historical?.order || [];
+    return order.find((t) => selectedTargets.includes(t)) || selectedTargets[0] || null;
   }
-  const auditory_bonus = responsive.auditory[searchLevel.auditory || 'none'] || 0;
-  const visual_bonus = responsive.visual[searchLevel.visual || 'none'] || 0;
-  const cap = responsive.cap;
+
+  // Default: active_missing_person
+  const order = hierarchy.active_missing_person || ['adult', 'child', 'large_clues', 'small_clues'];
+  return order.find((t) => selectedTargets.includes(t)) || selectedTargets[0] || null;
+}
+
+/* ================================================================
+   Response multiplier (active_missing_person group only)
+   ================================================================ */
+
+export function responseMultiplier(searchLevel, config, targetKey) {
+  const rm = responseModel(config);
+  const target = targetDef(config, targetKey);
+  const group = target.group || '';
+
+  if (!rm.enabled_for_groups.includes(group)) return 1;
+
+  const aud = Number(rm.auditory_bonus[searchLevel?.auditory || 'none'] ?? 0);
+  const vis = Number(rm.visual_bonus[searchLevel?.visual || 'none'] ?? 0);
+  return Math.min(rm.max_total_multiplier, 1 + aud + vis);
+}
+
+export function responseComponents(searchLevel, config, targetKey) {
+  const rm = responseModel(config);
+  const target = targetDef(config, targetKey);
+  const group = target.group || '';
+
+  if (!rm.enabled_for_groups.includes(group)) {
+    return { auditory_bonus: 0, visual_bonus: 0, cap: rm.max_total_multiplier, M_resp: 1 };
+  }
+
+  const auditory_bonus = Number(rm.auditory_bonus[searchLevel?.auditory || 'none'] ?? 0);
+  const visual_bonus = Number(rm.visual_bonus[searchLevel?.visual || 'none'] ?? 0);
+  const cap = rm.max_total_multiplier;
   return { auditory_bonus, visual_bonus, cap, M_resp: Math.min(cap, 1 + auditory_bonus + visual_bonus) };
 }
+
+/* ================================================================
+   Spacing effectiveness
+   ================================================================ */
 
 export function spacingEffectiveness(S_ref, S_act, k) {
   if (!S_act || S_act <= 0) return 0;
   return Math.min(1, (S_ref / S_act) ** k);
 }
 
+/* ================================================================
+   Completion multiplier (strict subtractive)
+   M_comp = max(0, min(1, searched_fraction - inaccessible_fraction))
+   ================================================================ */
+
 export function completionMultiplier(segment) {
-  return clamp((Number(segment?.area_coverage_pct) || 0) / 100, 0, 1);
+  const searched = Number(segment?.searched_fraction ?? 1);
+  const inaccessible = Number(segment?.inaccessible_fraction ?? 0);
+  return clamp(searched - inaccessible, 0, 1);
 }
 
-export function computeForTarget({ config, searchLevel, segment, targetKey }) {
-  const pod = safePod(config);
-  const factors = safeFactors(config);
-  const targets = config?.targets || {};
-  const target = targets[targetKey] || {};
+/* ================================================================
+   Full per-target POD computation
+   ================================================================ */
 
-  const S_base = Number(target.S_base ?? pod.S_base);
-  const F_time = Number(factors.time_of_day[segment?.time_of_day] ?? 1);
-  const F_weather = Number(factors.weather[segment?.weather] ?? 1);
-  const F_detectability = Number(factors.detectability[String(segment?.detectability_level ?? 3)] ?? 1);
+export function computeForTarget({ config, searchLevel, segment, targetKey }) {
+  const target = targetDef(config, targetKey);
+  const bounds = refBounds(config, targetKey);
+
+  const POD_ceiling = Number(target.pod_ceiling ?? 0.90);
+  const S_base = Number(target.base_reference_spacing_m ?? 15);
+  const k = Number(target.spacing_exponent_k ?? 1.5);
+
+  // Per-target condition factors
+  const F_time = conditionFactor(config, 'time_of_day', segment?.time_of_day || 'day', targetKey);
+  const F_weather = conditionFactor(config, 'weather', segment?.weather || 'clear', targetKey);
+  const F_detectability = conditionFactor(config, 'detectability_level', segment?.detectability_level ?? 3, targetKey);
 
   const C_t = F_time * F_weather * F_detectability;
   const S_ref_raw = S_base * C_t;
-  const S_ref = clamp(S_ref_raw, Number(pod.min_ref), Number(pod.max_ref));
-  const E_space = spacingEffectiveness(S_ref, Number(segment?.critical_spacing_m), Number(pod.k));
-  const response = responseComponents(searchLevel || {}, config);
+  const S_ref = clamp(S_ref_raw, bounds.min, bounds.max);
+  const E_space = spacingEffectiveness(S_ref, Number(segment?.critical_spacing_m), k);
+  const response = responseComponents(searchLevel || {}, config, targetKey);
   const M_resp = response.M_resp;
   const M_comp = completionMultiplier(segment || {});
 
-  const POD_pre = Number(pod.POD_ceiling) * E_space * M_resp;
+  const POD_pre = POD_ceiling * E_space * M_resp;
   const POD_final = clamp(POD_pre * M_comp, 0, 0.99);
 
   return {
     target: targetKey,
-    POD_ceiling: Number(pod.POD_ceiling),
+    POD_ceiling,
     S_base,
-    k: Number(pod.k),
-    min_ref: Number(pod.min_ref),
-    max_ref: Number(pod.max_ref),
+    k,
+    min_ref: bounds.min,
+    max_ref: bounds.max,
     F_time,
     F_weather,
     F_detectability,
@@ -115,6 +150,10 @@ export function computeForTarget({ config, searchLevel, segment, targetKey }) {
   };
 }
 
+/* ================================================================
+   Target selection from search-level state
+   ================================================================ */
+
 export function selectedTargets(searchLevel) {
   if (searchLevel.type_of_search === 'active_missing_person') {
     return searchLevel.active_targets || [];
@@ -128,4 +167,31 @@ export function selectedTargets(searchLevel) {
     targets.push(...(searchLevel.evidence_classes || []));
   }
   return targets;
+}
+
+/* ================================================================
+   QA warning flags
+   ================================================================ */
+
+export function generateQaWarnings(segment, config) {
+  const warnings = [];
+  const flags = config?.qa_flags || {};
+  const spacing = Number(segment?.critical_spacing_m);
+  const searched = Number(segment?.searched_fraction ?? 1);
+  const inaccessible = Number(segment?.inaccessible_fraction ?? 0);
+
+  if (flags.warn_if_critical_spacing_m_lt_1 && spacing < 1) {
+    warnings.push('Critical spacing is very small (< 1 m)');
+  }
+  if (flags.warn_if_critical_spacing_m_gt_50 && spacing > 50) {
+    warnings.push('Critical spacing is very large (> 50 m)');
+  }
+  if (flags['warn_if_searched_fraction_lt_0.5'] && searched < 0.5) {
+    warnings.push('Searched fraction is low (< 50%)');
+  }
+  if (flags['warn_if_inaccessible_fraction_gt_0.4'] && inaccessible > 0.4) {
+    warnings.push('Inaccessible fraction is high (> 40%)');
+  }
+
+  return warnings;
 }

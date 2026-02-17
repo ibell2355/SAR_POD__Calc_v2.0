@@ -1,5 +1,3 @@
-import { durationMinutes } from '../utils/math.js';
-
 export const LABELS = {
   time_of_day: { day: 'Day', dusk_dawn: 'Dusk/Dawn', night: 'Night' },
   weather: { clear: 'Clear', rain: 'Raining', snow: 'Snowing' },
@@ -15,7 +13,7 @@ export const LABELS = {
     evidence_historical: 'Evidence/Historical'
   },
   active_targets: { adult: 'Adult', child: 'Child', large_clues: 'Large Clues', small_clues: 'Small Clues' },
-  responsiveness: { none: 'None', possible: 'Possible', likely: 'Likely' },
+  responsiveness: { none: 'Not Expected', possible: 'Possible', likely: 'Likely' },
   evidence_categories: { remains: 'Remains', evidence: 'Evidence' },
   remains_state: {
     intact_remains: 'Intact Remains',
@@ -80,7 +78,6 @@ export function segmentListHtml(segments) {
       <button class="segment-card" data-action="edit-segment" data-id="${esc(seg.id)}">
         <div>
           <strong>${esc(seg.name || `Segment ${i + 1}`)}</strong>
-          <div class="segment-meta">${esc(seg.segment_start_time)}\u2013${esc(seg.segment_end_time)}</div>
         </div>
         <span class="pod-badge">${pod}</span>
       </button>`;
@@ -92,7 +89,6 @@ export function segmentListHtml(segments) {
    ================================================================ */
 
 export function renderSegment(root, segment, computed, savedLabel, configValid, configError) {
-  const d = durationMinutes(segment.segment_start_time, segment.segment_end_time);
   root.innerHTML = `
     ${configNotice(configValid, configError)}
 
@@ -106,13 +102,11 @@ export function renderSegment(root, segment, computed, savedLabel, configValid, 
       ${textField('Segment Name', 'name', segment.name)}
       <div class="grid-2">
         ${numField('Critical Spacing (m)', 'critical_spacing_m', segment.critical_spacing_m, '0.1', 'Distance between searchers')}
-        ${numField('Area Coverage (%)', 'area_coverage_pct', segment.area_coverage_pct, '1', 'Account for incomplete segments or unsearchable area.')}
       </div>
       <div class="grid-2">
-        ${timeField('Segment Start Time', 'segment_start_time', segment.segment_start_time)}
-        ${timeField('Segment End Time', 'segment_end_time', segment.segment_end_time)}
+        ${numField('Searched Fraction', 'searched_fraction', segment.searched_fraction, '0.01', 'Fraction of planned segment actually searched (0\u20131)')}
+        ${numField('Inaccessible Fraction', 'inaccessible_fraction', segment.inaccessible_fraction, '0.01', 'Fraction of segment inaccessible due to hazards/terrain (0\u20131)')}
       </div>
-      <p id="duration-display" class="subtle">${d === null ? 'Duration: Invalid time' : `Duration: ${d} min`}</p>
 
       <h3>Time of Day</h3>
       ${radioChips('time_of_day', LABELS.time_of_day, segment.time_of_day)}
@@ -154,6 +148,14 @@ export function podResultHtml(segment, computed) {
       results.map((r) =>
         `<span style="margin-right:12px">${esc(prettyTarget(r.target))}: ${(r.POD_final * 100).toFixed(1)}%</span>`
       ).join('') + '</div>';
+  }
+
+  // QA warnings
+  const warnings = computed.qaWarnings || [];
+  if (warnings.length) {
+    html += '<div style="margin-top:8px;font-size:0.85rem;color:var(--danger)">';
+    warnings.forEach((w) => { html += `<p style="margin:2px 0">\u26a0 ${esc(w)}</p>`; });
+    html += '</div>';
   }
 
   if (!results.length) {
@@ -222,8 +224,8 @@ export function buildReportText(state, version, generatedAt) {
 
     const inputs = [
       `Critical Spacing: ${seg.critical_spacing_m} m`,
-      `Area Coverage: ${seg.area_coverage_pct}%`,
-      `Time: ${seg.segment_start_time}\u2013${seg.segment_end_time}`,
+      `Searched Fraction: ${seg.searched_fraction}`,
+      `Inaccessible Fraction: ${seg.inaccessible_fraction}`,
       `Time of Day: ${LABELS.time_of_day[seg.time_of_day] || seg.time_of_day}`,
       `Weather: ${LABELS.weather[seg.weather] || seg.weather}`,
       `Vegetation / Terrain / Detectability: ${seg.detectability_level}`
@@ -355,8 +357,8 @@ function reportSegmentHtml(segment) {
   const primaryResult = results.find((r) => r.target === segment.primaryTarget);
   const inputs = [
     `Critical Spacing: ${segment.critical_spacing_m} m`,
-    `Area Coverage: ${segment.area_coverage_pct}%`,
-    `Time: ${segment.segment_start_time}\u2013${segment.segment_end_time}`,
+    `Searched Fraction: ${segment.searched_fraction}`,
+    `Inaccessible Fraction: ${segment.inaccessible_fraction}`,
     `Time of Day: ${LABELS.time_of_day[segment.time_of_day] || segment.time_of_day}`,
     `Weather: ${LABELS.weather[segment.weather] || segment.weather}`,
     `Vegetation / Terrain / Detectability: ${segment.detectability_level}`
@@ -393,10 +395,10 @@ function reportDetailHtml(segment, r) {
   return `
     <details class="report-detail">
       <summary>Detailed Calculation \u2014 ${esc(prettyTarget(r.target))}</summary>
-      <pre>Base values:
+      <pre>Base values (per-target):
   POD_ceiling = ${n(r.POD_ceiling)},  S_base = ${n(r.S_base)},  k = ${n(r.k)}
 
-Condition multipliers:
+Condition multipliers (per-target):
   F_time = ${n(r.F_time)},  F_weather = ${n(r.F_weather)},  F_detectability = ${n(r.F_detectability)}
   C_t = F_time \u00d7 F_weather \u00d7 F_detectability = ${n(r.C_t)}
 
@@ -413,9 +415,9 @@ Response multiplier:
   auditory_bonus = ${n(aud)},  visual_bonus = ${n(vis)},  cap = ${n(r.response_cap)}
   M_resp = min(cap, 1 + aud + vis) = ${n(r.M_resp)}
 
-Completion multiplier:
-  M_comp = clamp(area_coverage / 100, 0, 1)
-         = clamp(${n(segment.area_coverage_pct)} / 100, 0, 1)
+Completion multiplier (strict subtractive):
+  M_comp = max(0, min(1, searched_fraction \u2212 inaccessible_fraction))
+         = max(0, min(1, ${n(segment.searched_fraction)} \u2212 ${n(segment.inaccessible_fraction)}))
          = ${n(r.M_comp)}
 
 Final:
@@ -459,10 +461,6 @@ function textField(label, name, value, hint = '') {
 
 function numField(label, name, value, step, hint = '') {
   return `<label>${esc(label)}${hint ? `<span class="hint">${hint}</span>` : ''}<input type="number" step="${step}" name="${name}" value="${esc(value ?? '')}"/></label>`;
-}
-
-function timeField(label, name, value) {
-  return `<label>${esc(label)}<input type="text" name="${name}" value="${esc(value || '')}" placeholder="HH:MM" maxlength="5" pattern="\\d{2}:\\d{2}" autocomplete="off"/></label>`;
 }
 
 /* ---- Formatting ---- */

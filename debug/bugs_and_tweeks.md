@@ -6,6 +6,8 @@ Once complete, mark with an X inside of the square brackets "[X]"
 
 # TWEEKS
 
+- [ ] 
+- [X] Under auditory responsiveness and visual responsiveness instead of 'none' but "Not Expected"
 - [X] The report should include the selection from the search page
 	- For example search type, active missing person, adult, etc. should show in the report as well
 	- The report, instead of saying'session', should say'search information' and should show search name, team name, Then the selection information at the search level;

@@ -1,7 +1,6 @@
 import { loadConfig } from './model/configLoader.js';
-import { computeForTarget, inferPrimaryTarget, selectedTargets } from './model/podEngine.js';
+import { computeForTarget, inferPrimaryTarget, selectedTargets, generateQaWarnings } from './model/podEngine.js';
 import { getValue, setValue, clearAll } from './storage/db.js';
-import { durationMinutes } from './utils/math.js';
 import {
   renderHome, renderSegment, renderReport,
   buildReportText, podResultHtml, segmentListHtml
@@ -25,15 +24,15 @@ function newSegment() {
   return {
     id: uid(),
     name: '',
-    segment_start_time: '08:00',
-    segment_end_time: '09:00',
     time_of_day: 'day',
     weather: 'clear',
     detectability_level: 3,
     critical_spacing_m: 15,
-    area_coverage_pct: 100,
+    searched_fraction: 1.0,
+    inaccessible_fraction: 0.0,
     results: [],
-    primaryTarget: null
+    primaryTarget: null,
+    qaWarnings: []
   };
 }
 
@@ -114,7 +113,7 @@ function route() {
     const seg = state.segments.find((s) => s.id === id);
     if (!seg) { location.hash = '#/'; return; }
     renderSegment(root, seg,
-      { results: seg.results, primaryTarget: seg.primaryTarget },
+      { results: seg.results, primaryTarget: seg.primaryTarget, qaWarnings: seg.qaWarnings },
       saveState, configValid, configError);
   } else if (hash === '#/report') {
     renderReport(root, state, appVersion, formatReportDate(new Date()), configValid, configError);
@@ -129,7 +128,7 @@ function route() {
 
 function onInput(e) {
   const el = e.target;
-  if (el.matches('input[type="text"], input[type="number"], input[type="time"], input:not([type])')) {
+  if (el.matches('input[type="text"], input[type="number"], input:not([type])')) {
     handleInput(el);
   }
 }
@@ -167,12 +166,12 @@ function handleInput(el) {
     const seg = state.segments.find((s) => s.id === segId);
     if (seg) {
       const segFields = [
-        'name', 'critical_spacing_m', 'area_coverage_pct',
-        'segment_start_time', 'segment_end_time',
+        'name', 'critical_spacing_m', 'searched_fraction', 'inaccessible_fraction',
         'time_of_day', 'weather', 'detectability_level'
       ];
       if (segFields.includes(name)) {
-        if (type === 'number' || name === 'detectability_level') {
+        if (type === 'number' || name === 'detectability_level'
+            || name === 'searched_fraction' || name === 'inaccessible_fraction') {
           seg[name] = Number(value);
         } else {
           seg[name] = value;
@@ -182,16 +181,7 @@ function handleInput(el) {
 
         // Partial update: POD panel only
         const podEl = document.getElementById('pod-result');
-        if (podEl) podEl.innerHTML = podResultHtml(seg, { results: seg.results, primaryTarget: seg.primaryTarget });
-
-        // Partial update: duration
-        if (name === 'segment_start_time' || name === 'segment_end_time') {
-          const durEl = document.getElementById('duration-display');
-          if (durEl) {
-            const d = durationMinutes(seg.segment_start_time, seg.segment_end_time);
-            durEl.textContent = d === null ? 'Duration: Invalid time' : `Duration: ${d} min`;
-          }
-        }
+        if (podEl) podEl.innerHTML = podResultHtml(seg, { results: seg.results, primaryTarget: seg.primaryTarget, qaWarnings: seg.qaWarnings });
 
         debounceSave();
         return;
@@ -345,11 +335,13 @@ function recomputeAllSegments() {
 }
 
 function recomputeSegment(seg) {
+  const cfg = config || {};
   const targets = selectedTargets(state.searchLevel);
-  seg.primaryTarget = inferPrimaryTarget(targets, config || {});
+  seg.primaryTarget = inferPrimaryTarget(targets, cfg, state.searchLevel.type_of_search);
   seg.results = targets.map((t) =>
-    computeForTarget({ config: config || {}, searchLevel: state.searchLevel, segment: seg, targetKey: t })
+    computeForTarget({ config: cfg, searchLevel: state.searchLevel, segment: seg, targetKey: t })
   );
+  seg.qaWarnings = generateQaWarnings(seg, cfg);
 }
 
 /* ================================================================
@@ -432,19 +424,21 @@ function migrateState(raw) {
       next.critical_spacing_m = Number(seg.actual_spacing_m);
     }
 
-    // Legacy field migration: searched_fraction / inaccessible_fraction -> area_coverage_pct
-    if (next.area_coverage_pct == null) {
-      if (seg.searched_fraction != null) {
-        next.area_coverage_pct = Math.round(Number(seg.searched_fraction) * 100);
-      } else if (seg.inaccessible_fraction != null) {
-        next.area_coverage_pct = Math.round((1 - Number(seg.inaccessible_fraction)) * 100);
-      } else {
-        next.area_coverage_pct = 100;
-      }
+    // Legacy field migration: area_coverage_pct -> searched_fraction / inaccessible_fraction
+    // Check the original saved seg (not next, which has newSegment defaults)
+    if (seg.searched_fraction == null && seg.area_coverage_pct != null) {
+      next.searched_fraction = clampNum(Number(seg.area_coverage_pct) / 100, 1.0, 0, 1);
+      next.inaccessible_fraction = 0;
     }
 
+    // Remove legacy fields
+    delete next.segment_start_time;
+    delete next.segment_end_time;
+    delete next.area_coverage_pct;
+
     next.critical_spacing_m = clampNum(next.critical_spacing_m, 15, 0.1, 10000);
-    next.area_coverage_pct = clampNum(next.area_coverage_pct, 100, 0, 100);
+    next.searched_fraction = clampNum(next.searched_fraction, 1.0, 0, 1);
+    next.inaccessible_fraction = clampNum(next.inaccessible_fraction, 0, 0, 1);
     next.detectability_level = clampNum(Number(next.detectability_level), 3, 1, 5);
     next.results = [];
     next.primaryTarget = null;
