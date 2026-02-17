@@ -17,6 +17,16 @@ export function responseMultiplier(searchLevel, config) {
   return Math.min(config.active_responsiveness.cap, 1 + aud + vis);
 }
 
+export function responseComponents(searchLevel, config) {
+  if (searchLevel.type_of_search !== 'active_missing_person') {
+    return { auditory_bonus: 0, visual_bonus: 0, cap: config.active_responsiveness.cap, M_resp: 1 };
+  }
+  const auditory_bonus = config.active_responsiveness.auditory[searchLevel.auditory || 'none'] || 0;
+  const visual_bonus = config.active_responsiveness.visual[searchLevel.visual || 'none'] || 0;
+  const cap = config.active_responsiveness.cap;
+  return { auditory_bonus, visual_bonus, cap, M_resp: Math.min(cap, 1 + auditory_bonus + visual_bonus) };
+}
+
 export function spacingEffectiveness(S_ref, S_act, k) {
   if (!S_act || S_act <= 0) return 0;
   return Math.min(1, (S_ref / S_act) ** k);
@@ -37,7 +47,8 @@ export function computeForTarget({ config, searchLevel, segment, targetKey }) {
   const S_ref_raw = S_base * C_t;
   const S_ref = clamp(S_ref_raw, config.pod.min_ref, config.pod.max_ref);
   const E_space = spacingEffectiveness(S_ref, Number(segment.critical_spacing_m), config.pod.k);
-  const M_resp = responseMultiplier(searchLevel, config);
+  const response = responseComponents(searchLevel, config);
+  const M_resp = response.M_resp;
   const M_comp = completionMultiplier(segment);
 
   const POD_pre = config.pod.POD_ceiling * E_space * M_resp;
@@ -45,6 +56,14 @@ export function computeForTarget({ config, searchLevel, segment, targetKey }) {
 
   return {
     target: targetKey,
+    POD_ceiling: config.pod.POD_ceiling,
+    S_base,
+    k: config.pod.k,
+    min_ref: config.pod.min_ref,
+    max_ref: config.pod.max_ref,
+    F_time,
+    F_weather,
+    F_detectability,
     C_t,
     S_ref_raw,
     S_ref,
@@ -52,7 +71,10 @@ export function computeForTarget({ config, searchLevel, segment, targetKey }) {
     M_resp,
     M_comp,
     POD_pre,
-    POD_final
+    POD_final,
+    auditory_bonus: response.auditory_bonus,
+    visual_bonus: response.visual_bonus,
+    response_cap: response.cap
   };
 }
 
