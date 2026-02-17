@@ -119,8 +119,8 @@ export function renderSegment(root, segment, computed, savedLabel, configValid, 
       <h3>Weather</h3>
       ${radioChips('weather', LABELS.weather, segment.weather)}
       <h3>Vegetation / Terrain / Detectability</h3>
-      <span class="hint">Consider all factors that would make your primary subject more difficult to spot. For example, evidence buried in duff layer, snow cover, hiding places, natural shelters, or hard-to-spot natural shelters, dense vegetation, etc.</span>
-      ${radioChips('detectability_level', LABELS.detectability_level, String(segment.detectability_level))}
+      <span class="hint">Consider all factors that would make your primary subject more difficult to spot. For example, evidence buried under duff layer, snow cover, hiding places, hard-to-spot natural shelters, dense vegetation, etc.</span>
+      ${radioChips('detectability_level', LABELS.detectability_level, String(segment.detectability_level), true)}
     </section>
 
     <div class="sticky-result" id="pod-result">
@@ -180,14 +180,18 @@ export function renderReport(root, state, version, generatedAt, configValid, con
         <p class="subtle">App version: ${esc(version)}</p>
         <p class="subtle">Generated: ${esc(generatedAt)}</p>
 
-        <h3>Session</h3>
-        <ul>
+        <h3>Search Information</h3>
+        <ul class="report-list">
           <li><strong>Your Name:</strong> ${esc(state.session.your_name || '\u2014')}</li>
           <li><strong>Search Name:</strong> ${esc(state.session.search_name || '\u2014')}</li>
           <li><strong>Team Name:</strong> ${esc(state.session.team_name || '\u2014')}</li>
+          ${searchInfoItems(state.searchLevel)}
         </ul>
 
-        ${(state.segments || []).map((seg, i) => reportSegmentHtml(seg, i + 1)).join('')}
+        <h3>Search Areas</h3>
+        ${(state.segments || []).length
+          ? (state.segments || []).map((seg) => reportSegmentHtml(seg)).join('')
+          : '<p class="subtle">No segments added.</p>'}
       </article>
     </section>
   `;
@@ -203,14 +207,18 @@ export function buildReportText(state, version, generatedAt) {
     `App version: ${version}`,
     `Generated: ${generatedAt}`,
     '',
+    'Search Information',
     `Your Name: ${state.session.your_name || '\u2014'}`,
     `Search Name: ${state.session.search_name || '\u2014'}`,
     `Team Name: ${state.session.team_name || '\u2014'}`,
+    ...searchInfoText(state.searchLevel),
+    '',
+    'Search Areas',
     ''
   ];
 
-  state.segments.forEach((seg, i) => {
-    lines.push(`--- Segment ${i + 1}: ${seg.name || 'Unnamed'} ---`);
+  state.segments.forEach((seg) => {
+    lines.push(`--- ${seg.name || 'Unnamed'} ---`);
 
     const inputs = [
       `Critical Spacing: ${seg.critical_spacing_m} m`,
@@ -294,7 +302,55 @@ function configNotice(valid, error) {
   return `<p class="config-error">${esc(error || 'Configuration could not be loaded. Using safe defaults.')}</p>`;
 }
 
-function reportSegmentHtml(segment, index) {
+/* ---- Report helpers ---- */
+
+function searchInfoItems(s) {
+  const items = [];
+  items.push(`<li><strong>Search Type:</strong> ${esc(LABELS.type_of_search[s.type_of_search] || s.type_of_search)}</li>`);
+
+  if (s.type_of_search === 'active_missing_person') {
+    const targets = (s.active_targets || []).map((t) => LABELS.active_targets[t] || t).join(', ');
+    items.push(`<li><strong>Searching For:</strong> ${esc(targets)}</li>`);
+    items.push(`<li><strong>Auditory Responsiveness:</strong> ${esc(LABELS.responsiveness[s.auditory] || s.auditory)}</li>`);
+    items.push(`<li><strong>Visual Responsiveness:</strong> ${esc(LABELS.responsiveness[s.visual] || s.visual)}</li>`);
+  } else {
+    const cats = (s.evidence_categories || []).map((c) => LABELS.evidence_categories[c] || c).join(', ');
+    items.push(`<li><strong>Categories:</strong> ${esc(cats)}</li>`);
+    if ((s.evidence_categories || []).includes('remains')) {
+      items.push(`<li><strong>Remains State:</strong> ${esc(LABELS.remains_state[s.remains_state] || s.remains_state)}</li>`);
+    }
+    if ((s.evidence_categories || []).includes('evidence')) {
+      const classes = (s.evidence_classes || []).map((c) => LABELS.evidence_classes[c] || c).join(', ');
+      items.push(`<li><strong>Evidence Classes:</strong> ${esc(classes)}</li>`);
+    }
+  }
+  return items.join('\n          ');
+}
+
+function searchInfoText(s) {
+  const lines = [];
+  lines.push(`Search Type: ${LABELS.type_of_search[s.type_of_search] || s.type_of_search}`);
+
+  if (s.type_of_search === 'active_missing_person') {
+    const targets = (s.active_targets || []).map((t) => LABELS.active_targets[t] || t).join(', ');
+    lines.push(`Searching For: ${targets}`);
+    lines.push(`Auditory Responsiveness: ${LABELS.responsiveness[s.auditory] || s.auditory}`);
+    lines.push(`Visual Responsiveness: ${LABELS.responsiveness[s.visual] || s.visual}`);
+  } else {
+    const cats = (s.evidence_categories || []).map((c) => LABELS.evidence_categories[c] || c).join(', ');
+    lines.push(`Categories: ${cats}`);
+    if ((s.evidence_categories || []).includes('remains')) {
+      lines.push(`Remains State: ${LABELS.remains_state[s.remains_state] || s.remains_state}`);
+    }
+    if ((s.evidence_categories || []).includes('evidence')) {
+      const classes = (s.evidence_classes || []).map((c) => LABELS.evidence_classes[c] || c).join(', ');
+      lines.push(`Evidence Classes: ${classes}`);
+    }
+  }
+  return lines;
+}
+
+function reportSegmentHtml(segment) {
   const results = segment.results || [];
   const primaryResult = results.find((r) => r.target === segment.primaryTarget);
   const inputs = [
@@ -318,14 +374,14 @@ function reportSegmentHtml(segment, index) {
 
   return `
     <div class="report-segment">
-      <h3>Segment ${index}: ${esc(segment.name || 'Unnamed')}</h3>
+      <h3>${esc(segment.name || 'Unnamed')}</h3>
       <p class="pod-large" style="font-size:1.4rem">Primary POD: ${primaryPod}</p>
-      <p class="pod-average">Average POD: ${avgPod}</p>
+      <p class="report-avg-pod">Average POD: ${avgPod}</p>
       ${results.length
         ? `<p>${results.map((r) => `<strong>${esc(prettyTarget(r.target))}:</strong> ${(r.POD_final * 100).toFixed(1)}%`).join(' &middot; ')}</p>`
         : '<p class="subtle">No targets selected.</p>'}
-      <h4>Inputs</h4>
-      <ul>${inputs.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>
+      <h4 style="margin-bottom:2px">Inputs</h4>
+      <ul class="report-list">${inputs.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>
       <p class="hint" style="margin-top:12px;font-style:italic">For development only</p>
       ${results.map((r) => reportDetailHtml(segment, r)).join('')}
     </div>`;
@@ -384,8 +440,9 @@ function reportDetailText(segment, r) {
 
 /* ---- Form field generators ---- */
 
-function radioChips(name, options, current) {
-  return `<div class="chip-row">${Object.entries(options).map(([val, label]) =>
+function radioChips(name, options, current, vertical = false) {
+  const cls = vertical ? 'chip-col' : 'chip-row';
+  return `<div class="${cls}">${Object.entries(options).map(([val, label]) =>
     `<label class="chip"><input type="radio" name="${name}" value="${val}"${String(current) === String(val) ? ' checked' : ''}><span>${label}</span></label>`
   ).join('')}</div>`;
 }
@@ -405,7 +462,7 @@ function numField(label, name, value, step, hint = '') {
 }
 
 function timeField(label, name, value) {
-  return `<label>${esc(label)}<input type="time" name="${name}" value="${esc(value || '')}"/></label>`;
+  return `<label>${esc(label)}<input type="text" name="${name}" value="${esc(value || '')}" placeholder="HH:MM" maxlength="5" pattern="\\d{2}:\\d{2}" autocomplete="off"/></label>`;
 }
 
 /* ---- Formatting ---- */

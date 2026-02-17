@@ -17,7 +17,7 @@ const defaultSearch = {
   auditory: 'none',
   visual: 'none',
   remains_state: 'intact_remains',
-  evidence_classes: [],
+  evidence_classes: ['large_evidence'],
   evidence_categories: ['remains']
 };
 
@@ -117,7 +117,7 @@ function route() {
       { results: seg.results, primaryTarget: seg.primaryTarget },
       saveState, configValid, configError);
   } else if (hash === '#/report') {
-    renderReport(root, state, appVersion, format24h(new Date()), configValid, configError);
+    renderReport(root, state, appVersion, formatReportDate(new Date()), configValid, configError);
   } else {
     renderHome(root, state, saveState, configValid, configError);
   }
@@ -229,7 +229,29 @@ function handleInput(el) {
       return;
     }
 
+    // Prevent deselecting both evidence categories
+    if (name === 'evidence_categories' && next.length === 0) {
+      el.checked = true;
+      return;
+    }
+
+    // Prevent deselecting all evidence classes when evidence category is active
+    if (name === 'evidence_classes' && next.length === 0
+        && (state.searchLevel.evidence_categories || []).includes('evidence')) {
+      el.checked = true;
+      return;
+    }
+
     state.searchLevel[name] = next;
+
+    // When evidence category is selected, ensure at least one evidence class is checked
+    if (name === 'evidence_categories' && next.includes('evidence')) {
+      if (!state.searchLevel.evidence_classes || state.searchLevel.evidence_classes.length === 0) {
+        state.searchLevel.evidence_classes = ['large_evidence'];
+        const checkbox = document.querySelector('input[name="evidence_classes"][value="large_evidence"]');
+        if (checkbox) checkbox.checked = true;
+      }
+    }
 
     // Update evidence category visibility
     if (name === 'evidence_categories') {
@@ -283,14 +305,14 @@ function handleAction(action, id) {
   }
 
   if (action === 'copy-report') {
-    const text = buildReportText(state, appVersion, format24h(new Date()));
+    const text = buildReportText(state, appVersion, formatReportDate(new Date()));
     copyToClipboard(text);
     showToast('Report copied to clipboard');
     return;
   }
 
   if (action === 'share') {
-    const text = buildReportText(state, appVersion, format24h(new Date()));
+    const text = buildReportText(state, appVersion, formatReportDate(new Date()));
     if (navigator.share) {
       navigator.share({ title: 'SAR POD Calculator Report', text }).catch(() => {});
     } else {
@@ -393,9 +415,9 @@ function migrateState(raw) {
   searchLevel.active_targets = Array.isArray(searchLevel.active_targets)
     ? searchLevel.active_targets
     : [...defaultSearch.active_targets];
-  searchLevel.evidence_classes = Array.isArray(searchLevel.evidence_classes)
+  searchLevel.evidence_classes = Array.isArray(searchLevel.evidence_classes) && searchLevel.evidence_classes.length > 0
     ? searchLevel.evidence_classes
-    : [];
+    : ['large_evidence'];
   searchLevel.evidence_categories = Array.isArray(searchLevel.evidence_categories)
     ? searchLevel.evidence_categories
     : ['remains'];
@@ -512,11 +534,8 @@ function fallbackCopy(text) {
   ta.remove();
 }
 
-function format24h(date) {
-  return date.toLocaleString([], {
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', hour12: false
-  });
+function formatReportDate(date) {
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
 function clampNum(val, fallback, min, max) {
