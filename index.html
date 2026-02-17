@@ -1,18 +1,37 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0f172a" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0f4c81">
   <title>PSAR POD Calculator</title>
-  <link rel="manifest" href="./manifest.webmanifest" />
-  <link rel="stylesheet" href="./src/ui/styles.css" />
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./assets/logo-placeholder.svg">
+  <link rel="apple-touch-icon" href="./assets/icon-192.svg">
+  <link rel="stylesheet" href="./src/ui/styles.css?v=2.0.0">
 </head>
-<body class="loading-skeleton">
-  <div id="app" class="loading-skeleton">
-    <header id="app-header" class="topbar"></header>
-    <main id="app-main"></main>
+<body>
+  <div id="app" class="app-shell">
+    <header class="app-header">
+      <img class="logo" src="./assets/logo-placeholder.svg" alt="Logo">
+      <div>
+        <h1>PSAR POD Calculator</h1>
+        <p class="subtle">Parallel Sweep (V1) &middot; v<span id="app-version">&hellip;</span></p>
+      </div>
+      <div id="connectivity-pill" class="connectivity-pill online">Online / Offline ready</div>
+    </header>
+    <main id="view-root"></main>
   </div>
-  <script type="module" src="./src/main.js"></script>
+  <script>
+    // Purge stale service-worker caches from prior versions
+    if ('caches' in window) {
+      caches.keys().then(function(names) {
+        names.forEach(function(name) {
+          if (name !== 'psar-pod-v2.0.0') caches.delete(name);
+        });
+      });
+    }
+  </script>
+  <script type="module" src="./src/main.js?v=2.0.0"></script>
 </body>
 </html>

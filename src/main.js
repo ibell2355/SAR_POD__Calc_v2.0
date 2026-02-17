@@ -1,9 +1,15 @@
 import { loadConfig } from './model/configLoader.js';
 import { computeForTarget, inferPrimaryTarget, selectedTargets } from './model/podEngine.js';
-import { buildReportText, renderLandingPage, renderReportPage, renderSegmentPage } from './ui/render.js';
+import { getValue, setValue, clearAll } from './storage/db.js';
+import { durationMinutes } from './utils/math.js';
+import {
+  renderHome, renderSegment, renderReport,
+  buildReportText, podResultHtml, segmentListHtml
+} from './ui/render.js';
 
-const STORAGE_KEY = 'sar_v2_session';
-const IS_DEV = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+/* ================================================================
+   Defaults
+   ================================================================ */
 
 const defaultSearch = {
   type_of_search: 'active_missing_person',
@@ -14,415 +20,473 @@ const defaultSearch = {
   evidence_classes: []
 };
 
-const defaultSegment = () => ({
-  id: crypto.randomUUID(),
-  name: '',
-  segment_start_time: '08:00',
-  segment_end_time: '09:00',
-  time_of_day: 'day',
-  weather: 'clear',
-  detectability_level: 3,
-  critical_spacing_m: 15,
-  area_coverage_pct: 100,
-  results: [],
-  primaryTarget: null
-});
+function newSegment() {
+  return {
+    id: uid(),
+    name: '',
+    segment_start_time: '08:00',
+    segment_end_time: '09:00',
+    time_of_day: 'day',
+    weather: 'clear',
+    detectability_level: 3,
+    critical_spacing_m: 15,
+    area_coverage_pct: 100,
+    results: [],
+    primaryTarget: null
+  };
+}
 
-const app = {
-  config: null,
-  bootAttempted: false,
-  bootSettled: false,
-  fatalError: null,
-  version: '0.0.0',
-  diagnostics: '',
-  online: navigator.onLine,
-  isDev: IS_DEV,
-  savedState: 'Saved',
-  view: 'landing',
-  editingSegmentId: null,
+/* ================================================================
+   State
+   ================================================================ */
+
+const state = {
   session: { your_name: '', search_name: '', team_name: '' },
   searchLevel: { ...defaultSearch },
   segments: []
 };
 
-start();
+let config = null;
+let configValid = true;
+let configError = '';
+let appVersion = '2.0.0';
+let saveTimer = null;
+let saveState = 'Saved';
 
-async function start() {
-  app.bootAttempted = true;
+/* ================================================================
+   Startup
+   ================================================================ */
+
+init();
+
+async function init() {
   try {
-    const [{ config, diagnostics, path, errors, valid }, version] = await Promise.all([loadConfig(), getVersion()]);
-    app.config = config;
-    app.diagnostics = diagnostics;
-    app.version = version;
-    app.configPath = path;
-    app.configErrors = errors || [];
-    app.configValid = valid;
+    const [cfgResult, version] = await Promise.all([loadConfig(), fetchVersion()]);
 
-    const migrationInfo = hydrate();
-    logDevDiagnostics({ configPath: path, configValid: valid, configErrors: errors || [], migrationCount: migrationInfo.count, swVersion: 'v3' });
+    config = cfgResult.config;
+    configValid = cfgResult.valid;
+    configError = cfgResult.valid ? '' : (cfgResult.diagnostics || 'Config failed to load.');
+    appVersion = version;
 
-    bindNetwork();
-    safeRender();
-    registerServiceWorker();
-  } catch (error) {
-    console.error('[Startup Fatal]', error);
-    app.config = app.config || {};
-    app.diagnostics = `Fatal startup error: ${error.message}`;
-    app.configPath = app.configPath || './config/SAR_POD_V2_config.yaml';
-    app.configErrors = [{ code: 'STARTUP_FATAL', path: app.configPath, message: 'Application startup failed', cause: error.message }];
-    app.configValid = false;
-    bindNetwork();
-    showFatalError(error);
-  } finally {
-    app.bootSettled = true;
-    disableSkeleton();
-  }
-}
+    document.getElementById('app-version').textContent = version;
 
-function ensureMountNodes() {
-  const appRoot = document.querySelector('#app') || document.body.appendChild(Object.assign(document.createElement('div'), { id: 'app' }));
-  let headerRoot = appRoot.querySelector('#app-header');
-  if (!headerRoot) {
-    headerRoot = document.createElement('div');
-    headerRoot.id = 'app-header';
-    appRoot.appendChild(headerRoot);
-  }
-  let mainRoot = appRoot.querySelector('#app-main');
-  if (!mainRoot) {
-    mainRoot = document.createElement('main');
-    mainRoot.id = 'app-main';
-    appRoot.appendChild(mainRoot);
-  }
-  return { appRoot, headerRoot, mainRoot };
-}
+    await hydrate();
 
-function render() {
-  const { appRoot, headerRoot, mainRoot } = ensureMountNodes();
-  headerRoot.innerHTML = '';
-  headerRoot.className = 'topbar';
-  headerRoot.innerHTML = `
-    <div class="brand">
-      <img src="./assets/logo-placeholder.svg" alt="PSAR Logo" />
-      <div>
-        <h1>PSAR POD Calculator</h1>
-        <p>Parallel Sweep (V1) · v${app.version}</p>
-      </div>
-    </div>
-    <span class="status-pill ${app.online ? 'online' : 'offline'}">${app.online ? 'Online' : 'Offline'} / Offline ready</span>
-  `;
+    // Event delegation — set up once, never rebind
+    const root = document.getElementById('view-root');
+    root.addEventListener('input', onInput);
+    root.addEventListener('change', onChange);
+    root.addEventListener('click', onClick);
 
-  if (app.view === 'segment') {
-    const segment = app.segments.find((s) => s.id === app.editingSegmentId);
-    if (!segment) {
-      app.view = 'landing';
-      return render();
+    window.addEventListener('hashchange', route);
+    window.addEventListener('online', updateConnectivity);
+    window.addEventListener('offline', updateConnectivity);
+    updateConnectivity();
+
+    route();
+    registerSW();
+  } catch (err) {
+    console.error('Startup:', err);
+    const root = document.getElementById('view-root');
+    if (root) {
+      root.innerHTML = `<div class="panel" style="margin-top:12px">
+        <p style="color:var(--danger)">Unable to start: ${escapeHtml(err.message)}</p>
+      </div>`;
     }
-    renderSegmentPage(mainRoot, app, segment, { results: segment.results, primaryTarget: segment.primaryTarget });
-  } else if (app.view === 'report') {
-    renderReportPage(mainRoot, app, format24h(new Date()));
+  }
+}
+
+/* ================================================================
+   Routing (hash-based, like baseline)
+   ================================================================ */
+
+function route() {
+  const hash = location.hash || '#/';
+  const root = document.getElementById('view-root');
+
+  if (hash.startsWith('#/segment/')) {
+    const id = hash.slice('#/segment/'.length);
+    const seg = state.segments.find((s) => s.id === id);
+    if (!seg) { location.hash = '#/'; return; }
+    renderSegment(root, seg,
+      { results: seg.results, primaryTarget: seg.primaryTarget },
+      saveState, configValid, configError);
+  } else if (hash === '#/report') {
+    renderReport(root, state, appVersion, format24h(new Date()), configValid, configError);
   } else {
-    renderLandingPage(mainRoot, app);
-  }
-  bindInputs(appRoot);
-}
-
-function safeRender() {
-  try {
-    refreshDevDiagnostics();
-    render();
-    app.fatalError = null;
-  } catch (error) {
-    showFatalError(error);
-  } finally {
-    disableSkeleton();
+    renderHome(root, state, saveState, configValid, configError);
   }
 }
 
-function bindInputs(root) {
-  root.querySelectorAll('input').forEach((input) => {
-    input.oninput = () => handleInput(input);
-    input.onchange = () => handleInput(input);
-  });
+/* ================================================================
+   Event delegation
+   ================================================================ */
 
-  root.querySelectorAll('[data-action]').forEach((btn) => {
-    btn.onclick = () => handleAction(btn.dataset.action, btn.dataset.id);
-  });
+function onInput(e) {
+  const el = e.target;
+  if (el.matches('input[type="text"], input[type="number"], input[type="time"], input:not([type])')) {
+    handleInput(el);
+  }
 }
 
-function handleInput(input) {
-  const { name, value, type, checked } = input;
-  const segment = app.segments.find((s) => s.id === app.editingSegmentId);
+function onChange(e) {
+  const el = e.target;
+  if (el.matches('input[type="radio"], input[type="checkbox"]')) {
+    handleInput(el);
+  }
+}
+
+function onClick(e) {
+  const btn = e.target.closest('[data-action]');
+  if (btn) handleAction(btn.dataset.action, btn.dataset.id);
+}
+
+/* ================================================================
+   Input handling (targeted updates, no full re-render)
+   ================================================================ */
+
+function handleInput(el) {
+  const { name, value, type, checked } = el;
+  const hash = location.hash || '#/';
+
+  // ---- Session fields ----
   if (['your_name', 'search_name', 'team_name'].includes(name)) {
-    app.session[name] = value;
-  } else if (app.view === 'segment' && segment) {
-    if (type === 'number') segment[name] = Number(value);
-    else if (name === 'detectability_level') segment[name] = Number(value);
-    else segment[name] = value;
-    recomputeSegment(segment);
-  } else if (['type_of_search', 'auditory', 'visual', 'remains_state'].includes(name)) {
-    app.searchLevel[name] = value;
-    recomputeAllSegments();
-  } else if (['active_targets', 'evidence_classes'].includes(name) && type === 'checkbox') {
-    const arr = app.searchLevel[name] || [];
-    app.searchLevel[name] = checked ? [...new Set([...arr, value])] : arr.filter((x) => x !== value);
-    recomputeAllSegments();
+    state.session[name] = value;
+    debounceSave();
+    return;
   }
-  autosave();
-  safeRender();
+
+  // ---- Segment fields (segment edit page) ----
+  if (hash.startsWith('#/segment/')) {
+    const segId = hash.slice('#/segment/'.length);
+    const seg = state.segments.find((s) => s.id === segId);
+    if (seg) {
+      const segFields = [
+        'name', 'critical_spacing_m', 'area_coverage_pct',
+        'segment_start_time', 'segment_end_time',
+        'time_of_day', 'weather', 'detectability_level'
+      ];
+      if (segFields.includes(name)) {
+        if (type === 'number' || name === 'detectability_level') {
+          seg[name] = Number(value);
+        } else {
+          seg[name] = value;
+        }
+
+        recomputeSegment(seg);
+
+        // Partial update: POD panel only
+        const podEl = document.getElementById('pod-result');
+        if (podEl) podEl.innerHTML = podResultHtml(seg, { results: seg.results, primaryTarget: seg.primaryTarget });
+
+        // Partial update: duration
+        if (name === 'segment_start_time' || name === 'segment_end_time') {
+          const durEl = document.getElementById('duration-display');
+          if (durEl) {
+            const d = durationMinutes(seg.segment_start_time, seg.segment_end_time);
+            durEl.textContent = d === null ? 'Duration: Invalid time' : `Duration: ${d} min`;
+          }
+        }
+
+        debounceSave();
+        return;
+      }
+    }
+  }
+
+  // ---- Search-level radios ----
+  if (['type_of_search', 'auditory', 'visual', 'remains_state'].includes(name)) {
+    state.searchLevel[name] = value;
+
+    // Toggle survey sections via data attribute
+    if (name === 'type_of_search') {
+      const survey = document.getElementById('search-survey');
+      if (survey) survey.dataset.searchType = value;
+    }
+
+    recomputeAllSegments();
+    const listEl = document.getElementById('segment-list');
+    if (listEl) listEl.innerHTML = segmentListHtml(state.segments);
+    debounceSave();
+    return;
+  }
+
+  // ---- Search-level checkboxes ----
+  if (['active_targets', 'evidence_classes'].includes(name) && type === 'checkbox') {
+    const arr = state.searchLevel[name] || [];
+    state.searchLevel[name] = checked
+      ? [...new Set([...arr, value])]
+      : arr.filter((x) => x !== value);
+
+    recomputeAllSegments();
+    const listEl = document.getElementById('segment-list');
+    if (listEl) listEl.innerHTML = segmentListHtml(state.segments);
+    debounceSave();
+    return;
+  }
 }
 
-async function handleAction(action, id) {
+/* ================================================================
+   Actions
+   ================================================================ */
+
+function handleAction(action, id) {
   if (action === 'add-segment') {
-    const s = defaultSegment();
-    recomputeSegment(s);
-    app.segments.push(s);
-    app.editingSegmentId = s.id;
-    app.view = 'segment';
+    const seg = newSegment();
+    recomputeSegment(seg);
+    state.segments.push(seg);
+    debounceSave();
+    location.hash = `#/segment/${seg.id}`;
+    return;
   }
+
   if (action === 'edit-segment') {
-    app.editingSegmentId = id;
-    app.view = 'segment';
+    location.hash = `#/segment/${id}`;
+    return;
   }
-  if (action === 'go-home') app.view = 'landing';
-  if (action === 'view-report') app.view = 'report';
-  if (action === 'print') window.print();
+
+  if (action === 'go-home') {
+    location.hash = '#/';
+    return;
+  }
+
+  if (action === 'view-report') {
+    location.hash = '#/report';
+    return;
+  }
+
+  if (action === 'print') {
+    window.print();
+    return;
+  }
+
   if (action === 'copy-report') {
-    await navigator.clipboard.writeText(buildReportText(app, format24h(new Date())));
+    const text = buildReportText(state, appVersion, format24h(new Date()));
+    copyToClipboard(text);
+    showToast('Report copied to clipboard');
+    return;
   }
+
   if (action === 'share') {
-    const text = buildReportText(app, format24h(new Date()));
-    if (navigator.share) await navigator.share({ title: 'PSAR POD Calculator Report', text });
-    else await navigator.clipboard.writeText(text);
+    const text = buildReportText(state, appVersion, format24h(new Date()));
+    if (navigator.share) {
+      navigator.share({ title: 'SAR POD Calculator Report', text }).catch(() => {});
+    } else {
+      copyToClipboard(text);
+      showToast('Report copied to clipboard');
+    }
+    return;
   }
+
   if (action === 'new-session') {
-    localStorage.removeItem(STORAGE_KEY);
-    app.session = { your_name: '', search_name: '', team_name: '' };
-    app.searchLevel = { ...defaultSearch };
-    app.segments = [];
-    app.view = 'landing';
-  }
-  if (action === 'reset-local-data') {
-    localStorage.clear();
-    await clearIndexedDbSafe();
-    window.location.reload();
+    if (!confirm('Clear all data and start a new session?')) return;
+    state.session = { your_name: '', search_name: '', team_name: '' };
+    state.searchLevel = { ...defaultSearch };
+    state.segments = [];
+    clearAll();
+    localStorage.removeItem('sar_v2_session');
+    const atHome = !location.hash || location.hash === '#/' || location.hash === '#';
+    location.hash = '#/';
+    if (atHome) route();
     return;
   }
-  if (action === 'force-refresh-assets' && IS_DEV) {
-    await forceRefreshAssets();
-    return;
-  }
-  autosave();
-  safeRender();
 }
+
+/* ================================================================
+   Computation
+   ================================================================ */
 
 function recomputeAllSegments() {
-  app.segments.forEach(recomputeSegment);
+  state.segments.forEach(recomputeSegment);
 }
 
-function recomputeSegment(segment) {
-  const targets = selectedTargets(app.searchLevel || {});
-  segment.primaryTarget = inferPrimaryTarget(targets, app.config || {});
-  segment.results = targets.map((target) => computeForTarget({ config: app.config || {}, searchLevel: app.searchLevel || {}, segment, targetKey: target }));
+function recomputeSegment(seg) {
+  const targets = selectedTargets(state.searchLevel);
+  seg.primaryTarget = inferPrimaryTarget(targets, config || {});
+  seg.results = targets.map((t) =>
+    computeForTarget({ config: config || {}, searchLevel: state.searchLevel, segment: seg, targetKey: t })
+  );
 }
 
-function autosave() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ session: app.session, searchLevel: app.searchLevel, segments: app.segments }));
-  app.savedState = `Saved ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+/* ================================================================
+   Persistence (IndexedDB with localStorage migration)
+   ================================================================ */
+
+function debounceSave() {
+  saveState = 'Saving\u2026';
+  const indicator = document.getElementById('save-indicator');
+  if (indicator) indicator.textContent = saveState;
+
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    await setValue('session', {
+      session: state.session,
+      searchLevel: state.searchLevel,
+      segments: state.segments
+    });
+    saveState = 'Saved';
+    const ind = document.getElementById('save-indicator');
+    if (ind) ind.textContent = saveState;
+  }, 250);
 }
 
-function hydrate() {
-  const raw = safeParse(localStorage.getItem(STORAGE_KEY));
-  if (!raw) return { count: 0 };
-  const migrationInfo = migratePersistedState(raw);
-  app.session = migrationInfo.state.session;
-  app.searchLevel = migrationInfo.state.searchLevel;
-  app.segments = migrationInfo.state.segments;
-  recomputeAllSegments();
-  return { count: migrationInfo.count };
-}
+async function hydrate() {
+  // Try IndexedDB first
+  let raw = await getValue('session', null);
 
-function migratePersistedState(raw) {
-  let count = 0;
-  const migratedSegments = (raw?.segments || []).map((segment) => {
-    const next = {
-      ...defaultSegment(),
-      ...segment,
-      id: segment?.id || crypto.randomUUID(),
-      name: segment?.name || '',
-      segment_start_time: segment?.segment_start_time || '08:00',
-      segment_end_time: segment?.segment_end_time || '09:00',
-      time_of_day: segment?.time_of_day || 'day',
-      weather: segment?.weather || 'clear',
-      detectability_level: Number(segment?.detectability_level ?? 3)
-    };
-
-    if (next.critical_spacing_m == null && segment?.actual_spacing_m != null) {
-      next.critical_spacing_m = Number(segment.actual_spacing_m);
-      count += 1;
+  // Migrate from localStorage if IDB is empty
+  if (!raw) {
+    const lsRaw = localStorage.getItem('sar_v2_session');
+    if (lsRaw) {
+      try { raw = JSON.parse(lsRaw); } catch { /* ignore */ }
+      localStorage.removeItem('sar_v2_session');
     }
+  }
+
+  if (!raw) return;
+
+  const migrated = migrateState(raw);
+  state.session = migrated.session;
+  state.searchLevel = migrated.searchLevel;
+  state.segments = migrated.segments;
+  recomputeAllSegments();
+
+  // Persist migrated data to IDB
+  await setValue('session', {
+    session: state.session,
+    searchLevel: state.searchLevel,
+    segments: state.segments
+  });
+}
+
+function migrateState(raw) {
+  const session = {
+    your_name: '',
+    search_name: '',
+    team_name: '',
+    ...(raw.session || {})
+  };
+
+  const searchLevel = { ...defaultSearch, ...(raw.searchLevel || {}) };
+  searchLevel.active_targets = Array.isArray(searchLevel.active_targets)
+    ? searchLevel.active_targets
+    : [...defaultSearch.active_targets];
+  searchLevel.evidence_classes = Array.isArray(searchLevel.evidence_classes)
+    ? searchLevel.evidence_classes
+    : [];
+
+  const segments = (raw.segments || []).map((seg) => {
+    const next = { ...newSegment(), ...seg };
+    next.id = seg.id || uid();
+    next.name = seg.name || '';
+
+    // Legacy field migration: actual_spacing_m -> critical_spacing_m
+    if (next.critical_spacing_m == null && seg.actual_spacing_m != null) {
+      next.critical_spacing_m = Number(seg.actual_spacing_m);
+    }
+
+    // Legacy field migration: searched_fraction / inaccessible_fraction -> area_coverage_pct
     if (next.area_coverage_pct == null) {
-      if (segment?.searched_fraction != null) {
-        next.area_coverage_pct = Math.round(Number(segment.searched_fraction) * 100);
+      if (seg.searched_fraction != null) {
+        next.area_coverage_pct = Math.round(Number(seg.searched_fraction) * 100);
+      } else if (seg.inaccessible_fraction != null) {
+        next.area_coverage_pct = Math.round((1 - Number(seg.inaccessible_fraction)) * 100);
       } else {
         next.area_coverage_pct = 100;
       }
-      count += 1;
     }
 
-    next.critical_spacing_m = clampNumber(next.critical_spacing_m, 15, 0.1, 10000);
-    next.area_coverage_pct = clampNumber(next.area_coverage_pct, 100, 0, 100);
-    next.results = Array.isArray(next.results) ? next.results : [];
-    next.primaryTarget = next.primaryTarget || null;
+    next.critical_spacing_m = clampNum(next.critical_spacing_m, 15, 0.1, 10000);
+    next.area_coverage_pct = clampNum(next.area_coverage_pct, 100, 0, 100);
+    next.detectability_level = clampNum(Number(next.detectability_level), 3, 1, 5);
+    next.results = [];
+    next.primaryTarget = null;
     return next;
   });
 
-  const mergedSearch = { ...defaultSearch, ...(raw?.searchLevel || {}) };
-  mergedSearch.active_targets = Array.isArray(mergedSearch.active_targets) ? mergedSearch.active_targets : [...defaultSearch.active_targets];
-  mergedSearch.evidence_classes = Array.isArray(mergedSearch.evidence_classes) ? mergedSearch.evidence_classes : [];
-
-  return {
-    count,
-    state: {
-      session: { ...app.session, ...(raw?.session || {}) },
-      searchLevel: mergedSearch,
-      segments: migratedSegments
-    }
-  };
+  return { session, searchLevel, segments };
 }
 
-async function getVersion() {
+/* ================================================================
+   Utilities
+   ================================================================ */
+
+function uid() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+async function fetchVersion() {
   try {
     const pkg = await fetch('./package.json').then((r) => r.json());
-    return pkg.version;
+    return pkg.version || '2.0.0';
   } catch {
-    return '0.1.2';
+    return '2.0.0';
   }
 }
 
-function bindNetwork() {
-  window.addEventListener('online', () => { app.online = true; safeRender(); });
-  window.addEventListener('offline', () => { app.online = false; safeRender(); });
+function updateConnectivity() {
+  const online = navigator.onLine;
+  const pill = document.getElementById('connectivity-pill');
+  if (pill) {
+    pill.textContent = `${online ? 'Online' : 'Offline'} / Offline ready`;
+    pill.className = `connectivity-pill ${online ? 'online' : 'offline'}`;
+  }
 }
 
-function registerServiceWorker() {
+function registerSW() {
   if (!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.register('./service-worker.js').then((registration) => {
-    registration.addEventListener('updatefound', () => {
-      const worker = registration.installing;
-      if (!worker) return;
-      worker.addEventListener('statechange', () => {
-        if (worker.state === 'installed' && navigator.serviceWorker.controller) {
-          app.newVersionAvailable = true;
-          safeRender();
-          setTimeout(() => window.location.reload(), 1500);
-        }
-      });
-    });
-  }).catch((error) => {
-    if (IS_DEV) console.warn('SW registration failed:', error);
+  navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+}
+
+function showToast(msg, duration = 2500) {
+  let toast = document.querySelector('.toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.className = 'toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  requestAnimationFrame(() => {
+    toast.classList.add('visible');
+    setTimeout(() => toast.classList.remove('visible'), duration);
   });
 }
 
-function logDevDiagnostics({ configPath, configValid, configErrors, migrationCount, swVersion }) {
-  if (!IS_DEV) return;
-  app.migrationCount = migrationCount;
-  app.swVersion = swVersion;
-  app.devDiagnostics = {
-    appVersion: app.version,
-    configPath,
-    configValid,
-    migrationCount,
-    segmentsLoaded: app.segments.length,
-    route: app.view,
-    swVersion,
-    configErrorsCount: configErrors.length
-  };
-  console.group('[SAR POD Calculator startup diagnostics]');
-  console.log('config:', { path: configPath, valid: configValid, errors: configErrors.length });
-  console.log('migration count:', migrationCount);
-  console.log('service worker version:', swVersion);
-  console.groupEnd();
-}
-
-
-function refreshDevDiagnostics() {
-  if (!IS_DEV || !app.devDiagnostics) return;
-  app.devDiagnostics = {
-    ...app.devDiagnostics,
-    appVersion: app.version,
-    configPath: app.configPath,
-    configValid: app.configValid,
-    migrationCount: app.migrationCount || 0,
-    segmentsLoaded: app.segments.length,
-    route: app.view,
-    swVersion: app.swVersion || 'v3'
-  };
-}
-
-function disableSkeleton() {
-  document.body.classList.remove('loading-skeleton');
-  document.querySelector('#app')?.classList.remove('loading-skeleton');
-}
-
-function safeParse(raw) {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
+function copyToClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
   }
 }
 
-function clampNumber(value, fallback, min, max) {
-  const num = Number(value);
-  if (Number.isNaN(num)) return fallback;
-  return Math.max(min, Math.min(max, num));
-}
-
-function showFatalError(error) {
-  const { mainRoot } = ensureMountNodes();
-  app.fatalError = error;
-  mainRoot.innerHTML = `
-    <section class="page-wrap">
-      <article class="card notice notice-error" role="alert">
-        <h2>Fatal startup error</h2>
-        <p>${escapeHtml(error?.message || 'Unknown render error')}</p>
-        <p class="small"><strong>Config path attempted:</strong> ${escapeHtml(app.configPath || './config/SAR_POD_V2_config.yaml')}</p>
-        ${IS_DEV && error?.stack ? `<details><summary>Stack</summary><pre>${escapeHtml(error.stack)}</pre></details>` : ''}
-        <button data-action="reset-local-data" class="btn-danger">Reset local data</button>
-      </article>
-    </section>
-  `;
-  bindInputs(document.querySelector('#app'));
-}
-
-async function clearIndexedDbSafe() {
-  if (!('indexedDB' in window) || !indexedDB?.databases) return;
-  const dbs = await indexedDB.databases();
-  await Promise.all((dbs || []).map((db) => db?.name && new Promise((resolve) => {
-    const req = indexedDB.deleteDatabase(db.name);
-    req.onsuccess = req.onerror = req.onblocked = () => resolve();
-  })));
-}
-
-async function forceRefreshAssets() {
-  if ('caches' in window) {
-    const keys = await caches.keys();
-    await Promise.all(keys.map((key) => caches.delete(key)));
-  }
-  const registration = await navigator.serviceWorker?.getRegistration?.();
-  if (registration) await registration.unregister();
-  window.location.reload();
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;');
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;opacity:0';
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  ta.remove();
 }
 
 function format24h(date) {
-  return date.toLocaleString([], { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+  return date.toLocaleString([], {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false
+  });
+}
+
+function clampNum(val, fallback, min, max) {
+  const num = Number(val);
+  return Number.isNaN(num) ? fallback : Math.max(min, Math.min(max, num));
+}
+
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
