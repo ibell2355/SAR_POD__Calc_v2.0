@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sar-pod-v2-cache-v2';
+const CACHE_NAME = 'sar-pod-v2-cache-v3';
 const APP_SHELL = [
   './',
   './index.html',
@@ -6,7 +6,8 @@ const APP_SHELL = [
   './src/ui/styles.css',
   './config/SAR_POD_V2_config.yaml',
   './config/config.schema.json',
-  './manifest.webmanifest'
+  './manifest.webmanifest',
+  './assets/logo-placeholder.svg'
 ];
 
 self.addEventListener('install', (event) => {

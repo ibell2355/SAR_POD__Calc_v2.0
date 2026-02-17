@@ -21,8 +21,8 @@ export const LABELS = {
 export function renderLandingPage(el, app) {
   const savedLabel = app.savedState;
   el.innerHTML = `
-    ${header(app)}
     <main class="page-wrap">
+      ${devDiagnosticsPanel(app)}
       ${startupNotice(app)}
       <section class="card">
         <div class="card-title-row"><h2>Session</h2><span class="small saved-pill">${savedLabel}</span></div>
@@ -58,8 +58,8 @@ export function renderLandingPage(el, app) {
 export function renderSegmentPage(el, app, segment, computed) {
   const d = durationMinutes(segment.segment_start_time, segment.segment_end_time);
   el.innerHTML = `
-    ${header(app)}
     <main class="page-wrap slim">
+      ${devDiagnosticsPanel(app)}
       ${startupNotice(app)}
       <section class="card">
         <div class="card-title-row">
@@ -101,6 +101,7 @@ export function renderSegmentPage(el, app, segment, computed) {
 export function renderReportPage(el, app, generatedAt) {
   el.innerHTML = `
     <main class="page-wrap report">
+      ${devDiagnosticsPanel(app)}
       ${startupNotice(app)}
       <section class="card">
         <div class="card-title-row">
@@ -215,18 +216,22 @@ function searchSurvey(s) {
   `;
 }
 
-function header(app) {
+function devDiagnosticsPanel(app) {
+  if (!app.isDev || !app.devDiagnostics) return '';
+  const d = app.devDiagnostics;
   return `
-    <header class="topbar">
-      <div class="brand">
-        <img src="./assets/logo.png" alt="PSAR Logo" onerror="this.style.display='none'" />
-        <div>
-          <h1>PSAR POD Calculator</h1>
-          <p>Parallel Sweep (V1) · v${app.version}</p>
-        </div>
-      </div>
-      <span class="status-pill ${app.online ? 'online' : 'offline'}">${app.online ? 'Online' : 'Offline'} / Offline ready</span>
-    </header>
+    <section class="notice notice-info" aria-live="polite">
+      <h2>Startup diagnostics (dev)</h2>
+      <ul>
+        <li>App version: ${escapeHtml(d.appVersion || app.version || 'unknown')}</li>
+        <li>Config file loaded: ${escapeHtml(d.configPath || app.configPath || './config/SAR_POD_V2_config.yaml')}</li>
+        <li>Config valid: ${d.configValid === true ? 'true' : 'false'}</li>
+        <li>Migration count: ${Number(d.migrationCount || 0)}</li>
+        <li>Segments loaded: ${Number(d.segmentsLoaded || 0)}</li>
+        <li>Current route/view: ${escapeHtml(d.route || app.view || 'landing')}</li>
+      </ul>
+      <button data-action="force-refresh-assets" class="btn-secondary">Force refresh assets</button>
+    </section>
   `;
 }
 

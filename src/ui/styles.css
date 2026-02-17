@@ -1,5 +1,5 @@
 :root {
-  --bg: #e9edf3;
+  --bg: #dff0ff;
   --card: #fff;
   --ink: #10233f;
   --muted: #516177;
@@ -70,3 +70,8 @@ pre { white-space: pre-wrap; background: #f8fafc; border: 1px solid var(--border
   .chip-row { gap: 6px; }
   .chip span { max-width: 100%; white-space: normal; }
 }
+
+#app { min-height: 100vh; }
+#app-main { min-height: calc(100vh - 64px); }
+.loading-skeleton #app-main { background: linear-gradient(90deg,#e9edf3,#f3f7fc,#e9edf3); background-size: 200% 100%; animation: pulse 1.2s linear infinite; }
+@keyframes pulse { from { background-position: 0 0; } to { background-position: 200% 0; } }
