@@ -1,12 +1,9 @@
 import { emergencyDefaults } from '../../config/defaults.js';
-import { validateAgainstSchema } from './configValidator.js';
 import { parseSimpleYaml } from '../utils/simpleYaml.js';
 
 const CONFIG_CANDIDATES = [
   '/config/SAR_POD_V2_config.yaml',
-  './config/SAR_POD_V2_config.yaml',
-  '/config/SAR_POD_V2_algorithm_config.json',
-  './config/SAR_POD_V2_algorithm_config.json'
+  './config/SAR_POD_V2_config.yaml'
 ];
 
 function parseConfig(raw, path) {
@@ -24,12 +21,6 @@ export async function loadConfig() {
   let selectedPath = CONFIG_CANDIDATES[0];
 
   try {
-    const schemaRes = await fetch('./config/config.schema.json');
-    if (!schemaRes.ok) {
-      throw new Error(`Schema fetch failed (${schemaRes.status})`);
-    }
-    const schema = await schemaRes.json();
-
     let config;
     let loaded = false;
     for (const path of CONFIG_CANDIDATES) {
@@ -58,16 +49,19 @@ export async function loadConfig() {
       };
     }
 
-    const errors = validateAgainstSchema(config, schema);
-    if (errors.length) {
+    // Basic sanity check: ensure required top-level keys exist
+    const required = ['targets', 'condition_factors', 'reference_spacing_bounds_m', 'response_model'];
+    const missing = required.filter((k) => !config[k]);
+    if (missing.length) {
       return {
         config: emergencyDefaults,
-        diagnostics: errors.map((e) => `• ${e}`).join('\n'),
+        diagnostics: `Config missing required keys: ${missing.join(', ')}`,
         valid: false,
         path: selectedPath,
-        errors: errors.map((error) => buildError('CONFIG_VALIDATION_ERROR', selectedPath, error))
+        errors: missing.map((k) => buildError('CONFIG_VALIDATION_ERROR', selectedPath, `Missing required key: ${k}`))
       };
     }
+
     return { config, diagnostics: '', valid: true, path: selectedPath, errors: [] };
   } catch (error) {
     return {

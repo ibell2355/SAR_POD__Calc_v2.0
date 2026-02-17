@@ -32,6 +32,7 @@ function responseModel(config) {
 
 /* ================================================================
    Primary target inference
+   Uses primary_target_hierarchy.<group>.order for ALL groups.
    ================================================================ */
 
 export function inferPrimaryTarget(selectedTargets, config, searchType) {
@@ -42,13 +43,17 @@ export function inferPrimaryTarget(selectedTargets, config, searchType) {
     return order.find((t) => selectedTargets.includes(t)) || selectedTargets[0] || null;
   }
 
-  // Default: active_missing_person
-  const order = hierarchy.active_missing_person || ['adult', 'child', 'large_clues', 'small_clues'];
-  return order.find((t) => selectedTargets.includes(t)) || selectedTargets[0] || null;
+  // Default: active_missing_person — always use .order sub-key
+  const order = hierarchy.active_missing_person?.order
+    || hierarchy.active_missing_person
+    || ['adult', 'child', 'large_clues', 'small_clues'];
+  const orderArr = Array.isArray(order) ? order : [];
+  return orderArr.find((t) => selectedTargets.includes(t)) || selectedTargets[0] || null;
 }
 
 /* ================================================================
    Response multiplier (active_missing_person group only)
+   M_resp = min(max_total_multiplier, 1 + auditory_bonus + visual_bonus)
    ================================================================ */
 
 export function responseMultiplier(searchLevel, config, targetKey) {
@@ -80,6 +85,7 @@ export function responseComponents(searchLevel, config, targetKey) {
 
 /* ================================================================
    Spacing effectiveness
+   E_space = min(1, (S_ref / S_act)^spacing_exponent)
    ================================================================ */
 
 export function spacingEffectiveness(S_ref, S_act, k) {
@@ -88,65 +94,104 @@ export function spacingEffectiveness(S_ref, S_act, k) {
 }
 
 /* ================================================================
-   Completion multiplier (strict subtractive)
-   M_comp = max(0, min(1, searched_fraction - inaccessible_fraction))
+   Completion multiplier
+   M_comp = clamp(area_coverage_pct / 100, 0, 1)
    ================================================================ */
 
 export function completionMultiplier(segment) {
-  const searched = Number(segment?.searched_fraction ?? 1);
-  const inaccessible = Number(segment?.inaccessible_fraction ?? 0);
-  return clamp(searched - inaccessible, 0, 1);
+  const pct = Number(segment?.area_coverage_pct ?? 100);
+  return clamp(pct / 100, 0, 1);
 }
 
 /* ================================================================
-   Full per-target POD computation
+   Full per-target POD computation — Exponential detection model
+
+   POD_t = clamp(
+     (1 - exp(-calibration_constant_k * effective_detectability
+              * spacing_effectiveness * responsiveness_multiplier))
+     * completion_multiplier,
+     0, 0.99
+   )
+
+   Where:
+     condition_multiplier  = F_time * F_weather * F_detectability  (per-target)
+     effective_detectability = base_detectability * condition_multiplier
+     reference_critical_spacing_raw = base_reference_critical_spacing_m  (NOT * C_t)
+     reference_critical_spacing = clamp(raw, min, max)
+     spacing_effectiveness = min(1, (S_ref / S_act)^spacing_exponent)
    ================================================================ */
 
 export function computeForTarget({ config, searchLevel, segment, targetKey }) {
   const target = targetDef(config, targetKey);
   const bounds = refBounds(config, targetKey);
 
-  const POD_ceiling = Number(target.pod_ceiling ?? 0.90);
-  const S_base = Number(target.base_reference_spacing_m ?? 15);
-  const k = Number(target.spacing_exponent_k ?? 1.5);
+  // Per-target base values from config
+  const base_detectability = Number(target.base_detectability ?? 0.80);
+  const calibration_constant_k = Number(target.calibration_constant_k ?? 3.50);
+  const base_reference_critical_spacing_m = Number(target.base_reference_critical_spacing_m ?? 15);
+  const spacing_exponent = Number(target.spacing_exponent ?? 1.5);
 
-  // Per-target condition factors
+  // Per-target condition factors (detectability_level key must be string)
   const F_time = conditionFactor(config, 'time_of_day', segment?.time_of_day || 'day', targetKey);
   const F_weather = conditionFactor(config, 'weather', segment?.weather || 'clear', targetKey);
   const F_detectability = conditionFactor(config, 'detectability_level', segment?.detectability_level ?? 3, targetKey);
 
+  // condition_multiplier_for_target = F_time * F_weather * F_detectability
   const C_t = F_time * F_weather * F_detectability;
-  const S_ref_raw = S_base * C_t;
+
+  // effective_detectability_for_target = base_detectability * condition_multiplier
+  const D_eff = base_detectability * C_t;
+
+  // reference_critical_spacing_raw = base_reference_critical_spacing_m (NOT multiplied by conditions)
+  const S_ref_raw = base_reference_critical_spacing_m;
   const S_ref = clamp(S_ref_raw, bounds.min, bounds.max);
-  const E_space = spacingEffectiveness(S_ref, Number(segment?.critical_spacing_m), k);
+
+  // spacing_effectiveness_for_target = min(1, (S_ref / S_act)^spacing_exponent)
+  const E_space = spacingEffectiveness(S_ref, Number(segment?.critical_spacing_m), spacing_exponent);
+
+  // responsiveness_multiplier
   const response = responseComponents(searchLevel || {}, config, targetKey);
   const M_resp = response.M_resp;
+
+  // completion_multiplier = clamp(area_coverage_pct / 100, 0, 1)
   const M_comp = completionMultiplier(segment || {});
 
-  const POD_pre = POD_ceiling * E_space * M_resp;
-  const POD_final = clamp(POD_pre * M_comp, 0, 0.99);
+  // Exponential POD formula:
+  // POD = clamp((1 - exp(-k * D_eff * E_space * M_resp)) * M_comp, 0, 0.99)
+  const POD_raw = 1 - Math.exp(-calibration_constant_k * D_eff * E_space * M_resp);
+  const POD_final = clamp(POD_raw * M_comp, 0, 0.99);
 
   return {
     target: targetKey,
-    POD_ceiling,
-    S_base,
-    k,
+    // Per-target base values
+    base_detectability,
+    calibration_constant_k,
+    base_reference_critical_spacing_m,
+    spacing_exponent,
     min_ref: bounds.min,
     max_ref: bounds.max,
+    // Condition factors
     F_time,
     F_weather,
     F_detectability,
     C_t,
+    // Effective detectability
+    D_eff,
+    // Reference spacing (raw = base, not multiplied by conditions)
     S_ref_raw,
     S_ref,
+    // Spacing effectiveness
     E_space,
+    // Response
     M_resp,
-    M_comp,
-    POD_pre,
-    POD_final,
     auditory_bonus: response.auditory_bonus,
     visual_bonus: response.visual_bonus,
-    response_cap: response.cap
+    response_cap: response.cap,
+    // Completion
+    M_comp,
+    // Final POD
+    POD_raw,
+    POD_final
   };
 }
 
@@ -177,8 +222,7 @@ export function generateQaWarnings(segment, config) {
   const warnings = [];
   const flags = config?.qa_flags || {};
   const spacing = Number(segment?.critical_spacing_m);
-  const searched = Number(segment?.searched_fraction ?? 1);
-  const inaccessible = Number(segment?.inaccessible_fraction ?? 0);
+  const pct = Number(segment?.area_coverage_pct ?? 100);
 
   if (flags.warn_if_critical_spacing_m_lt_1 && spacing < 1) {
     warnings.push('Critical spacing is very small (< 1 m)');
@@ -186,11 +230,8 @@ export function generateQaWarnings(segment, config) {
   if (flags.warn_if_critical_spacing_m_gt_50 && spacing > 50) {
     warnings.push('Critical spacing is very large (> 50 m)');
   }
-  if (flags['warn_if_searched_fraction_lt_0.5'] && searched < 0.5) {
-    warnings.push('Searched fraction is low (< 50%)');
-  }
-  if (flags['warn_if_inaccessible_fraction_gt_0.4'] && inaccessible > 0.4) {
-    warnings.push('Inaccessible fraction is high (> 40%)');
+  if (flags.warn_if_area_coverage_pct_lt_50 && pct < 50) {
+    warnings.push('Area coverage is low (< 50%)');
   }
 
   return warnings;

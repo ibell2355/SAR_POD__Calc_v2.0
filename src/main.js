@@ -28,8 +28,7 @@ function newSegment() {
     weather: 'clear',
     detectability_level: 3,
     critical_spacing_m: 15,
-    searched_fraction: 1.0,
-    inaccessible_fraction: 0.0,
+    area_coverage_pct: 100,
     results: [],
     primaryTarget: null,
     qaWarnings: []
@@ -166,12 +165,12 @@ function handleInput(el) {
     const seg = state.segments.find((s) => s.id === segId);
     if (seg) {
       const segFields = [
-        'name', 'critical_spacing_m', 'searched_fraction', 'inaccessible_fraction',
+        'name', 'critical_spacing_m', 'area_coverage_pct',
         'time_of_day', 'weather', 'detectability_level'
       ];
       if (segFields.includes(name)) {
         if (type === 'number' || name === 'detectability_level'
-            || name === 'searched_fraction' || name === 'inaccessible_fraction') {
+            || name === 'area_coverage_pct') {
           seg[name] = Number(value);
         } else {
           seg[name] = value;
@@ -424,21 +423,19 @@ function migrateState(raw) {
       next.critical_spacing_m = Number(seg.actual_spacing_m);
     }
 
-    // Legacy field migration: area_coverage_pct -> searched_fraction / inaccessible_fraction
-    // Check the original saved seg (not next, which has newSegment defaults)
-    if (seg.searched_fraction == null && seg.area_coverage_pct != null) {
-      next.searched_fraction = clampNum(Number(seg.area_coverage_pct) / 100, 1.0, 0, 1);
-      next.inaccessible_fraction = 0;
+    // Legacy field migration: searched_fraction -> area_coverage_pct
+    if (seg.area_coverage_pct == null && seg.searched_fraction != null) {
+      next.area_coverage_pct = clampNum(Number(seg.searched_fraction) * 100, 100, 0, 100);
     }
 
     // Remove legacy fields
     delete next.segment_start_time;
     delete next.segment_end_time;
-    delete next.area_coverage_pct;
+    delete next.searched_fraction;
+    delete next.inaccessible_fraction;
 
     next.critical_spacing_m = clampNum(next.critical_spacing_m, 15, 0.1, 10000);
-    next.searched_fraction = clampNum(next.searched_fraction, 1.0, 0, 1);
-    next.inaccessible_fraction = clampNum(next.inaccessible_fraction, 0, 0, 1);
+    next.area_coverage_pct = clampNum(next.area_coverage_pct, 100, 0, 100);
     next.detectability_level = clampNum(Number(next.detectability_level), 3, 1, 5);
     next.results = [];
     next.primaryTarget = null;

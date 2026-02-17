@@ -53,8 +53,7 @@ input_schema:
         - 5
     execution:
       critical_spacing_m: number > 0
-      searched_fraction: number 0..1
-      inaccessible_fraction: number 0..1
+      area_coverage_pct: number 0..100
 
 targets:
   adult:
@@ -289,9 +288,8 @@ response_model:
   max_total_multiplier: 1.25
 
 completion_model:
-  # Hard limiter: completion multiplier always stays in [0, 1].
-  formula: completion_multiplier = max(0, min(1, searched_fraction - inaccessible_fraction))
-  use_strict_subtractive_formula: true
+  # Completion multiplier converts area coverage percentage to 0-1 range.
+  formula: completion_multiplier = clamp(area_coverage_pct / 100, 0, 1)
 
 formulas:
   # ===== Per-target condition multiplier =====
@@ -346,16 +344,14 @@ formulas:
         1 + auditory_response_bonus + visual_response_bonus
       )
 
-  # ===== Completion multiplier (hard limiter) =====
+  # ===== Completion multiplier =====
   completion_multiplier:
     text: >
       completion_multiplier =
-      max(
+      clamp(
+        area_coverage_pct / 100,
         0,
-        min(
-          1,
-          searched_fraction - inaccessible_fraction
-        )
+        1
       )
 
   # ===== Final exponential POD =====
@@ -380,8 +376,7 @@ formulas:
 qa_flags:
   warn_if_critical_spacing_m_lt_1: true
   warn_if_critical_spacing_m_gt_50: true
-  warn_if_searched_fraction_lt_0.5: true
-  warn_if_inaccessible_fraction_gt_0.4: true
+  warn_if_area_coverage_pct_lt_50: true
 
 calibration:
   notes:
@@ -405,8 +400,7 @@ audit:
     - weather
     - detectability_level
     - critical_spacing_m
-    - searched_fraction
-    - inaccessible_fraction
+    - area_coverage_pct
     - condition_multiplier_for_target
     - effective_detectability_for_target
     - reference_critical_spacing_m_for_target

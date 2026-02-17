@@ -102,10 +102,7 @@ export function renderSegment(root, segment, computed, savedLabel, configValid, 
       ${textField('Segment Name', 'name', segment.name)}
       <div class="grid-2">
         ${numField('Critical Spacing (m)', 'critical_spacing_m', segment.critical_spacing_m, '0.1', 'Distance between searchers')}
-      </div>
-      <div class="grid-2">
-        ${numField('Searched Fraction', 'searched_fraction', segment.searched_fraction, '0.01', 'Fraction of planned segment actually searched (0\u20131)')}
-        ${numField('Inaccessible Fraction', 'inaccessible_fraction', segment.inaccessible_fraction, '0.01', 'Fraction of segment inaccessible due to hazards/terrain (0\u20131)')}
+        ${numField('Area Coverage (%)', 'area_coverage_pct', segment.area_coverage_pct, '1', 'Account for incomplete segments or unsearchable area.')}
       </div>
 
       <h3>Time of Day</h3>
@@ -224,8 +221,7 @@ export function buildReportText(state, version, generatedAt) {
 
     const inputs = [
       `Critical Spacing: ${seg.critical_spacing_m} m`,
-      `Searched Fraction: ${seg.searched_fraction}`,
-      `Inaccessible Fraction: ${seg.inaccessible_fraction}`,
+      `Area Coverage: ${seg.area_coverage_pct}%`,
       `Time of Day: ${LABELS.time_of_day[seg.time_of_day] || seg.time_of_day}`,
       `Weather: ${LABELS.weather[seg.weather] || seg.weather}`,
       `Vegetation / Terrain / Detectability: ${seg.detectability_level}`
@@ -357,8 +353,7 @@ function reportSegmentHtml(segment) {
   const primaryResult = results.find((r) => r.target === segment.primaryTarget);
   const inputs = [
     `Critical Spacing: ${segment.critical_spacing_m} m`,
-    `Searched Fraction: ${segment.searched_fraction}`,
-    `Inaccessible Fraction: ${segment.inaccessible_fraction}`,
+    `Area Coverage: ${segment.area_coverage_pct}%`,
     `Time of Day: ${LABELS.time_of_day[segment.time_of_day] || segment.time_of_day}`,
     `Weather: ${LABELS.weather[segment.weather] || segment.weather}`,
     `Vegetation / Terrain / Detectability: ${segment.detectability_level}`
@@ -396,47 +391,52 @@ function reportDetailHtml(segment, r) {
     <details class="report-detail">
       <summary>Detailed Calculation \u2014 ${esc(prettyTarget(r.target))}</summary>
       <pre>Base values (per-target):
-  POD_ceiling = ${n(r.POD_ceiling)},  S_base = ${n(r.S_base)},  k = ${n(r.k)}
+  base_detectability = ${n(r.base_detectability)}
+  calibration_constant_k = ${n(r.calibration_constant_k)}
+  base_reference_critical_spacing_m = ${n(r.base_reference_critical_spacing_m)}
+  spacing_exponent = ${n(r.spacing_exponent)}
 
-Condition multipliers (per-target):
+Condition multiplier (per-target):
   F_time = ${n(r.F_time)},  F_weather = ${n(r.F_weather)},  F_detectability = ${n(r.F_detectability)}
-  C_t = F_time \u00d7 F_weather \u00d7 F_detectability = ${n(r.C_t)}
+  condition_multiplier = F_time \u00d7 F_weather \u00d7 F_detectability = ${n(r.C_t)}
 
-Reference spacing:
-  S_ref_raw = S_base \u00d7 C_t = ${n(r.S_base)} \u00d7 ${n(r.C_t)} = ${n(r.S_ref_raw)}
+Effective detectability:
+  D_eff = base_detectability \u00d7 condition_multiplier
+        = ${n(r.base_detectability)} \u00d7 ${n(r.C_t)} = ${n(r.D_eff)}
+
+Reference critical spacing:
+  S_ref_raw = base_reference_critical_spacing_m = ${n(r.S_ref_raw)}
   S_ref = clamp(${n(r.S_ref_raw)}, min=${n(r.min_ref)}, max=${n(r.max_ref)}) = ${n(r.S_ref)}
 
 Spacing effectiveness:
-  E_space = min(1, (S_ref / critical_spacing)^k)
-          = min(1, (${n(r.S_ref)} / ${n(segment.critical_spacing_m)})^${n(r.k)})
+  E_space = min(1, (S_ref / critical_spacing)^spacing_exponent)
+          = min(1, (${n(r.S_ref)} / ${n(segment.critical_spacing_m)})^${n(r.spacing_exponent)})
           = ${n(r.E_space)}
 
 Response multiplier:
   auditory_bonus = ${n(aud)},  visual_bonus = ${n(vis)},  cap = ${n(r.response_cap)}
   M_resp = min(cap, 1 + aud + vis) = ${n(r.M_resp)}
 
-Completion multiplier (strict subtractive):
-  M_comp = max(0, min(1, searched_fraction \u2212 inaccessible_fraction))
-         = max(0, min(1, ${n(segment.searched_fraction)} \u2212 ${n(segment.inaccessible_fraction)}))
+Completion multiplier:
+  M_comp = clamp(area_coverage_pct / 100, 0, 1)
+         = clamp(${n(segment.area_coverage_pct)} / 100, 0, 1)
          = ${n(r.M_comp)}
 
-Final:
-  POD_pre  = POD_ceiling \u00d7 E_space \u00d7 M_resp
-           = ${n(r.POD_ceiling)} \u00d7 ${n(r.E_space)} \u00d7 ${n(r.M_resp)}
-           = ${n(r.POD_pre)}
-  POD_final = clamp(POD_pre \u00d7 M_comp, 0, 0.99)
-            = clamp(${n(r.POD_pre)} \u00d7 ${n(r.M_comp)}, 0, 0.99)
+Final (exponential detection model):
+  POD_raw  = 1 \u2212 exp(\u2212k \u00d7 D_eff \u00d7 E_space \u00d7 M_resp)
+           = 1 \u2212 exp(\u2212${n(r.calibration_constant_k)} \u00d7 ${n(r.D_eff)} \u00d7 ${n(r.E_space)} \u00d7 ${n(r.M_resp)})
+           = ${n(r.POD_raw)}
+  POD_final = clamp(POD_raw \u00d7 M_comp, 0, 0.99)
+            = clamp(${n(r.POD_raw)} \u00d7 ${n(r.M_comp)}, 0, 0.99)
             = ${n(r.POD_final)}</pre>
     </details>`;
 }
 
 function reportDetailText(segment, r) {
-  const aud = r.auditory_bonus ?? 0;
-  const vis = r.visual_bonus ?? 0;
   return [
-    `    C_t=${n(r.C_t)}  S_ref=${n(r.S_ref)}  E_space=${n(r.E_space)}`,
+    `    C_t=${n(r.C_t)}  D_eff=${n(r.D_eff)}  S_ref=${n(r.S_ref)}  E_space=${n(r.E_space)}`,
     `    M_resp=${n(r.M_resp)}  M_comp=${n(r.M_comp)}`,
-    `    POD_pre=${n(r.POD_pre)}  POD_final=${n(r.POD_final)}`
+    `    POD_raw=${n(r.POD_raw)}  POD_final=${n(r.POD_final)}`
   ].join('\n');
 }
 
