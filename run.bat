@@ -18,6 +18,7 @@ if not exist node_modules (
 )
 
 echo Starting SAR PoD Calculator at http://localhost:4173 ...
+start http://localhost:4173
 call npm run start
 
 endlocal
