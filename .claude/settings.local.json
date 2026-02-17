@@ -3,7 +3,9 @@
     "allow": [
       "Bash(node --test)",
       "Bash(node -e:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(npx vitest run)",
+      "Bash(node --test:*)"
     ]
   }
 }

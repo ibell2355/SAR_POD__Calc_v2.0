@@ -120,6 +120,12 @@ export function selectedTargets(searchLevel) {
     return searchLevel.active_targets || [];
   }
   const targets = [];
-  if (searchLevel.remains_state) targets.push(searchLevel.remains_state);
-  return targets.concat(searchLevel.evidence_classes || []);
+  const cats = searchLevel.evidence_categories || ['remains'];
+  if (cats.includes('remains') && searchLevel.remains_state) {
+    targets.push(searchLevel.remains_state);
+  }
+  if (cats.includes('evidence')) {
+    targets.push(...(searchLevel.evidence_classes || []));
+  }
+  return targets;
 }

@@ -214,6 +214,11 @@ textarea { min-height: 90px; resize: vertical; }
 #search-survey[data-search-type="active_missing_person"] .evidence-only { display: none; }
 #search-survey[data-search-type="evidence_historical"] .active-only { display: none; }
 
+/* ---- Evidence category sub-option show/hide ---- */
+
+#evidence-cats[data-has-remains="false"] .remains-options { display: none; }
+#evidence-cats[data-has-evidence="false"] .evidence-options { display: none; }
+
 /* ---- Sticky POD result ---- */
 
 .sticky-result {
@@ -231,6 +236,12 @@ textarea { min-height: 90px; resize: vertical; }
   font-weight: 800;
   color: var(--primary);
   margin: 0;
+}
+
+.pod-average {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 4px 0 0;
 }
 
 .pod-detail-list {

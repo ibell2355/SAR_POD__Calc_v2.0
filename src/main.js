@@ -17,7 +17,8 @@ const defaultSearch = {
   auditory: 'none',
   visual: 'none',
   remains_state: 'intact_remains',
-  evidence_classes: []
+  evidence_classes: [],
+  evidence_categories: ['remains']
 };
 
 function newSegment() {
@@ -212,11 +213,28 @@ function handleInput(el) {
   }
 
   // ---- Search-level checkboxes ----
-  if (['active_targets', 'evidence_classes'].includes(name) && type === 'checkbox') {
+  if (['active_targets', 'evidence_classes', 'evidence_categories'].includes(name) && type === 'checkbox') {
     const arr = state.searchLevel[name] || [];
-    state.searchLevel[name] = checked
+    const next = checked
       ? [...new Set([...arr, value])]
       : arr.filter((x) => x !== value);
+
+    // Prevent deselecting the last active target
+    if (name === 'active_targets' && next.length === 0) {
+      el.checked = true;
+      return;
+    }
+
+    state.searchLevel[name] = next;
+
+    // Update evidence category visibility
+    if (name === 'evidence_categories') {
+      const catsEl = document.getElementById('evidence-cats');
+      if (catsEl) {
+        catsEl.dataset.hasRemains = next.includes('remains');
+        catsEl.dataset.hasEvidence = next.includes('evidence');
+      }
+    }
 
     recomputeAllSegments();
     const listEl = document.getElementById('segment-list');
@@ -374,6 +392,9 @@ function migrateState(raw) {
   searchLevel.evidence_classes = Array.isArray(searchLevel.evidence_classes)
     ? searchLevel.evidence_classes
     : [];
+  searchLevel.evidence_categories = Array.isArray(searchLevel.evidence_categories)
+    ? searchLevel.evidence_categories
+    : ['remains'];
 
   const segments = (raw.segments || []).map((seg) => {
     const next = { ...newSegment(), ...seg };

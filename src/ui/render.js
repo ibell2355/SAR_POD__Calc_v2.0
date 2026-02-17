@@ -2,14 +2,21 @@ import { durationMinutes } from '../utils/math.js';
 
 export const LABELS = {
   time_of_day: { day: 'Day', dusk_dawn: 'Dusk/Dawn', night: 'Night' },
-  weather: { clear: 'Clear', rain: 'Rain', snow: 'Snow' },
-  detectability_level: { '1': '1', '2': '2', '3': '3', '4': '4', '5': '5' },
+  weather: { clear: 'Clear', rain: 'Raining', snow: 'Snowing' },
+  detectability_level: {
+    '1': '1 - Low Concealment',
+    '2': '2 - Low/Moderate Concealment',
+    '3': '3 - Moderate Concealment',
+    '4': '4 - Moderate/High Concealment',
+    '5': '5 - High Concealment'
+  },
   type_of_search: {
     active_missing_person: 'Active Missing Person',
     evidence_historical: 'Evidence/Historical'
   },
   active_targets: { adult: 'Adult', child: 'Child', large_clues: 'Large Clues', small_clues: 'Small Clues' },
   responsiveness: { none: 'None', possible: 'Possible', likely: 'Likely' },
+  evidence_categories: { remains: 'Remains', evidence: 'Evidence' },
   remains_state: {
     intact_remains: 'Intact Remains',
     partially_skeletonized: 'Partially Skeletonized',
@@ -31,16 +38,16 @@ export function renderHome(root, state, savedLabel, configValid, configError) {
         <h2>Session</h2>
         <span id="save-indicator" class="subtle">${esc(savedLabel)}</span>
       </div>
-      ${textField('Your name', 'your_name', state.session.your_name)}
-      ${textField('Search name', 'search_name', state.session.search_name, 'Do not include case numbers or subjects\u2019 names')}
-      ${textField('Team name', 'team_name', state.session.team_name)}
+      ${textField('Your Name', 'your_name', state.session.your_name)}
+      ${textField('Search Name', 'search_name', state.session.search_name, 'Do not include case numbers or subjects\u2019 names')}
+      ${textField('Team Name', 'team_name', state.session.team_name)}
       ${searchSurvey(state.searchLevel)}
     </section>
 
     <section class="panel">
       <div class="row between align-center">
         <h2>Segments</h2>
-        <button class="btn" data-action="add-segment">Add segment</button>
+        <button class="btn" data-action="add-segment">Add Segment</button>
       </div>
       <div id="segment-list" class="segment-list">
         ${segmentListHtml(state.segments)}
@@ -50,9 +57,9 @@ export function renderHome(root, state, savedLabel, configValid, configError) {
     <section class="panel">
       <div class="action-grid">
         <button class="btn" data-action="share">Share</button>
-        <button class="btn" data-action="view-report">View report</button>
-        <button class="btn" data-action="copy-report">Copy report</button>
-        <button class="btn btn-danger" data-action="new-session">New session (Clear)</button>
+        <button class="btn" data-action="view-report">View Report</button>
+        <button class="btn" data-action="copy-report">Copy Report</button>
+        <button class="btn btn-danger" data-action="new-session">New Session (Clear)</button>
       </div>
       <p class="subtle" style="text-align:center;margin-top:8px">All data stays on your device. Nothing is sent to any server.</p>
     </section>
@@ -96,22 +103,23 @@ export function renderSegment(root, segment, computed, savedLabel, configValid, 
 
     <section class="panel">
       <h2>Edit Segment</h2>
-      ${textField('Segment name (required)', 'name', segment.name)}
+      ${textField('Segment Name', 'name', segment.name)}
       <div class="grid-2">
-        ${numField('Critical spacing (meters)', 'critical_spacing_m', segment.critical_spacing_m, '0.1')}
-        ${numField('Area coverage (%)', 'area_coverage_pct', segment.area_coverage_pct, '1')}
+        ${numField('Critical Spacing (m)', 'critical_spacing_m', segment.critical_spacing_m, '0.1', 'Distance between searchers')}
+        ${numField('Area Coverage (%)', 'area_coverage_pct', segment.area_coverage_pct, '1', 'Account for incomplete segments or unsearchable area.')}
       </div>
       <div class="grid-2">
-        ${timeField('Segment start time (24h HH:MM)', 'segment_start_time', segment.segment_start_time)}
-        ${timeField('Segment end time (24h HH:MM)', 'segment_end_time', segment.segment_end_time)}
+        ${timeField('Segment Start Time', 'segment_start_time', segment.segment_start_time)}
+        ${timeField('Segment End Time', 'segment_end_time', segment.segment_end_time)}
       </div>
       <p id="duration-display" class="subtle">${d === null ? 'Duration: Invalid time' : `Duration: ${d} min`}</p>
 
-      <h3>Time of day</h3>
+      <h3>Time of Day</h3>
       ${radioChips('time_of_day', LABELS.time_of_day, segment.time_of_day)}
       <h3>Weather</h3>
       ${radioChips('weather', LABELS.weather, segment.weather)}
-      <h3>Detectability level (1\u20135)</h3>
+      <h3>Vegetation / Terrain / Detectability</h3>
+      <span class="hint">Consider all factors that would make your primary subject more difficult to spot. For example, evidence buried in duff layer, snow cover, hiding places, natural shelters, or hard-to-spot natural shelters, dense vegetation, etc.</span>
       ${radioChips('detectability_level', LABELS.detectability_level, String(segment.detectability_level))}
     </section>
 
@@ -131,11 +139,15 @@ export function podResultHtml(segment, computed) {
   const primaryResult = results.find((r) => r.target === primary);
   const podPct = primaryResult ? `${(primaryResult.POD_final * 100).toFixed(1)}%` : '\u2014';
 
-  let html = `<p class="pod-large">POD ${podPct}</p>`;
-
-  if (primary) {
-    html += `<p><strong>Primary target:</strong> ${esc(prettyTarget(primary))}</p>`;
+  // Average POD = mean of all targets
+  let avgPct = '\u2014';
+  if (results.length > 0) {
+    const avg = results.reduce((sum, r) => sum + r.POD_final, 0) / results.length;
+    avgPct = `${(avg * 100).toFixed(1)}%`;
   }
+
+  let html = `<p class="pod-large">Primary POD: ${podPct}</p>`;
+  html += `<p class="pod-average">Average POD: ${avgPct}</p>`;
 
   if (results.length > 1) {
     html += '<div style="margin-top:6px">' +
@@ -148,22 +160,6 @@ export function podResultHtml(segment, computed) {
     html += '<p class="subtle">Select targets on the landing page.</p>';
   }
 
-  if (primaryResult) {
-    html += `
-      <details style="margin-top:8px">
-        <summary>Calculation details</summary>
-        <dl class="pod-detail-list">
-          <dt>S_base</dt><dd>${n(primaryResult.S_base)}</dd>
-          <dt>C_t (condition)</dt><dd>${n(primaryResult.C_t)}</dd>
-          <dt>S_ref</dt><dd>${n(primaryResult.S_ref)} m</dd>
-          <dt>E_space</dt><dd>${n(primaryResult.E_space)}</dd>
-          <dt>M_resp</dt><dd>${n(primaryResult.M_resp)}</dd>
-          <dt>M_comp</dt><dd>${n(primaryResult.M_comp)}</dd>
-          <dt>POD_pre</dt><dd>${n(primaryResult.POD_pre)}</dd>
-          <dt>POD_final</dt><dd>${n(primaryResult.POD_final)}</dd>
-        </dl>
-      </details>`;
-  }
   return html;
 }
 
@@ -186,9 +182,9 @@ export function renderReport(root, state, version, generatedAt, configValid, con
 
         <h3>Session</h3>
         <ul>
-          <li><strong>Your name:</strong> ${esc(state.session.your_name || '\u2014')}</li>
-          <li><strong>Search name:</strong> ${esc(state.session.search_name || '\u2014')}</li>
-          <li><strong>Team name:</strong> ${esc(state.session.team_name || '\u2014')}</li>
+          <li><strong>Your Name:</strong> ${esc(state.session.your_name || '\u2014')}</li>
+          <li><strong>Search Name:</strong> ${esc(state.session.search_name || '\u2014')}</li>
+          <li><strong>Team Name:</strong> ${esc(state.session.team_name || '\u2014')}</li>
         </ul>
 
         ${(state.segments || []).map((seg, i) => reportSegmentHtml(seg, i + 1)).join('')}
@@ -207,9 +203,9 @@ export function buildReportText(state, version, generatedAt) {
     `App version: ${version}`,
     `Generated: ${generatedAt}`,
     '',
-    `Your name: ${state.session.your_name || '\u2014'}`,
-    `Search name: ${state.session.search_name || '\u2014'}`,
-    `Team name: ${state.session.team_name || '\u2014'}`,
+    `Your Name: ${state.session.your_name || '\u2014'}`,
+    `Search Name: ${state.session.search_name || '\u2014'}`,
+    `Team Name: ${state.session.team_name || '\u2014'}`,
     ''
   ];
 
@@ -217,16 +213,29 @@ export function buildReportText(state, version, generatedAt) {
     lines.push(`--- Segment ${i + 1}: ${seg.name || 'Unnamed'} ---`);
 
     const inputs = [
-      `Critical spacing: ${seg.critical_spacing_m} m`,
-      `Area coverage: ${seg.area_coverage_pct}%`,
+      `Critical Spacing: ${seg.critical_spacing_m} m`,
+      `Area Coverage: ${seg.area_coverage_pct}%`,
       `Time: ${seg.segment_start_time}\u2013${seg.segment_end_time}`,
-      `Time of day: ${LABELS.time_of_day[seg.time_of_day] || seg.time_of_day}`,
+      `Time of Day: ${LABELS.time_of_day[seg.time_of_day] || seg.time_of_day}`,
       `Weather: ${LABELS.weather[seg.weather] || seg.weather}`,
-      `Detectability: ${seg.detectability_level}`
+      `Vegetation / Terrain / Detectability: ${seg.detectability_level}`
     ];
     lines.push(`Inputs: ${inputs.join(' | ')}`);
 
-    (seg.results || []).forEach((r) => {
+    // Primary POD
+    const results = seg.results || [];
+    const primaryResult = results.find((r) => r.target === seg.primaryTarget);
+    if (primaryResult) {
+      lines.push(`Primary POD: ${(primaryResult.POD_final * 100).toFixed(1)}%`);
+    }
+
+    // Average POD
+    if (results.length > 0) {
+      const avg = results.reduce((sum, r) => sum + r.POD_final, 0) / results.length;
+      lines.push(`Average POD: ${(avg * 100).toFixed(1)}%`);
+    }
+
+    results.forEach((r) => {
       lines.push(`  ${prettyTarget(r.target)}: ${(r.POD_final * 100).toFixed(1)}%`);
       lines.push(reportDetailText(seg, r));
     });
@@ -241,6 +250,7 @@ export function buildReportText(state, version, generatedAt) {
    ================================================================ */
 
 function searchSurvey(s) {
+  const cats = s.evidence_categories || [];
   return `
     <div class="survey-group" id="search-survey" data-search-type="${s.type_of_search}">
       <h3>Type of Search</h3>
@@ -248,6 +258,7 @@ function searchSurvey(s) {
 
       <div class="active-only">
         <h3>Searching For</h3>
+        <span class="hint">Select all that apply</span>
         ${checkboxChips('active_targets', LABELS.active_targets, s.active_targets)}
         <h3>Subject Responsiveness</h3>
         <div class="grid-2">
@@ -262,12 +273,18 @@ function searchSurvey(s) {
         </div>
       </div>
 
-      <div class="evidence-only">
+      <div class="evidence-only" id="evidence-cats" data-has-remains="${cats.includes('remains')}" data-has-evidence="${cats.includes('evidence')}">
         <h3>Searching For</h3>
-        <p class="subtle" style="margin:0 0 4px"><strong>Remains state</strong></p>
-        ${radioChips('remains_state', LABELS.remains_state, s.remains_state)}
-        <p class="subtle" style="margin:6px 0 4px"><strong>Evidence classes</strong></p>
-        ${checkboxChips('evidence_classes', LABELS.evidence_classes, s.evidence_classes)}
+        <span class="hint">Select all that apply</span>
+        ${checkboxChips('evidence_categories', LABELS.evidence_categories, cats)}
+        <div class="remains-options">
+          <p class="subtle" style="margin:6px 0 4px"><strong>Remains State</strong></p>
+          ${radioChips('remains_state', LABELS.remains_state, s.remains_state)}
+        </div>
+        <div class="evidence-options">
+          <p class="subtle" style="margin:6px 0 4px"><strong>Evidence Classes</strong></p>
+          ${checkboxChips('evidence_classes', LABELS.evidence_classes, s.evidence_classes)}
+        </div>
       </div>
     </div>`;
 }
@@ -279,23 +296,37 @@ function configNotice(valid, error) {
 
 function reportSegmentHtml(segment, index) {
   const results = segment.results || [];
+  const primaryResult = results.find((r) => r.target === segment.primaryTarget);
   const inputs = [
-    `Critical spacing: ${segment.critical_spacing_m} m`,
-    `Area coverage: ${segment.area_coverage_pct}%`,
+    `Critical Spacing: ${segment.critical_spacing_m} m`,
+    `Area Coverage: ${segment.area_coverage_pct}%`,
     `Time: ${segment.segment_start_time}\u2013${segment.segment_end_time}`,
-    `Time of day: ${LABELS.time_of_day[segment.time_of_day] || segment.time_of_day}`,
+    `Time of Day: ${LABELS.time_of_day[segment.time_of_day] || segment.time_of_day}`,
     `Weather: ${LABELS.weather[segment.weather] || segment.weather}`,
-    `Detectability: ${segment.detectability_level}`
+    `Vegetation / Terrain / Detectability: ${segment.detectability_level}`
   ];
+
+  // Primary POD
+  const primaryPod = primaryResult ? `${(primaryResult.POD_final * 100).toFixed(1)}%` : '\u2014';
+
+  // Average POD
+  let avgPod = '\u2014';
+  if (results.length > 0) {
+    const avg = results.reduce((sum, r) => sum + r.POD_final, 0) / results.length;
+    avgPod = `${(avg * 100).toFixed(1)}%`;
+  }
 
   return `
     <div class="report-segment">
       <h3>Segment ${index}: ${esc(segment.name || 'Unnamed')}</h3>
+      <p class="pod-large" style="font-size:1.4rem">Primary POD: ${primaryPod}</p>
+      <p class="pod-average">Average POD: ${avgPod}</p>
       ${results.length
         ? `<p>${results.map((r) => `<strong>${esc(prettyTarget(r.target))}:</strong> ${(r.POD_final * 100).toFixed(1)}%`).join(' &middot; ')}</p>`
         : '<p class="subtle">No targets selected.</p>'}
       <h4>Inputs</h4>
       <ul>${inputs.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>
+      <p class="hint" style="margin-top:12px;font-style:italic">For development only</p>
       ${results.map((r) => reportDetailHtml(segment, r)).join('')}
     </div>`;
 }
@@ -366,11 +397,11 @@ function checkboxChips(name, options, current = []) {
 }
 
 function textField(label, name, value, hint = '') {
-  return `<label>${esc(label)}<input name="${name}" value="${esc(value || '')}"/>${hint ? `<span class="hint">${hint}</span>` : ''}</label>`;
+  return `<label>${esc(label)}${hint ? `<span class="hint">${hint}</span>` : ''}<input name="${name}" value="${esc(value || '')}"/></label>`;
 }
 
-function numField(label, name, value, step) {
-  return `<label>${esc(label)}<input type="number" step="${step}" name="${name}" value="${esc(value ?? '')}"/></label>`;
+function numField(label, name, value, step, hint = '') {
+  return `<label>${esc(label)}${hint ? `<span class="hint">${hint}</span>` : ''}<input type="number" step="${step}" name="${name}" value="${esc(value ?? '')}"/></label>`;
 }
 
 function timeField(label, name, value) {
