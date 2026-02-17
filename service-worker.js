@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sar-pod-v2-cache-v1';
+const CACHE_NAME = 'sar-pod-v2-cache-v2';
 const APP_SHELL = [
   './',
   './index.html',
@@ -22,11 +22,39 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request).then((res) => {
-      const copy = res.clone();
-      caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-      return res;
-    }).catch(() => cached))
-  );
+  if (event.request.method !== 'GET') return;
+
+  const requestUrl = new URL(event.request.url);
+  const isHtmlRequest = event.request.mode === 'navigate' || event.request.destination === 'document';
+  const isSameOrigin = requestUrl.origin === self.location.origin;
+  const isStaticAsset = isSameOrigin && ['script', 'style', 'image', 'font'].includes(event.request.destination);
+
+  if (isHtmlRequest) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put('./index.html', copy));
+          return response;
+        })
+        .catch(() => caches.match(event.request).then((cached) => cached || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  if (isStaticAsset) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached;
+        return fetch(event.request).then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
 });

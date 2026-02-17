@@ -23,6 +23,7 @@ export function renderLandingPage(el, app) {
   el.innerHTML = `
     ${header(app)}
     <main class="page-wrap">
+      ${startupNotice(app)}
       <section class="card">
         <div class="card-title-row"><h2>Session</h2><span class="small saved-pill">${savedLabel}</span></div>
         <div class="grid-3">
@@ -59,6 +60,7 @@ export function renderSegmentPage(el, app, segment, computed) {
   el.innerHTML = `
     ${header(app)}
     <main class="page-wrap slim">
+      ${startupNotice(app)}
       <section class="card">
         <div class="card-title-row">
           <button data-action="go-home" class="btn-link">← Back</button>
@@ -99,6 +101,7 @@ export function renderSegmentPage(el, app, segment, computed) {
 export function renderReportPage(el, app, generatedAt) {
   el.innerHTML = `
     <main class="page-wrap report">
+      ${startupNotice(app)}
       <section class="card">
         <div class="card-title-row">
           <button data-action="go-home" class="btn-link">← Back</button>
@@ -224,6 +227,25 @@ function header(app) {
       </div>
       <span class="status-pill ${app.online ? 'online' : 'offline'}">${app.online ? 'Online' : 'Offline'} / Offline ready</span>
     </header>
+  `;
+}
+
+function startupNotice(app) {
+  const issues = app.configErrors || [];
+  const hasConfigIssue = app.configValid === false;
+  const versionNotice = app.newVersionAvailable ? '<div class="notice notice-info">New version available. Refreshing…</div>' : '';
+  if (!hasConfigIssue) return versionNotice;
+
+  const conciseMessage = app.diagnostics || 'Configuration failed to load. Emergency defaults are active.';
+  return `
+    <section class="notice notice-error" role="alert">
+      <h2>Startup Configuration Warning</h2>
+      <p>${escapeHtml(conciseMessage)}</p>
+      <p class="small"><strong>Config path attempted:</strong> ${escapeHtml(app.configPath || './config/SAR_POD_V2_config.yaml')}</p>
+      ${issues.length ? `<details><summary>Details</summary><pre>${escapeHtml(JSON.stringify(issues, null, 2))}</pre></details>` : ''}
+      <p class="small">The app is running with safe defaults to avoid a blank screen. Validate your config to restore normal calculations.</p>
+    </section>
+    ${versionNotice}
   `;
 }
 
