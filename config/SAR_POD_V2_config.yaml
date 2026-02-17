@@ -1,60 +1,59 @@
 version: 1.1-exp
 name: SAR_POD_V2_exponential
-description: Exponential POD model with per-target condition factors, spacing effectiveness, responsiveness, and completion limiter.
+description: Exponential POD model where per-target conditions adjust the reference critical spacing, benefit from tighter-than-reference spacing is capped by clamping actual spacing to a per-target minimum effective value, responsiveness applies only to enabled groups, and area_coverage_pct is a hard completion cap.
 units:
   distance: m
   time: 24h
   probability: 0-1
-
 input_schema:
   search_level:
     type_of_search:
-      - active_missing_person
-      - evidence_historical
+    - active_missing_person
+    - evidence_historical
     searching_for:
       active_missing_person:
-        - adult
-        - child
-        - large_clues
-        - small_clues
+      - adult
+      - child
+      - large_clues
+      - small_clues
       evidence_historical:
         remains_state:
-          - intact_remains
-          - partially_skeletonized
-          - skeletal_remains
+        - intact_remains
+        - partially_skeletonized
+        - skeletal_remains
         evidence_classes:
-          - large_evidence
-          - small_evidence
+        - large_evidence
+        - small_evidence
     subject_responsiveness:
       auditory:
-        - not expected
-        - possible
-        - likely
+      - not expected
+      - possible
+      - likely
       visual:
-        - not expected
-        - possible
-        - likely
-
+      - not expected
+      - possible
+      - likely
   segment_level:
     conditions:
       time_of_day:
-        - day
-        - dusk_dawn
-        - night
+      - day
+      - dusk_dawn
+      - night
       weather:
-        - clear
-        - rain
-        - snow
+      - clear
+      - rain
+      - snow
       detectability_level:
-        - 1
-        - 2
-        - 3
-        - 4
-        - 5
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
     execution:
       critical_spacing_m: number > 0
+      searched_fraction: number 0..1
+      inaccessible_fraction: number 0..1
       area_coverage_pct: number 0..100
-
 targets:
   adult:
     group: active_missing_person
@@ -62,221 +61,207 @@ targets:
     calibration_constant_k: 1.0
     base_reference_critical_spacing_m: 8.0
     spacing_exponent: 2.0
-
   child:
     group: active_missing_person
     base_detectability: 0.9
     calibration_constant_k: 1.05
     base_reference_critical_spacing_m: 7.0
     spacing_exponent: 2.2
-
   large_clues:
     group: active_missing_person
     base_detectability: 0.7
     calibration_constant_k: 1.0
     base_reference_critical_spacing_m: 7.0
     spacing_exponent: 2.2
-
   small_clues:
     group: active_missing_person
     base_detectability: 0.5
     calibration_constant_k: 0.95
     base_reference_critical_spacing_m: 5.5
     spacing_exponent: 2.6
-
   intact_remains:
     group: evidence_historical
     base_detectability: 0.6
     calibration_constant_k: 0.95
     base_reference_critical_spacing_m: 6.0
     spacing_exponent: 2.4
-
   partially_skeletonized:
     group: evidence_historical
     base_detectability: 0.4
     calibration_constant_k: 0.9
     base_reference_critical_spacing_m: 5.0
     spacing_exponent: 2.6
-
   skeletal_remains:
     group: evidence_historical
     base_detectability: 0.4
     calibration_constant_k: 0.9
     base_reference_critical_spacing_m: 5.0
     spacing_exponent: 2.6
-
   large_evidence:
     group: evidence_historical
     base_detectability: 0.7
     calibration_constant_k: 1.0
     base_reference_critical_spacing_m: 7.0
     spacing_exponent: 2.2
-
   small_evidence:
     group: evidence_historical
     base_detectability: 0.5
     calibration_constant_k: 0.95
     base_reference_critical_spacing_m: 5.5
     spacing_exponent: 2.6
-
 primary_target_hierarchy:
   active_missing_person:
     order:
-      - adult
-      - child
-      - large_clues
-      - small_clues
+    - adult
+    - child
+    - large_clues
+    - small_clues
   evidence_historical:
     order:
-      - intact_remains
-      - partially_skeletonized
-      - skeletal_remains
-      - large_evidence
-      - small_evidence
-
-# NOTE: Condition factors below are preserved exactly from the first attachment (SAR_POD_V2_config1_exponential.yaml).
+    - intact_remains
+    - partially_skeletonized
+    - skeletal_remains
+    - large_evidence
+    - small_evidence
 condition_factors:
-  time_of_day:
-    day:
-      adult: 1.0
-      child: 1.0
-      large_clues: 1.0
-      small_clues: 1.0
-      intact_remains: 1.0
-      partially_skeletonized: 1.0
-      skeletal_remains: 1.0
-      large_evidence: 1.0
-      small_evidence: 1.0
-    dusk_dawn:
-      adult: 0.9
-      child: 0.9
-      large_clues: 0.82
-      small_clues: 0.72
-      intact_remains: 0.84
-      partially_skeletonized: 0.78
-      skeletal_remains: 0.74
-      large_evidence: 0.82
-      small_evidence: 0.72
-    night:
-      adult: 0.72
-      child: 0.7
-      large_clues: 0.58
-      small_clues: 0.42
-      intact_remains: 0.6
-      partially_skeletonized: 0.5
-      skeletal_remains: 0.46
-      large_evidence: 0.58
-      small_evidence: 0.42
-
-  weather:
-    clear:
-      adult: 1.0
-      child: 1.0
-      large_clues: 1.0
-      small_clues: 1.0
-      intact_remains: 1.0
-      partially_skeletonized: 1.0
-      skeletal_remains: 1.0
-      large_evidence: 1.0
-      small_evidence: 1.0
-    rain:
-      adult: 0.9
-      child: 0.9
-      large_clues: 0.84
-      small_clues: 0.74
-      intact_remains: 0.86
-      partially_skeletonized: 0.8
-      skeletal_remains: 0.76
-      large_evidence: 0.84
-      small_evidence: 0.74
-    snow:
-      adult: 0.82
-      child: 0.82
-      large_clues: 0.74
-      small_clues: 0.6
-      intact_remains: 0.76
-      partially_skeletonized: 0.66
-      skeletal_remains: 0.62
-      large_evidence: 0.74
-      small_evidence: 0.6
-
-  detectability_level:
-    '1':
-      adult: 1.1
-      child: 1.08
-      large_clues: 1.05
-      small_clues: 1.0
-      intact_remains: 1.05
-      partially_skeletonized: 1.0
-      skeletal_remains: 0.98
-      large_evidence: 1.05
-      small_evidence: 1.0
-    '2':
-      adult: 1.0
-      child: 0.98
-      large_clues: 0.94
-      small_clues: 0.84
-      intact_remains: 0.95
-      partially_skeletonized: 0.9
-      skeletal_remains: 0.86
-      large_evidence: 0.94
-      small_evidence: 0.84
-    '3':
-      adult: 0.88
-      child: 0.86
-      large_clues: 0.76
-      small_clues: 0.62
-      intact_remains: 0.78
-      partially_skeletonized: 0.7
-      skeletal_remains: 0.66
-      large_evidence: 0.76
-      small_evidence: 0.62
-    '4':
-      adult: 0.74
-      child: 0.72
-      large_clues: 0.58
-      small_clues: 0.44
-      intact_remains: 0.6
-      partially_skeletonized: 0.52
-      skeletal_remains: 0.48
-      large_evidence: 0.58
-      small_evidence: 0.44
-    '5':
-      adult: 0.6
-      child: 0.58
-      large_clues: 0.44
-      small_clues: 0.3
-      intact_remains: 0.46
-      partially_skeletonized: 0.38
-      skeletal_remains: 0.34
-      large_evidence: 0.44
-      small_evidence: 0.3
-
-reference_spacing_bounds_m:
-  min_by_target:
-    adult: 3
-    child: 3
-    large_clues: 2
-    small_clues: 1
-    intact_remains: 2
-    partially_skeletonized: 1.5
-    skeletal_remains: 1.2
-    large_evidence: 2
-    small_evidence: 1
-  max_by_target:
-    adult: 40
-    child: 35
-    large_clues: 25
-    small_clues: 10
-    intact_remains: 28
-    partially_skeletonized: 18
-    skeletal_remains: 15
-    large_evidence: 25
-    small_evidence: 10
-
+  adult:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.9
+      night: 0.72
+    weather:
+      clear: 1.0
+      rain: 0.9
+      snow: 0.82
+    detectability_level:
+      '1': 1.1
+      '2': 1.0
+      '3': 0.88
+      '4': 0.74
+      '5': 0.6
+  child:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.9
+      night: 0.7
+    weather:
+      clear: 1.0
+      rain: 0.9
+      snow: 0.82
+    detectability_level:
+      '1': 1.08
+      '2': 0.98
+      '3': 0.86
+      '4': 0.72
+      '5': 0.58
+  large_clues:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.82
+      night: 0.58
+    weather:
+      clear: 1.0
+      rain: 0.84
+      snow: 0.74
+    detectability_level:
+      '1': 1.05
+      '2': 0.94
+      '3': 0.76
+      '4': 0.58
+      '5': 0.44
+  small_clues:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.72
+      night: 0.42
+    weather:
+      clear: 1.0
+      rain: 0.74
+      snow: 0.6
+    detectability_level:
+      '1': 1.0
+      '2': 0.84
+      '3': 0.62
+      '4': 0.44
+      '5': 0.3
+  intact_remains:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.84
+      night: 0.6
+    weather:
+      clear: 1.0
+      rain: 0.86
+      snow: 0.76
+    detectability_level:
+      '1': 1.05
+      '2': 0.95
+      '3': 0.78
+      '4': 0.6
+      '5': 0.46
+  partially_skeletonized:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.78
+      night: 0.5
+    weather:
+      clear: 1.0
+      rain: 0.8
+      snow: 0.66
+    detectability_level:
+      '1': 1.0
+      '2': 0.9
+      '3': 0.7
+      '4': 0.52
+      '5': 0.38
+  skeletal_remains:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.74
+      night: 0.46
+    weather:
+      clear: 1.0
+      rain: 0.76
+      snow: 0.62
+    detectability_level:
+      '1': 0.98
+      '2': 0.86
+      '3': 0.66
+      '4': 0.48
+      '5': 0.34
+  large_evidence:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.82
+      night: 0.58
+    weather:
+      clear: 1.0
+      rain: 0.84
+      snow: 0.74
+    detectability_level:
+      '1': 1.05
+      '2': 0.94
+      '3': 0.76
+      '4': 0.58
+      '5': 0.44
+  small_evidence:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.72
+      night: 0.42
+    weather:
+      clear: 1.0
+      rain: 0.74
+      snow: 0.6
+    detectability_level:
+      '1': 1.0
+      '2': 0.84
+      '3': 0.62
+      '4': 0.44
+      '5': 0.3
 response_model:
   enabled_for_groups:
-    - active_missing_person
+  - active_missing_person
   auditory_bonus:
     none: 0.0
     possible: 0.05
@@ -286,125 +271,94 @@ response_model:
     possible: 0.03
     likely: 0.07
   max_total_multiplier: 1.25
-
 completion_model:
-  # Completion multiplier converts area coverage percentage to 0-1 range.
   formula: completion_multiplier = clamp(area_coverage_pct / 100, 0, 1)
-
+  description: Hard limiter based on searched area coverage percentage. Applied as the final multiplier on probability_of_detection.
 formulas:
-  # ===== Per-target condition multiplier =====
-  # condition_multiplier_for_target = time_of_day_factor_for_target * weather_factor_for_target * detectability_level_factor_for_target
   condition_multiplier:
-    text: >
-      condition_multiplier_for_target =
-      time_of_day_factor_for_target *
-      weather_factor_for_target *
-      detectability_level_factor_for_target
-
-  # ===== Effective detectability =====
-  # effective_detectability_for_target = base_detectability_for_target * condition_multiplier_for_target
-  effective_detectability:
-    text: >
-      effective_detectability_for_target =
-      base_detectability_for_target *
-      condition_multiplier_for_target
-
-  # ===== Reference (critical) spacing with clamp =====
-  # reference_critical_spacing_raw_for_target = base_reference_critical_spacing_m_for_target
-  # reference_critical_spacing_m_for_target = clamp(reference_critical_spacing_raw_for_target, reference_spacing_min_m_for_target, reference_spacing_max_m_for_target)
+    text: "condition_multiplier_for_target =\n  time_of_day_factor_for_target *\n  weather_factor_for_target *\n  detectability_level_factor_for_target\n"
+  base_hazard_rate:
+    text: "base_hazard_rate_for_target =\n  - ln(1 - base_detectability_for_target)\n"
   reference_critical_spacing:
-    raw_text: >
-      reference_critical_spacing_raw_for_target =
-      base_reference_critical_spacing_m_for_target
-    clamped_text: >
-      reference_critical_spacing_m_for_target =
-      clamp(
-        reference_critical_spacing_raw_for_target,
-        reference_spacing_min_m_for_target,
-        reference_spacing_max_m_for_target
-      )
-
-  # ===== Spacing effectiveness =====
-  # spacing_effectiveness_for_target = min(1, (reference_critical_spacing_m_for_target / actual_critical_spacing_m) ^ spacing_exponent_for_target)
-  spacing_effectiveness:
-    text: >
-      spacing_effectiveness_for_target =
-      min(
-        1,
-        (reference_critical_spacing_m_for_target / actual_critical_spacing_m) ^ spacing_exponent_for_target
-      )
-
-  # ===== Responsiveness multiplier (only when enabled_for_groups applies) =====
-  # responsiveness_multiplier = min(max_total_multiplier, 1 + auditory_bonus + visual_bonus)
+    text: "reference_critical_spacing_m_for_target =\n  base_reference_critical_spacing_m_for_target *\n  condition_multiplier_for_target\n"
+  effective_actual_spacing:
+    text: "effective_actual_critical_spacing_m_for_target =\n  max(\n    actual_critical_spacing_m,\n    minimum_effective_actual_spacing_m_for_target\n  )\n"
+  spacing_ratio:
+    text: "spacing_ratio_for_target =\n  (reference_critical_spacing_m_for_target / effective_actual_critical_spacing_m_for_target) ^ spacing_exponent_for_target\n"
   response_multiplier:
-    text: >
-      responsiveness_multiplier =
-      min(
-        response_model.max_total_multiplier,
-        1 + auditory_response_bonus + visual_response_bonus
-      )
-
-  # ===== Completion multiplier =====
+    text: "responsiveness_multiplier =\n  min(\n    response_model.max_total_multiplier,\n    1 + auditory_response_bonus + visual_response_bonus\n  )\n"
   completion_multiplier:
-    text: >
-      completion_multiplier =
-      clamp(
-        area_coverage_pct / 100,
-        0,
-        1
-      )
-
-  # ===== Final exponential POD =====
-  # pod_for_target = clamp( (1 - exp( - calibration_constant_k_for_target * effective_detectability_for_target * spacing_effectiveness_for_target * responsiveness_multiplier )) * completion_multiplier, 0, 0.99 )
+    text: "completion_multiplier =\n  clamp(\n    area_coverage_pct / 100,\n    0,\n    1\n  )\n"
   final_pod:
-    text: >
-      probability_of_detection_for_target =
-      clamp(
-        (
-          1 - exp(
-            - calibration_constant_k_for_target *
-              effective_detectability_for_target *
-              spacing_effectiveness_for_target *
-              responsiveness_multiplier
-          )
-        ) *
-        completion_multiplier,
-        0,
-        0.99
-      )
-
+    text: "probability_of_detection_for_target =\n  clamp(\n    (\n      1 - exp(\n        - calibration_constant_k_for_target *\n          base_hazard_rate_for_target *\n          spacing_ratio_for_target *\n          responsiveness_multiplier\n      )\n    ) *\n    completion_multiplier,\n    0,\n    0.99\n  )\n"
 qa_flags:
   warn_if_critical_spacing_m_lt_1: true
   warn_if_critical_spacing_m_gt_50: true
-  warn_if_area_coverage_pct_lt_50: true
-
+  warn_if_searched_fraction_lt_0.5: true
+  warn_if_inaccessible_fraction_gt_0.4: true
 calibration:
   notes:
-    - "Treat all values as initial SME priors."
-    - "Back-test on historical segments and adjust quarterly."
-    - "Adjust in order: base_reference_critical_spacing_m, condition_factors, spacing_exponent."
-    - "Keep response bonuses small; avoid overpowering spacing effectiveness."
-    - "Do not set any POD ceiling to 1.00 (this model clamps at 0.99)."
-    - "Implementation note: detectability_level keys are strings '1'..'5' in condition_factors; cast input to string for lookup."
-    - "Implementation note: apply response_model only when target.group is in response_model.enabled_for_groups; otherwise responsiveness_multiplier = 1.0."
-    - "Implementation note: actual_critical_spacing_m is input_schema.segment_level.execution.critical_spacing_m."
-
+  - Treat all values as initial SME priors.
+  - Back-test on historical segments and adjust quarterly.
+  - 'Adjust in order: base_reference_critical_spacing_m, condition_factors, spacing_exponent.'
+  - Keep response bonuses small; avoid overpowering spacing effectiveness.
+  - Do not set any POD ceiling to 1.00 (this model clamps at 0.99).
+  - 'Implementation note: detectability_level keys are strings ''1''..''5'' in condition_factors; cast input to string for lookup.'
+  - 'Implementation note: apply response_model only when target.group is in response_model.enabled_for_groups; otherwise responsiveness_multiplier = 1.0.'
+  - 'Implementation note: actual_critical_spacing_m is input_schema.segment_level.execution.critical_spacing_m.'
+  - Condition factors are organized by target (adult/child/etc.) with nested time_of_day, weather, and detectability_level tables.
+  - 'Completion uses area_coverage_pct as a final hard multiplier: completion_multiplier = clamp(area_coverage_pct / 100, 0, 1).'
+  - Base detectability is mapped to an exponential hazard rate using base_hazard_rate_for_target = - ln(1 - base_detectability_for_target) so that, when spacing_ratio_for_target = 1, responsiveness_multiplier = 1, completion_multiplier = 1, and calibration_constant_k_for_target = 1, probability_of_detection_for_target equals base_detectability_for_target.
+  - 'Model change: reference_critical_spacing_m_for_target is not clamped; it is computed as base_reference_critical_spacing_m_for_target * condition_multiplier_for_target.'
+  - 'Model change: benefit from very tight spacing is capped using effective_actual_critical_spacing_m_for_target = max(actual_critical_spacing_m, minimum_effective_actual_spacing_m_for_target).'
+  - 'Implementation note: minimum_effective_actual_spacing_m_for_target comes from spacing_bounds_m.min_effective_actual_spacing_m_by_target[target].'
 audit:
   save_inputs: true
   save_intermediate_values: true
   save_per_target_outputs: true
   fields_to_log:
-    - selected_targets
-    - primary_target_inferred
-    - time_of_day
-    - weather
-    - detectability_level
-    - critical_spacing_m
-    - area_coverage_pct
-    - condition_multiplier_for_target
-    - effective_detectability_for_target
-    - reference_critical_spacing_m_for_target
-    - spacing_effectiveness_for_target
-    - responsiveness_multiplier
-    - completion_multiplier
-    - probability_of_detection_for_target
+  - selected_targets
+  - primary_target_inferred
+  - time_of_day
+  - weather
+  - detectability_level
+  - critical_spacing_m
+  - searched_fraction
+  - inaccessible_fraction
+  - condition_multiplier_for_target
+  - effective_detectability_for_target
+  - reference_critical_spacing_m_for_target
+  - spacing_effectiveness_for_target
+  - responsiveness_multiplier
+  - completion_multiplier
+  - probability_of_detection_for_target
+  - base_hazard_rate_for_target
+  - spacing_ratio_for_target
+  - area_coverage_pct
+  - effective_actual_critical_spacing_m_for_target
+  - minimum_effective_actual_spacing_m_for_target
+spacing_bounds_m:
+  min_effective_actual_spacing_m_by_target:
+    adult: 3
+    child: 3
+    large_clues: 2
+    small_clues: 1
+    intact_remains: 2
+    partially_skeletonized: 1.5
+    skeletal_remains: 1.2
+    large_evidence: 2
+    small_evidence: 1
+  max_effective_actual_spacing_m_by_target:
+    adult: 40
+    child: 35
+    large_clues: 25
+    small_clues: 10
+    intact_remains: 28
+    partially_skeletonized: 18
+    skeletal_remains: 15
+    large_evidence: 25
+    small_evidence: 10
+  notes:
+  - This model clamps the BENEFIT of very tight spacing by enforcing a minimum effective actual spacing per target.
+  - Reference critical spacing is NOT clamped; it is computed from base_reference_critical_spacing_m_for_target and condition_multiplier_for_target.
+  - max_effective_actual_spacing_m_by_target is reserved for future use (e.g., optionally capping detriment for extremely wide spacing) and is not used in the current formulas.

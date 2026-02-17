@@ -9,7 +9,7 @@ function targetDef(config, targetKey) {
 }
 
 function conditionFactor(config, axis, level, targetKey) {
-  return Number(config?.condition_factors?.[axis]?.[String(level)]?.[targetKey] ?? 1);
+  return Number(config?.condition_factors?.[targetKey]?.[axis]?.[String(level)] ?? 1);
 }
 
 function refBounds(config, targetKey) {

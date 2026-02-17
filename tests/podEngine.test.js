@@ -23,23 +23,15 @@ const config = {
     evidence_historical: { order: ['intact_remains', 'partially_skeletonized', 'skeletal_remains', 'large_evidence', 'small_evidence'] }
   },
   condition_factors: {
-    time_of_day: {
-      day:       { adult: 1.0, child: 1.0, large_clues: 1.0, small_clues: 1.0, intact_remains: 1.0, partially_skeletonized: 1.0, skeletal_remains: 1.0, large_evidence: 1.0, small_evidence: 1.0 },
-      dusk_dawn: { adult: 0.9, child: 0.9, large_clues: 0.82, small_clues: 0.72, intact_remains: 0.84, partially_skeletonized: 0.78, skeletal_remains: 0.74, large_evidence: 0.82, small_evidence: 0.72 },
-      night:     { adult: 0.72, child: 0.7, large_clues: 0.58, small_clues: 0.42, intact_remains: 0.6, partially_skeletonized: 0.5, skeletal_remains: 0.46, large_evidence: 0.58, small_evidence: 0.42 }
-    },
-    weather: {
-      clear: { adult: 1.0, child: 1.0, large_clues: 1.0, small_clues: 1.0, intact_remains: 1.0, partially_skeletonized: 1.0, skeletal_remains: 1.0, large_evidence: 1.0, small_evidence: 1.0 },
-      rain:  { adult: 0.9, child: 0.9, large_clues: 0.84, small_clues: 0.74, intact_remains: 0.86, partially_skeletonized: 0.8, skeletal_remains: 0.76, large_evidence: 0.84, small_evidence: 0.74 },
-      snow:  { adult: 0.82, child: 0.82, large_clues: 0.74, small_clues: 0.6, intact_remains: 0.76, partially_skeletonized: 0.66, skeletal_remains: 0.62, large_evidence: 0.74, small_evidence: 0.6 }
-    },
-    detectability_level: {
-      '1': { adult: 1.1, child: 1.08, large_clues: 1.05, small_clues: 1.0, intact_remains: 1.05, partially_skeletonized: 1.0, skeletal_remains: 0.98, large_evidence: 1.05, small_evidence: 1.0 },
-      '2': { adult: 1.0, child: 0.98, large_clues: 0.94, small_clues: 0.84, intact_remains: 0.95, partially_skeletonized: 0.9, skeletal_remains: 0.86, large_evidence: 0.94, small_evidence: 0.84 },
-      '3': { adult: 0.88, child: 0.86, large_clues: 0.76, small_clues: 0.62, intact_remains: 0.78, partially_skeletonized: 0.7, skeletal_remains: 0.66, large_evidence: 0.76, small_evidence: 0.62 },
-      '4': { adult: 0.74, child: 0.72, large_clues: 0.58, small_clues: 0.44, intact_remains: 0.6, partially_skeletonized: 0.52, skeletal_remains: 0.48, large_evidence: 0.58, small_evidence: 0.44 },
-      '5': { adult: 0.6, child: 0.58, large_clues: 0.44, small_clues: 0.3, intact_remains: 0.46, partially_skeletonized: 0.38, skeletal_remains: 0.34, large_evidence: 0.44, small_evidence: 0.3 }
-    }
+    adult:                  { time_of_day: { day: 1.0, dusk_dawn: 0.9, night: 0.72 }, weather: { clear: 1.0, rain: 0.9, snow: 0.82 }, detectability_level: { '1': 1.1, '2': 1.0, '3': 0.88, '4': 0.74, '5': 0.6 } },
+    child:                  { time_of_day: { day: 1.0, dusk_dawn: 0.9, night: 0.7 },  weather: { clear: 1.0, rain: 0.9, snow: 0.82 }, detectability_level: { '1': 1.08, '2': 0.98, '3': 0.86, '4': 0.72, '5': 0.58 } },
+    large_clues:            { time_of_day: { day: 1.0, dusk_dawn: 0.82, night: 0.58 }, weather: { clear: 1.0, rain: 0.84, snow: 0.74 }, detectability_level: { '1': 1.05, '2': 0.94, '3': 0.76, '4': 0.58, '5': 0.44 } },
+    small_clues:            { time_of_day: { day: 1.0, dusk_dawn: 0.72, night: 0.42 }, weather: { clear: 1.0, rain: 0.74, snow: 0.6 },  detectability_level: { '1': 1.0, '2': 0.84, '3': 0.62, '4': 0.44, '5': 0.3 } },
+    intact_remains:         { time_of_day: { day: 1.0, dusk_dawn: 0.84, night: 0.6 },  weather: { clear: 1.0, rain: 0.86, snow: 0.76 }, detectability_level: { '1': 1.05, '2': 0.95, '3': 0.78, '4': 0.6, '5': 0.46 } },
+    partially_skeletonized: { time_of_day: { day: 1.0, dusk_dawn: 0.78, night: 0.5 },  weather: { clear: 1.0, rain: 0.8, snow: 0.66 },  detectability_level: { '1': 1.0, '2': 0.9, '3': 0.7, '4': 0.52, '5': 0.38 } },
+    skeletal_remains:       { time_of_day: { day: 1.0, dusk_dawn: 0.74, night: 0.46 }, weather: { clear: 1.0, rain: 0.76, snow: 0.62 }, detectability_level: { '1': 0.98, '2': 0.86, '3': 0.66, '4': 0.48, '5': 0.34 } },
+    large_evidence:         { time_of_day: { day: 1.0, dusk_dawn: 0.82, night: 0.58 }, weather: { clear: 1.0, rain: 0.84, snow: 0.74 }, detectability_level: { '1': 1.05, '2': 0.94, '3': 0.76, '4': 0.58, '5': 0.44 } },
+    small_evidence:         { time_of_day: { day: 1.0, dusk_dawn: 0.72, night: 0.42 }, weather: { clear: 1.0, rain: 0.74, snow: 0.6 },  detectability_level: { '1': 1.0, '2': 0.84, '3': 0.62, '4': 0.44, '5': 0.3 } }
   },
   reference_spacing_bounds_m: {
     min_by_target: { adult: 3, child: 3, large_clues: 2, small_clues: 1, intact_remains: 2, partially_skeletonized: 1.5, skeletal_remains: 1.2, large_evidence: 2, small_evidence: 1 },
