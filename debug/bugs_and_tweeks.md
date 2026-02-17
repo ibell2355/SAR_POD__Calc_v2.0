@@ -6,6 +6,24 @@ Once complete, mark with an X inside of the square brackets "[X]"
 
 # TWEEKS
 
+- [ ] 
+- [ ] The report should include the selection from the search page 
+	- For example search type, active missing person, adult, etc. should show in the report as well 
+	- The report, instead of saying'session', should say'search information' and should show search name, team name, Then the selection information at the search level;
+	- After that, each segment added's information should be displayed
+	- It should not say "segment 1: unnamed". It should just show the name of the segment, Most segments will be called Segment 1, Segment 2, etc. This would cause confusion since somebody might only be assigned Segment 5 through 7 
+	- In the report after the search level information is displayed, there can be a heading called "Search Areas" 
+	- Average POD can be displayed slightly smaller in the report 
+	- In the report the generated date should be in the format  mmmm dd, yyyy
+	- For the segments, remove the space after inputs before its bullets start 
+	- [ ] Under Evidence/Historical Search, searching for you should not be able to unselect remains and evidence. At least one needs to be selected 
+	- You can select one or the other or both but not none 
+	- If evidence is selected, one of large evidence or small evidence or both needs to be selected. You should not be able to select both 
+- [ ] Tool Tip for Vegetation Train and Detectability: 
+	- Instead of it saying "natural shelters" or "hard to spot natural shelters", delete the first one and just say "hard to spot natural shelters" 
+	- Update to say "evidence buried under duff layer" instead of "in duff layer" 
+- [ ] Segment start time and segment end time are still not a 24-hour clock 
+- [ ] For vegetation, terrain, and detectability stack the selection options on top of each other vertically 
 - [X] In the report section the primary POD and average POD should be presented As discussed below.
 	- Each individual target or subject being searched for should continue to be displayed as currently shown
 	- Please add a quick tooltip note above the detailed calculation that says "for development only"

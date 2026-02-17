@@ -8,7 +8,7 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./assets/logo-placeholder.svg">
   <link rel="apple-touch-icon" href="./assets/icon-192.svg">
-  <link rel="stylesheet" href="./src/ui/styles.css?v=2.0.0">
+  <link rel="stylesheet" href="./src/ui/styles.css">
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -21,17 +21,8 @@
       <div id="connectivity-pill" class="connectivity-pill online">Online / Offline ready</div>
     </header>
     <main id="view-root"></main>
+    <footer class="build-stamp" id="build-stamp"></footer>
   </div>
-  <script>
-    // Purge stale service-worker caches from prior versions
-    if ('caches' in window) {
-      caches.keys().then(function(names) {
-        names.forEach(function(name) {
-          if (name !== 'psar-pod-v2.0.0') caches.delete(name);
-        });
-      });
-    }
-  </script>
-  <script type="module" src="./src/main.js?v=2.0.0"></script>
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>

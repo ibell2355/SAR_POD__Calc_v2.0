@@ -50,7 +50,8 @@ const state = {
 let config = null;
 let configValid = true;
 let configError = '';
-let appVersion = '2.0.0';
+let appVersion = '2.1.0';
+let appBuildDate = '';
 let saveTimer = null;
 let saveState = 'Saved';
 
@@ -62,14 +63,17 @@ init();
 
 async function init() {
   try {
-    const [cfgResult, version] = await Promise.all([loadConfig(), fetchVersion()]);
+    const [cfgResult, pkgInfo] = await Promise.all([loadConfig(), fetchPackageInfo()]);
 
     config = cfgResult.config;
     configValid = cfgResult.valid;
     configError = cfgResult.valid ? '' : (cfgResult.diagnostics || 'Config failed to load.');
-    appVersion = version;
+    appVersion = pkgInfo.version;
+    appBuildDate = pkgInfo.buildDate;
 
-    document.getElementById('app-version').textContent = version;
+    document.getElementById('app-version').textContent = pkgInfo.version;
+    const stampEl = document.getElementById('build-stamp');
+    if (stampEl) stampEl.textContent = `v${pkgInfo.version} \u00b7 ${pkgInfo.buildDate}`;
 
     await hydrate();
 
@@ -437,12 +441,12 @@ function uid() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-async function fetchVersion() {
+async function fetchPackageInfo() {
   try {
     const pkg = await fetch('./package.json').then((r) => r.json());
-    return pkg.version || '2.0.0';
+    return { version: pkg.version || '2.1.0', buildDate: pkg.buildDate || '' };
   } catch {
-    return '2.0.0';
+    return { version: '2.1.0', buildDate: '' };
   }
 }
 
@@ -457,7 +461,23 @@ function updateConnectivity() {
 
 function registerSW() {
   if (!('serviceWorker' in navigator)) return;
+
+  const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
+  if (isDev) {
+    // In local dev, unregister any existing SW so edits take effect immediately
+    navigator.serviceWorker.getRegistrations().then((regs) =>
+      regs.forEach((r) => r.unregister())
+    );
+    caches.keys().then((names) => names.forEach((n) => caches.delete(n)));
+    return;
+  }
+
+  // Production: register SW and auto-refresh once when a new version activates
   navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    location.reload();
+  });
 }
 
 function showToast(msg, duration = 2500) {
