@@ -33,7 +33,10 @@ export function parseSimpleYaml(text) {
 
     const indent = line.match(/^\s*/)[0].length;
 
-    while (stack.length > 1 && indent <= stack[stack.length - 1].indent) stack.pop();
+    // Array items at the same indent as their container key are children, not siblings.
+    // Key-value pairs at the same indent as a container are siblings (pop the container).
+    const isArrayItem = trimmed.startsWith('- ');
+    while (stack.length > 1 && (isArrayItem ? indent < stack[stack.length - 1].indent : indent <= stack[stack.length - 1].indent)) stack.pop();
     const parent = stack[stack.length - 1].container;
 
     // Array item

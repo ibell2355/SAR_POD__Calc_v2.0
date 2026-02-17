@@ -8,15 +8,15 @@ import { completionMultiplier, inferPrimaryTarget, responseMultiplier, spacingEf
 
 const config = {
   targets: {
-    adult:                  { group: 'active_missing_person', base_detectability: 0.8,  calibration_constant_k: 1.0,  base_reference_critical_spacing_m: 8.0, spacing_exponent: 2.0 },
-    child:                  { group: 'active_missing_person', base_detectability: 0.9,  calibration_constant_k: 1.05, base_reference_critical_spacing_m: 7.0, spacing_exponent: 2.2 },
-    large_clues:            { group: 'active_missing_person', base_detectability: 0.7,  calibration_constant_k: 1.0,  base_reference_critical_spacing_m: 7.0, spacing_exponent: 2.2 },
-    small_clues:            { group: 'active_missing_person', base_detectability: 0.5,  calibration_constant_k: 0.95, base_reference_critical_spacing_m: 5.5, spacing_exponent: 2.6 },
-    intact_remains:         { group: 'evidence_historical',   base_detectability: 0.6,  calibration_constant_k: 0.95, base_reference_critical_spacing_m: 6.0, spacing_exponent: 2.4 },
-    partially_skeletonized: { group: 'evidence_historical',   base_detectability: 0.4,  calibration_constant_k: 0.9,  base_reference_critical_spacing_m: 5.0, spacing_exponent: 2.6 },
-    skeletal_remains:       { group: 'evidence_historical',   base_detectability: 0.4,  calibration_constant_k: 0.9,  base_reference_critical_spacing_m: 5.0, spacing_exponent: 2.6 },
-    large_evidence:         { group: 'evidence_historical',   base_detectability: 0.7,  calibration_constant_k: 1.0,  base_reference_critical_spacing_m: 7.0, spacing_exponent: 2.2 },
-    small_evidence:         { group: 'evidence_historical',   base_detectability: 0.5,  calibration_constant_k: 0.95, base_reference_critical_spacing_m: 5.5, spacing_exponent: 2.6 }
+    adult:                  { group: 'active_missing_person', base_detectability: 0.8,  calibration_constant_k: 1.0, base_reference_critical_spacing_m: 8.0, spacing_exponent: 2.0 },
+    child:                  { group: 'active_missing_person', base_detectability: 0.9,  calibration_constant_k: 1.0, base_reference_critical_spacing_m: 7.0, spacing_exponent: 2.2 },
+    large_clues:            { group: 'active_missing_person', base_detectability: 0.7,  calibration_constant_k: 1.0, base_reference_critical_spacing_m: 7.0, spacing_exponent: 2.2 },
+    small_clues:            { group: 'active_missing_person', base_detectability: 0.5,  calibration_constant_k: 1.0, base_reference_critical_spacing_m: 5.5, spacing_exponent: 2.6 },
+    intact_remains:         { group: 'evidence_historical',   base_detectability: 0.6,  calibration_constant_k: 1.0, base_reference_critical_spacing_m: 6.0, spacing_exponent: 2.4 },
+    partially_skeletonized: { group: 'evidence_historical',   base_detectability: 0.4,  calibration_constant_k: 1.0, base_reference_critical_spacing_m: 5.0, spacing_exponent: 2.6 },
+    skeletal_remains:       { group: 'evidence_historical',   base_detectability: 0.4,  calibration_constant_k: 1.0, base_reference_critical_spacing_m: 5.0, spacing_exponent: 2.6 },
+    large_evidence:         { group: 'evidence_historical',   base_detectability: 0.7,  calibration_constant_k: 1.0, base_reference_critical_spacing_m: 7.0, spacing_exponent: 2.2 },
+    small_evidence:         { group: 'evidence_historical',   base_detectability: 0.5,  calibration_constant_k: 1.0, base_reference_critical_spacing_m: 5.5, spacing_exponent: 2.6 }
   },
   primary_target_hierarchy: {
     active_missing_person: { order: ['adult', 'child', 'large_clues', 'small_clues'] },
@@ -33,9 +33,9 @@ const config = {
     large_evidence:         { time_of_day: { day: 1.0, dusk_dawn: 0.82, night: 0.58 }, weather: { clear: 1.0, rain: 0.84, snow: 0.74 }, detectability_level: { '1': 1.05, '2': 0.94, '3': 0.76, '4': 0.58, '5': 0.44 } },
     small_evidence:         { time_of_day: { day: 1.0, dusk_dawn: 0.72, night: 0.42 }, weather: { clear: 1.0, rain: 0.74, snow: 0.6 },  detectability_level: { '1': 1.0, '2': 0.84, '3': 0.62, '4': 0.44, '5': 0.3 } }
   },
-  reference_spacing_bounds_m: {
-    min_by_target: { adult: 3, child: 3, large_clues: 2, small_clues: 1, intact_remains: 2, partially_skeletonized: 1.5, skeletal_remains: 1.2, large_evidence: 2, small_evidence: 1 },
-    max_by_target: { adult: 40, child: 35, large_clues: 25, small_clues: 10, intact_remains: 28, partially_skeletonized: 18, skeletal_remains: 15, large_evidence: 25, small_evidence: 10 }
+  spacing_bounds_m: {
+    min_effective_actual_spacing_m_by_target: { adult: 3, child: 3, large_clues: 2, small_clues: 1, intact_remains: 2, partially_skeletonized: 1.5, skeletal_remains: 1.2, large_evidence: 2, small_evidence: 1 },
+    max_effective_actual_spacing_m_by_target: { adult: 40, child: 35, large_clues: 25, small_clues: 10, intact_remains: 28, partially_skeletonized: 18, skeletal_remains: 15, large_evidence: 25, small_evidence: 10 }
   },
   response_model: {
     enabled_for_groups: ['active_missing_person'],
@@ -54,63 +54,131 @@ const config = {
    Tests
    ================================================================ */
 
-test('spacing effectiveness', () => {
-  assert.equal(spacingEffectiveness(10, 20, 1), 0.5);
-  assert.equal(spacingEffectiveness(20, 10, 1.5), 1);
-  assert.equal(spacingEffectiveness(5, 0, 1.4), 0);
+/* --- 1. base_hazard_rate maps base_detectability correctly --- */
+
+test('base_hazard_rate: when all multipliers are 1, POD equals base_detectability', () => {
+  // Adult: base_detectability = 0.8, k = 1.0
+  // With day/clear/level-2 (all factors = 1.0), spacing = 8m = base_reference,
+  // actual >= min_effective (8 >= 3), so S_eff_act = 8.
+  // S_ref = 8 * 1.0 = 8, spacing_ratio = (8/8)^2 = 1.
+  // hazard = -ln(1 - 0.8) = 1.6094..., exponent = 1 * 1.6094 * 1 * 1 = 1.6094
+  // POD_raw = 1 - exp(-1.6094) = 0.8 (exact calibration property)
+  const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 2, critical_spacing_m: 8, area_coverage_pct: 100 };
+  const searchLevel = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none' };
+  const r = computeForTarget({ config, searchLevel, segment, targetKey: 'adult' });
+
+  const expected_hazard = -Math.log(1 - 0.8);
+  assert.ok(Math.abs(r.base_hazard_rate - expected_hazard) < 0.0001);
+  assert.ok(Math.abs(r.POD_final - 0.8) < 0.0001, `Expected POD ~0.8, got ${r.POD_final}`);
 });
 
-test('spacing effectiveness caps at 1 when critical_spacing < reference', () => {
-  assert.equal(spacingEffectiveness(25, 10, 1.4), 1);
-  assert.equal(spacingEffectiveness(25, 25, 1.4), 1);
-  assert.equal(spacingEffectiveness(100, 5, 2.0), 1);
+/* --- 2. effective_actual_spacing clamps benefit of tight spacing --- */
+
+test('effective_actual_spacing: actual below min_effective uses min_effective', () => {
+  // Adult min_effective = 3m. If actual = 1m, S_eff_act should be 3m (not 1m).
+  const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 2, critical_spacing_m: 1, area_coverage_pct: 100 };
+  const searchLevel = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none' };
+  const r = computeForTarget({ config, searchLevel, segment, targetKey: 'adult' });
+
+  assert.equal(r.S_eff_act, 3, 'S_eff_act should be clamped to min_effective=3');
+  assert.equal(r.min_effective, 3);
+
+  // Verify same result as if actual = 3m (since both clamp to 3)
+  const segment3 = { ...segment, critical_spacing_m: 3 };
+  const r3 = computeForTarget({ config, searchLevel, segment: segment3, targetKey: 'adult' });
+  assert.ok(Math.abs(r.POD_final - r3.POD_final) < 0.0001, 'POD should be identical when both clamp to min');
 });
 
-test('response multiplier capped at 1.25 for active group', () => {
-  const mult = responseMultiplier(
-    { type_of_search: 'active_missing_person', auditory: 'likely', visual: 'likely' },
-    config,
-    'adult'
-  );
-  assert.ok(Math.abs(mult - 1.17) < 0.0001);
+/* --- 3. detectability_level numeric input resolves via string key --- */
+
+test('detectability_level: numeric input resolves correctly via string key', () => {
+  const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 3, critical_spacing_m: 8, area_coverage_pct: 100 };
+  const searchLevel = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none' };
+  const r = computeForTarget({ config, searchLevel, segment, targetKey: 'adult' });
+
+  assert.ok(Math.abs(r.F_detectability - 0.88) < 0.0001, 'detectability_level 3 for adult should be 0.88');
 });
 
-test('response multiplier is 1 for evidence_historical targets (disabled group)', () => {
-  const mult = responseMultiplier(
-    { type_of_search: 'evidence_historical', auditory: 'likely', visual: 'likely' },
-    config,
-    'intact_remains'
-  );
-  assert.equal(mult, 1);
+/* --- 4. response_model: disabled groups force M_resp = 1.0 --- */
 
-  const mult2 = responseMultiplier(
-    { type_of_search: 'evidence_historical', auditory: 'likely', visual: 'likely' },
-    config,
-    'partially_skeletonized'
-  );
-  assert.equal(mult2, 1);
+test('response_model: M_resp = 1 for evidence_historical (disabled group)', () => {
+  const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 2, critical_spacing_m: 6, area_coverage_pct: 100 };
+  const searchLevel = { type_of_search: 'evidence_historical', auditory: 'likely', visual: 'likely' };
+
+  // intact_remains is evidence_historical → response disabled
+  const r = computeForTarget({ config, searchLevel, segment, targetKey: 'intact_remains' });
+  assert.equal(r.M_resp, 1, 'M_resp should be 1 for evidence_historical group');
+
+  // adult is active_missing_person → response enabled
+  const r2 = computeForTarget({ config, searchLevel, segment: { ...segment, critical_spacing_m: 8 }, targetKey: 'adult' });
+  assert.ok(r2.M_resp > 1, 'M_resp should be > 1 for active_missing_person group with likely responsiveness');
+  assert.ok(Math.abs(r2.M_resp - 1.17) < 0.0001, 'M_resp should be 1 + 0.10 + 0.07 = 1.17');
 });
 
-test('completion multiplier from area coverage percentage', () => {
+/* --- 5. completion_multiplier as final hard cap --- */
+
+test('completion_multiplier: area_coverage_pct is a final hard cap on POD', () => {
+  // 100% coverage → full POD
   assert.equal(completionMultiplier({ area_coverage_pct: 100 }), 1);
-  assert.ok(Math.abs(completionMultiplier({ area_coverage_pct: 80 }) - 0.8) < 0.0001);
+  // 50% coverage → halves POD
   assert.ok(Math.abs(completionMultiplier({ area_coverage_pct: 50 }) - 0.5) < 0.0001);
+  // 0% coverage → zero POD
   assert.equal(completionMultiplier({ area_coverage_pct: 0 }), 0);
-});
-
-test('completion multiplier clamps to 0-1 range', () => {
+  // Clamps above 100 and below 0
   assert.equal(completionMultiplier({ area_coverage_pct: 150 }), 1);
   assert.equal(completionMultiplier({ area_coverage_pct: -10 }), 0);
+
+  // Verify M_comp actually scales final POD
+  const segment80 = { time_of_day: 'day', weather: 'clear', detectability_level: 2, critical_spacing_m: 8, area_coverage_pct: 80 };
+  const segment100 = { ...segment80, area_coverage_pct: 100 };
+  const searchLevel = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none' };
+  const r80 = computeForTarget({ config, searchLevel, segment: segment80, targetKey: 'adult' });
+  const r100 = computeForTarget({ config, searchLevel, segment: segment100, targetKey: 'adult' });
+
+  assert.ok(Math.abs(r80.M_comp - 0.8) < 0.0001);
+  assert.ok(Math.abs(r80.POD_final - r100.POD_raw * 0.8) < 0.0001, 'POD_final at 80% coverage should be POD_raw * 0.8');
 });
 
-test('target selection and hierarchy inference - active (uses .order)', () => {
+/* --- 6. final POD clamp to 0.99 --- */
+
+test('POD clamped to 0.99 max even with extreme inputs', () => {
+  // Use very high k to force POD_raw above 0.99
+  const highKConfig = {
+    ...config,
+    targets: {
+      ...config.targets,
+      adult: { ...config.targets.adult, calibration_constant_k: 10.0 }
+    }
+  };
+  const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 1, critical_spacing_m: 3, area_coverage_pct: 100 };
+  const searchLevel = { type_of_search: 'active_missing_person', auditory: 'likely', visual: 'likely' };
+  const r = computeForTarget({ config: highKConfig, searchLevel, segment, targetKey: 'adult' });
+
+  assert.ok(r.POD_raw > 0.99, `POD_raw should exceed 0.99 before clamping, got ${r.POD_raw}`);
+  assert.equal(r.POD_final, 0.99);
+});
+
+/* ================================================================
+   Additional tests
+   ================================================================ */
+
+test('spacing ratio (raw, uncapped)', () => {
+  // spacingEffectiveness(S_ref, S_eff_act, exponent) = (S_ref / S_eff_act) ^ exponent
+  assert.equal(spacingEffectiveness(10, 20, 1), 0.5);
+  assert.equal(spacingEffectiveness(5, 0, 1.4), 0);
+  // NOT capped at 1 — if S_ref > S_eff_act, ratio > 1
+  const ratio = spacingEffectiveness(20, 10, 2);
+  assert.ok(Math.abs(ratio - 4) < 0.0001, 'spacing ratio can exceed 1');
+});
+
+test('target selection - active missing person', () => {
   const s = { type_of_search: 'active_missing_person', active_targets: ['child', 'adult'] };
   const targets = selectedTargets(s);
   assert.deepEqual(targets, ['child', 'adult']);
   assert.equal(inferPrimaryTarget(targets, config, 'active_missing_person'), 'adult');
 });
 
-test('target selection and hierarchy inference - evidence (uses .order)', () => {
+test('target selection - evidence/historical', () => {
   const s = {
     type_of_search: 'evidence_historical',
     evidence_categories: ['remains', 'evidence'],
@@ -122,49 +190,6 @@ test('target selection and hierarchy inference - evidence (uses .order)', () => 
   assert.equal(inferPrimaryTarget(targets, config, 'evidence_historical'), 'intact_remains');
 });
 
-test('detectability_level lookup with numeric input uses string key', () => {
-  const segment = {
-    time_of_day: 'day',
-    weather: 'clear',
-    detectability_level: 3,
-    critical_spacing_m: 5,
-    area_coverage_pct: 100
-  };
-  const searchLevel = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none' };
-  const result = computeForTarget({ config, searchLevel, segment, targetKey: 'adult' });
-  assert.ok(Math.abs(result.F_detectability - 0.88) < 0.0001);
-});
-
-test('computeForTarget uses exponential formula with per-target values', () => {
-  const segment = {
-    time_of_day: 'day',
-    weather: 'clear',
-    detectability_level: 1,
-    critical_spacing_m: 5,
-    area_coverage_pct: 100
-  };
-  const searchLevel = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none' };
-  const result = computeForTarget({ config, searchLevel, segment, targetKey: 'adult' });
-
-  assert.equal(result.base_detectability, 0.8);
-  assert.equal(result.calibration_constant_k, 1.0);
-  assert.equal(result.base_reference_critical_spacing_m, 8.0);
-  assert.equal(result.spacing_exponent, 2.0);
-
-  assert.ok(Math.abs(result.F_detectability - 1.1) < 0.0001);
-  assert.ok(Math.abs(result.C_t - 1.1) < 0.0001);
-  assert.ok(Math.abs(result.D_eff - 0.88) < 0.0001);
-
-  assert.equal(result.S_ref_raw, 8.0);
-  assert.equal(result.S_ref, 8.0);
-  assert.equal(result.E_space, 1);
-  assert.equal(result.M_resp, 1);
-  assert.equal(result.M_comp, 1);
-
-  const expectedPod = 1 - Math.exp(-1.0 * 0.88 * 1 * 1);
-  assert.ok(Math.abs(result.POD_final - expectedPod) < 0.0001);
-});
-
 test('computeForTarget with harsh conditions reduces POD', () => {
   const segment = {
     time_of_day: 'night',
@@ -174,36 +199,13 @@ test('computeForTarget with harsh conditions reduces POD', () => {
     area_coverage_pct: 70
   };
   const searchLevel = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none' };
-  const result = computeForTarget({ config, searchLevel, segment, targetKey: 'adult' });
+  const r = computeForTarget({ config, searchLevel, segment, targetKey: 'adult' });
 
-  assert.ok(Math.abs(result.C_t - 0.35424) < 0.0001);
-  assert.ok(Math.abs(result.D_eff - 0.283392) < 0.0001);
-  assert.equal(result.S_ref_raw, 8.0);
-  assert.ok(Math.abs(result.M_comp - 0.7) < 0.0001);
-  assert.ok(result.POD_final < 0.3);
-  assert.ok(result.POD_final > 0);
-});
-
-test('POD clamped to 0.99 max even with ideal conditions', () => {
-  const highKConfig = {
-    ...config,
-    targets: {
-      ...config.targets,
-      adult: { ...config.targets.adult, calibration_constant_k: 10.0 }
-    }
-  };
-  const segment = {
-    time_of_day: 'day',
-    weather: 'clear',
-    detectability_level: 1,
-    critical_spacing_m: 3,
-    area_coverage_pct: 100
-  };
-  const searchLevel = { type_of_search: 'active_missing_person', auditory: 'likely', visual: 'likely' };
-  const result = computeForTarget({ config: highKConfig, searchLevel, segment, targetKey: 'adult' });
-
-  assert.ok(result.POD_raw > 0.99, 'POD_raw should exceed 0.99 before clamping');
-  assert.equal(result.POD_final, 0.99);
+  // C_t = 0.72 * 0.82 * 0.6 = 0.35424
+  assert.ok(Math.abs(r.C_t - 0.35424) < 0.0001);
+  assert.ok(Math.abs(r.M_comp - 0.7) < 0.0001);
+  assert.ok(r.POD_final < 0.3);
+  assert.ok(r.POD_final > 0);
 });
 
 test('QA warnings fire on extreme values', () => {

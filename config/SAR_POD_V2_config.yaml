@@ -57,58 +57,58 @@ input_schema:
 targets:
   adult:
     group: active_missing_person
-    base_detectability: 0.8
+    base_detectability: 0.75
     calibration_constant_k: 1.0
-    base_reference_critical_spacing_m: 8.0
-    spacing_exponent: 2.0
+    base_reference_critical_spacing_m: 10.0
+    spacing_exponent: .75
   child:
     group: active_missing_person
-    base_detectability: 0.9
-    calibration_constant_k: 1.05
-    base_reference_critical_spacing_m: 7.0
-    spacing_exponent: 2.2
+    base_detectability: 0.72
+    calibration_constant_k: 0.97
+    base_reference_critical_spacing_m: 10.0
+    spacing_exponent: .7
   large_clues:
     group: active_missing_person
     base_detectability: 0.7
     calibration_constant_k: 1.0
     base_reference_critical_spacing_m: 7.0
-    spacing_exponent: 2.2
+    spacing_exponent: .65
   small_clues:
     group: active_missing_person
-    base_detectability: 0.5
-    calibration_constant_k: 0.95
-    base_reference_critical_spacing_m: 5.5
-    spacing_exponent: 2.6
+    base_detectability: 0.7
+    calibration_constant_k: 0.9
+    base_reference_critical_spacing_m: 5.0
+    spacing_exponent: .45
   intact_remains:
     group: evidence_historical
-    base_detectability: 0.6
-    calibration_constant_k: 0.95
-    base_reference_critical_spacing_m: 6.0
-    spacing_exponent: 2.4
+    base_detectability: 0.75
+    calibration_constant_k: 0.98
+    base_reference_critical_spacing_m: 10.0
+    spacing_exponent: .75
   partially_skeletonized:
     group: evidence_historical
-    base_detectability: 0.4
-    calibration_constant_k: 0.9
-    base_reference_critical_spacing_m: 5.0
-    spacing_exponent: 2.6
+    base_detectability: 0.70
+    calibration_constant_k: 0.98
+    base_reference_critical_spacing_m: 8.0
+    spacing_exponent: .70
   skeletal_remains:
-    group: evidence_historical
-    base_detectability: 0.4
-    calibration_constant_k: 0.9
-    base_reference_critical_spacing_m: 5.0
-    spacing_exponent: 2.6
-  large_evidence:
-    group: evidence_historical
+    group: active_missing_person
     base_detectability: 0.7
-    calibration_constant_k: 1.0
-    base_reference_critical_spacing_m: 7.0
-    spacing_exponent: 2.2
-  small_evidence:
-    group: evidence_historical
-    base_detectability: 0.5
     calibration_constant_k: 0.95
-    base_reference_critical_spacing_m: 5.5
-    spacing_exponent: 2.6
+    base_reference_critical_spacing_m: 6.0
+    spacing_exponent: .45
+  large_evidence:
+    group: active_missing_person
+    base_detectability: 0.7
+    calibration_constant_k: 0.98
+    base_reference_critical_spacing_m: 7.0
+    spacing_exponent: .65
+  small_evidence:
+    group: active_missing_person
+    base_detectability: 0.7
+    calibration_constant_k: 0.88
+    base_reference_critical_spacing_m: 5.0
+    spacing_exponent: .45
 primary_target_hierarchy:
   active_missing_person:
     order:
@@ -128,148 +128,148 @@ condition_factors:
     time_of_day:
       day: 1.0
       dusk_dawn: 0.9
-      night: 0.72
+      night: 0.56
     weather:
       clear: 1.0
-      rain: 0.9
-      snow: 0.82
+      rain: 0.96
+      snow: 0.80
     detectability_level:
-      '1': 1.1
-      '2': 1.0
-      '3': 0.88
-      '4': 0.74
-      '5': 0.6
+      '1': 1.75
+      '2': 1.35
+      '3': 1.0
+      '4': 0.75
+      '5': 0.45
   child:
     time_of_day:
       day: 1.0
       dusk_dawn: 0.9
-      night: 0.7
+      night: 0.52
     weather:
       clear: 1.0
-      rain: 0.9
-      snow: 0.82
+      rain: 0.93
+      snow: 0.78
     detectability_level:
-      '1': 1.08
-      '2': 0.98
-      '3': 0.86
-      '4': 0.72
-      '5': 0.58
+      '1': 1.70
+      '2': 1.30
+      '3': 1.0
+      '4': 0.65
+      '5': 0.40
   large_clues:
     time_of_day:
       day: 1.0
-      dusk_dawn: 0.82
-      night: 0.58
+      dusk_dawn: 0.9
+      night: 0.50
     weather:
       clear: 1.0
-      rain: 0.84
-      snow: 0.74
+      rain: 0.92
+      snow: 0.76
     detectability_level:
-      '1': 1.05
-      '2': 0.94
-      '3': 0.76
-      '4': 0.58
-      '5': 0.44
+      '1': 1.70
+      '2': 1.30
+      '3': 1.0
+      '4': 0.65
+      '5': 0.35
   small_clues:
     time_of_day:
       day: 1.0
-      dusk_dawn: 0.72
-      night: 0.42
+      dusk_dawn: 0.88
+      night: 0.40
     weather:
       clear: 1.0
-      rain: 0.74
-      snow: 0.6
+      rain: 0.90
+      snow: 0.45
     detectability_level:
-      '1': 1.0
-      '2': 0.84
-      '3': 0.62
-      '4': 0.44
-      '5': 0.3
+      '1': 1.65
+      '2': 1.20
+      '3': 1.0
+      '4': 0.50
+      '5': 0.20
   intact_remains:
     time_of_day:
       day: 1.0
-      dusk_dawn: 0.84
-      night: 0.6
+      dusk_dawn: 0.9
+      night: 0.56
     weather:
       clear: 1.0
-      rain: 0.86
-      snow: 0.76
+      rain: 0.96
+      snow: 0.80
     detectability_level:
-      '1': 1.05
-      '2': 0.95
-      '3': 0.78
-      '4': 0.6
-      '5': 0.46
+      '1': 1.75
+      '2': 1.35
+      '3': 1.0
+      '4': 0.75
+      '5': 0.45
   partially_skeletonized:
     time_of_day:
       day: 1.0
-      dusk_dawn: 0.78
-      night: 0.5
+      dusk_dawn: 0.9
+      night: 0.52
     weather:
       clear: 1.0
-      rain: 0.8
-      snow: 0.66
+      rain: 0.93
+      snow: 0.78
     detectability_level:
-      '1': 1.0
-      '2': 0.9
-      '3': 0.7
-      '4': 0.52
-      '5': 0.38
+      '1': 1.70
+      '2': 1.30
+      '3': 1.0
+      '4': 0.65
+      '5': 0.40
   skeletal_remains:
     time_of_day:
       day: 1.0
-      dusk_dawn: 0.74
-      night: 0.46
+      dusk_dawn: 0.88
+      night: 0.40
     weather:
       clear: 1.0
-      rain: 0.76
-      snow: 0.62
+      rain: 0.90
+      snow: 0.45
     detectability_level:
-      '1': 0.98
-      '2': 0.86
-      '3': 0.66
-      '4': 0.48
-      '5': 0.34
+      '1': 1.65
+      '2': 1.20
+      '3': 1.0
+      '4': 0.50
+      '5': 0.20
   large_evidence:
     time_of_day:
       day: 1.0
-      dusk_dawn: 0.82
-      night: 0.58
+      dusk_dawn: 0.9
+      night: 0.50
     weather:
       clear: 1.0
-      rain: 0.84
-      snow: 0.74
+      rain: 0.92
+      snow: 0.76
     detectability_level:
-      '1': 1.05
-      '2': 0.94
-      '3': 0.76
-      '4': 0.58
-      '5': 0.44
+      '1': 1.70
+      '2': 1.30
+      '3': 1.0
+      '4': 0.65
+      '5': 0.35
   small_evidence:
     time_of_day:
       day: 1.0
-      dusk_dawn: 0.72
-      night: 0.42
+      dusk_dawn: 0.88
+      night: 0.40
     weather:
       clear: 1.0
-      rain: 0.74
-      snow: 0.6
+      rain: 0.90
+      snow: 0.45
     detectability_level:
-      '1': 1.0
-      '2': 0.84
-      '3': 0.62
-      '4': 0.44
-      '5': 0.3
+      '1': 1.65
+      '2': 1.20
+      '3': 1.0
+      '4': 0.50
+      '5': 0.20
 response_model:
   enabled_for_groups:
   - active_missing_person
   auditory_bonus:
     none: 0.0
-    possible: 0.05
-    likely: 0.1
+    possible: 0.04
+    likely: 0.08
   visual_bonus:
     none: 0.0
-    possible: 0.03
-    likely: 0.07
+    possible: 0.015
+    likely: 0.04
   max_total_multiplier: 1.25
 completion_model:
   formula: completion_multiplier = clamp(area_coverage_pct / 100, 0, 1)
@@ -339,8 +339,8 @@ audit:
   - minimum_effective_actual_spacing_m_for_target
 spacing_bounds_m:
   min_effective_actual_spacing_m_by_target:
-    adult: 3
-    child: 3
+    adult: 4
+    child: 4
     large_clues: 2
     small_clues: 1
     intact_remains: 2
@@ -350,14 +350,14 @@ spacing_bounds_m:
     small_evidence: 1
   max_effective_actual_spacing_m_by_target:
     adult: 40
-    child: 35
-    large_clues: 25
-    small_clues: 10
-    intact_remains: 28
-    partially_skeletonized: 18
-    skeletal_remains: 15
-    large_evidence: 25
-    small_evidence: 10
+    child: 40
+    large_clues: 30
+    small_clues: 20
+    intact_remains: 40
+    partially_skeletonized: 40
+    skeletal_remains: 20
+    large_evidence: 30
+    small_evidence: 20
   notes:
   - This model clamps the BENEFIT of very tight spacing by enforcing a minimum effective actual spacing per target.
   - Reference critical spacing is NOT clamped; it is computed from base_reference_critical_spacing_m_for_target and condition_multiplier_for_target.

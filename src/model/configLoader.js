@@ -40,9 +40,11 @@ export async function loadConfig() {
     }
 
     if (!loaded) {
+      const detail = structuredErrors.map((e) => `${e.code}: ${e.message}${e.cause ? ' — ' + e.cause : ''}`).join('; ');
+      console.error('[configLoader] All config candidates failed:', structuredErrors);
       return {
         config: emergencyDefaults,
-        diagnostics: 'No readable config found. Using emergency defaults.',
+        diagnostics: `No readable config found. Using emergency defaults. (${detail})`,
         valid: false,
         path: selectedPath,
         errors: structuredErrors
@@ -50,7 +52,8 @@ export async function loadConfig() {
     }
 
     // Basic sanity check: ensure required top-level keys exist
-    const required = ['targets', 'condition_factors', 'reference_spacing_bounds_m', 'response_model'];
+    // Accept either new spacing_bounds_m or legacy reference_spacing_bounds_m
+    const required = ['targets', 'condition_factors', 'response_model'];
     const missing = required.filter((k) => !config[k]);
     if (missing.length) {
       return {

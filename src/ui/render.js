@@ -395,37 +395,42 @@ function reportDetailHtml(segment, r) {
   calibration_constant_k = ${n(r.calibration_constant_k)}
   base_reference_critical_spacing_m = ${n(r.base_reference_critical_spacing_m)}
   spacing_exponent = ${n(r.spacing_exponent)}
+  min_effective_actual_spacing = ${n(r.min_effective)}
 
-Condition multiplier (per-target):
+1. Condition multiplier (per-target):
   F_time = ${n(r.F_time)},  F_weather = ${n(r.F_weather)},  F_detectability = ${n(r.F_detectability)}
   condition_multiplier = F_time \u00d7 F_weather \u00d7 F_detectability = ${n(r.C_t)}
 
-Effective detectability:
-  D_eff = base_detectability \u00d7 condition_multiplier
-        = ${n(r.base_detectability)} \u00d7 ${n(r.C_t)} = ${n(r.D_eff)}
+2. Base hazard rate:
+  base_hazard_rate = \u2212ln(1 \u2212 base_detectability)
+                   = \u2212ln(1 \u2212 ${n(r.base_detectability)}) = ${n(r.base_hazard_rate)}
 
-Reference critical spacing:
-  S_ref_raw = base_reference_critical_spacing_m = ${n(r.S_ref_raw)}
-  S_ref = clamp(${n(r.S_ref_raw)}, min=${n(r.min_ref)}, max=${n(r.max_ref)}) = ${n(r.S_ref)}
+3. Reference critical spacing:
+  S_ref = base_reference_critical_spacing_m \u00d7 condition_multiplier
+        = ${n(r.base_reference_critical_spacing_m)} \u00d7 ${n(r.C_t)} = ${n(r.S_ref)}
 
-Spacing effectiveness:
-  E_space = min(1, (S_ref / critical_spacing)^spacing_exponent)
-          = min(1, (${n(r.S_ref)} / ${n(segment.critical_spacing_m)})^${n(r.spacing_exponent)})
-          = ${n(r.E_space)}
+4. Effective actual critical spacing:
+  S_eff_act = max(actual_spacing, min_effective)
+            = max(${n(segment.critical_spacing_m)}, ${n(r.min_effective)}) = ${n(r.S_eff_act)}
 
-Response multiplier:
+5. Spacing ratio:
+  spacing_ratio = (S_ref / S_eff_act) ^ spacing_exponent
+                = (${n(r.S_ref)} / ${n(r.S_eff_act)}) ^ ${n(r.spacing_exponent)}
+                = ${n(r.spacing_ratio)}
+
+6. Response multiplier:
   auditory_bonus = ${n(aud)},  visual_bonus = ${n(vis)},  cap = ${n(r.response_cap)}
   M_resp = min(cap, 1 + aud + vis) = ${n(r.M_resp)}
 
-Completion multiplier:
+7. Completion multiplier:
   M_comp = clamp(area_coverage_pct / 100, 0, 1)
          = clamp(${n(segment.area_coverage_pct)} / 100, 0, 1)
          = ${n(r.M_comp)}
 
-Final (exponential detection model):
-  POD_raw  = 1 \u2212 exp(\u2212k \u00d7 D_eff \u00d7 E_space \u00d7 M_resp)
-           = 1 \u2212 exp(\u2212${n(r.calibration_constant_k)} \u00d7 ${n(r.D_eff)} \u00d7 ${n(r.E_space)} \u00d7 ${n(r.M_resp)})
-           = ${n(r.POD_raw)}
+8. Probability of detection (exponential model):
+  exponent = k \u00d7 base_hazard_rate \u00d7 spacing_ratio \u00d7 M_resp
+           = ${n(r.calibration_constant_k)} \u00d7 ${n(r.base_hazard_rate)} \u00d7 ${n(r.spacing_ratio)} \u00d7 ${n(r.M_resp)}
+  POD_raw  = 1 \u2212 exp(\u2212exponent) = ${n(r.POD_raw)}
   POD_final = clamp(POD_raw \u00d7 M_comp, 0, 0.99)
             = clamp(${n(r.POD_raw)} \u00d7 ${n(r.M_comp)}, 0, 0.99)
             = ${n(r.POD_final)}</pre>
@@ -434,8 +439,8 @@ Final (exponential detection model):
 
 function reportDetailText(segment, r) {
   return [
-    `    C_t=${n(r.C_t)}  D_eff=${n(r.D_eff)}  S_ref=${n(r.S_ref)}  E_space=${n(r.E_space)}`,
-    `    M_resp=${n(r.M_resp)}  M_comp=${n(r.M_comp)}`,
+    `    C_t=${n(r.C_t)}  hazard=${n(r.base_hazard_rate)}  S_ref=${n(r.S_ref)}  S_eff_act=${n(r.S_eff_act)}`,
+    `    spacing_ratio=${n(r.spacing_ratio)}  M_resp=${n(r.M_resp)}  M_comp=${n(r.M_comp)}`,
     `    POD_raw=${n(r.POD_raw)}  POD_final=${n(r.POD_final)}`
   ].join('\n');
 }

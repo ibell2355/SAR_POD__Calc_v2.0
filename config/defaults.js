@@ -3,15 +3,15 @@
 
 export const emergencyDefaults = {
   targets: {
-    adult:                  { group: 'active_missing_person', base_detectability: 0.8,  calibration_constant_k: 1.0,  base_reference_critical_spacing_m: 8.0, spacing_exponent: 2.0 },
-    child:                  { group: 'active_missing_person', base_detectability: 0.9,  calibration_constant_k: 1.05, base_reference_critical_spacing_m: 7.0, spacing_exponent: 2.2 },
-    large_clues:            { group: 'active_missing_person', base_detectability: 0.7,  calibration_constant_k: 1.0,  base_reference_critical_spacing_m: 7.0, spacing_exponent: 2.2 },
-    small_clues:            { group: 'active_missing_person', base_detectability: 0.5,  calibration_constant_k: 0.95, base_reference_critical_spacing_m: 5.5, spacing_exponent: 2.6 },
-    intact_remains:         { group: 'evidence_historical',   base_detectability: 0.6,  calibration_constant_k: 0.95, base_reference_critical_spacing_m: 6.0, spacing_exponent: 2.4 },
-    partially_skeletonized: { group: 'evidence_historical',   base_detectability: 0.4,  calibration_constant_k: 0.9,  base_reference_critical_spacing_m: 5.0, spacing_exponent: 2.6 },
-    skeletal_remains:       { group: 'evidence_historical',   base_detectability: 0.4,  calibration_constant_k: 0.9,  base_reference_critical_spacing_m: 5.0, spacing_exponent: 2.6 },
-    large_evidence:         { group: 'evidence_historical',   base_detectability: 0.7,  calibration_constant_k: 1.0,  base_reference_critical_spacing_m: 7.0, spacing_exponent: 2.2 },
-    small_evidence:         { group: 'evidence_historical',   base_detectability: 0.5,  calibration_constant_k: 0.95, base_reference_critical_spacing_m: 5.5, spacing_exponent: 2.6 }
+    adult:                  { group: 'active_missing_person', base_detectability: 0.8,  calibration_constant_k: 1.0, base_reference_critical_spacing_m: 8.0, spacing_exponent: 2.0 },
+    child:                  { group: 'active_missing_person', base_detectability: 0.9,  calibration_constant_k: 1.0, base_reference_critical_spacing_m: 7.0, spacing_exponent: 2.2 },
+    large_clues:            { group: 'active_missing_person', base_detectability: 0.7,  calibration_constant_k: 1.0, base_reference_critical_spacing_m: 7.0, spacing_exponent: 2.2 },
+    small_clues:            { group: 'active_missing_person', base_detectability: 0.5,  calibration_constant_k: 1.0, base_reference_critical_spacing_m: 5.5, spacing_exponent: 2.6 },
+    intact_remains:         { group: 'evidence_historical',   base_detectability: 0.6,  calibration_constant_k: 1.0, base_reference_critical_spacing_m: 6.0, spacing_exponent: 2.4 },
+    partially_skeletonized: { group: 'evidence_historical',   base_detectability: 0.4,  calibration_constant_k: 1.0, base_reference_critical_spacing_m: 5.0, spacing_exponent: 2.6 },
+    skeletal_remains:       { group: 'evidence_historical',   base_detectability: 0.4,  calibration_constant_k: 1.0, base_reference_critical_spacing_m: 5.0, spacing_exponent: 2.6 },
+    large_evidence:         { group: 'evidence_historical',   base_detectability: 0.7,  calibration_constant_k: 1.0, base_reference_critical_spacing_m: 7.0, spacing_exponent: 2.2 },
+    small_evidence:         { group: 'evidence_historical',   base_detectability: 0.5,  calibration_constant_k: 1.0, base_reference_critical_spacing_m: 5.5, spacing_exponent: 2.6 }
   },
 
   primary_target_hierarchy: {
@@ -35,9 +35,9 @@ export const emergencyDefaults = {
     small_evidence:         { time_of_day: { day: 1, dusk_dawn: 0.72, night: 0.42 }, weather: { clear: 1, rain: 0.74, snow: 0.6 },  detectability_level: { '1': 1.0, '2': 0.84, '3': 0.62, '4': 0.44, '5': 0.3 } }
   },
 
-  reference_spacing_bounds_m: {
-    min_by_target: { adult: 3, child: 3, large_clues: 2, small_clues: 1, intact_remains: 2, partially_skeletonized: 1.5, skeletal_remains: 1.2, large_evidence: 2, small_evidence: 1 },
-    max_by_target: { adult: 40, child: 35, large_clues: 25, small_clues: 10, intact_remains: 28, partially_skeletonized: 18, skeletal_remains: 15, large_evidence: 25, small_evidence: 10 }
+  spacing_bounds_m: {
+    min_effective_actual_spacing_m_by_target: { adult: 3, child: 3, large_clues: 2, small_clues: 1, intact_remains: 2, partially_skeletonized: 1.5, skeletal_remains: 1.2, large_evidence: 2, small_evidence: 1 },
+    max_effective_actual_spacing_m_by_target: { adult: 40, child: 35, large_clues: 25, small_clues: 10, intact_remains: 28, partially_skeletonized: 18, skeletal_remains: 15, large_evidence: 25, small_evidence: 10 }
   },
 
   response_model: {
@@ -54,6 +54,7 @@ export const emergencyDefaults = {
   qa_flags: {
     warn_if_critical_spacing_m_lt_1: true,
     warn_if_critical_spacing_m_gt_50: true,
-    warn_if_area_coverage_pct_lt_50: true
+    'warn_if_searched_fraction_lt_0.5': true,
+    'warn_if_inaccessible_fraction_gt_0.4': true
   }
 };

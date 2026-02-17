@@ -8,15 +8,32 @@ function targetDef(config, targetKey) {
   return config?.targets?.[targetKey] || {};
 }
 
+/**
+ * Condition factors are organized by target:
+ *   config.condition_factors[targetKey][axis][level]
+ * Detectability level keys in YAML are strings ('1'..'5'); cast input to string.
+ */
 function conditionFactor(config, axis, level, targetKey) {
   return Number(config?.condition_factors?.[targetKey]?.[axis]?.[String(level)] ?? 1);
 }
 
-function refBounds(config, targetKey) {
-  const bounds = config?.reference_spacing_bounds_m || {};
+/**
+ * Spacing bounds from config.spacing_bounds_m.
+ * Falls back to config.reference_spacing_bounds_m for backward compat.
+ */
+function spacingBounds(config, targetKey) {
+  const sb = config?.spacing_bounds_m;
+  if (sb) {
+    return {
+      min_effective: Number(sb.min_effective_actual_spacing_m_by_target?.[targetKey] ?? 1),
+      max_effective: Number(sb.max_effective_actual_spacing_m_by_target?.[targetKey] ?? 200)
+    };
+  }
+  // Fallback to legacy structure
+  const rb = config?.reference_spacing_bounds_m || {};
   return {
-    min: Number(bounds.min_by_target?.[targetKey] ?? 1),
-    max: Number(bounds.max_by_target?.[targetKey] ?? 200)
+    min_effective: Number(rb.min_by_target?.[targetKey] ?? 1),
+    max_effective: Number(rb.max_by_target?.[targetKey] ?? 200)
   };
 }
 
@@ -54,6 +71,7 @@ export function inferPrimaryTarget(selectedTargets, config, searchType) {
 /* ================================================================
    Response multiplier (active_missing_person group only)
    M_resp = min(max_total_multiplier, 1 + auditory_bonus + visual_bonus)
+   If target.group NOT in enabled_for_groups → 1.0
    ================================================================ */
 
 export function responseMultiplier(searchLevel, config, targetKey) {
@@ -84,13 +102,14 @@ export function responseComponents(searchLevel, config, targetKey) {
 }
 
 /* ================================================================
-   Spacing effectiveness
-   E_space = min(1, (S_ref / S_act)^spacing_exponent)
+   Spacing ratio (replaces old spacingEffectiveness)
+   spacing_ratio = (S_ref / S_eff_act) ^ spacing_exponent
+   NOT capped at 1 — benefit is limited by min effective actual spacing.
    ================================================================ */
 
-export function spacingEffectiveness(S_ref, S_act, k) {
-  if (!S_act || S_act <= 0) return 0;
-  return Math.min(1, (S_ref / S_act) ** k);
+export function spacingEffectiveness(S_ref, S_eff_act, k) {
+  if (!S_eff_act || S_eff_act <= 0) return 0;
+  return (S_ref / S_eff_act) ** k;
 }
 
 /* ================================================================
@@ -106,59 +125,61 @@ export function completionMultiplier(segment) {
 /* ================================================================
    Full per-target POD computation — Exponential detection model
 
-   POD_t = clamp(
-     (1 - exp(-calibration_constant_k * effective_detectability
-              * spacing_effectiveness * responsiveness_multiplier))
-     * completion_multiplier,
-     0, 0.99
-   )
+   1) condition_multiplier = F_time * F_weather * F_detectability
+   2) base_hazard_rate = -ln(1 - base_detectability)
+   3) reference_critical_spacing_m = base * condition_multiplier
+   4) effective_actual_critical_spacing_m = max(actual, min_effective)
+   5) spacing_ratio = (ref / eff_actual) ^ spacing_exponent
+   6) responsiveness_multiplier (only for enabled groups)
+   7) completion_multiplier = clamp(area_coverage_pct / 100, 0, 1)
+   8) POD = clamp((1 - exp(-k * hazard * ratio * resp)) * comp, 0, 0.99)
 
-   Where:
-     condition_multiplier  = F_time * F_weather * F_detectability  (per-target)
-     effective_detectability = base_detectability * condition_multiplier
-     reference_critical_spacing_raw = base_reference_critical_spacing_m  (NOT * C_t)
-     reference_critical_spacing = clamp(raw, min, max)
-     spacing_effectiveness = min(1, (S_ref / S_act)^spacing_exponent)
+   Calibration property: when k=1, ratio=1, resp=1, comp=1 → POD = base_detectability
    ================================================================ */
 
 export function computeForTarget({ config, searchLevel, segment, targetKey }) {
   const target = targetDef(config, targetKey);
-  const bounds = refBounds(config, targetKey);
+  const bounds = spacingBounds(config, targetKey);
 
   // Per-target base values from config
   const base_detectability = Number(target.base_detectability ?? 0.80);
-  const calibration_constant_k = Number(target.calibration_constant_k ?? 3.50);
-  const base_reference_critical_spacing_m = Number(target.base_reference_critical_spacing_m ?? 15);
-  const spacing_exponent = Number(target.spacing_exponent ?? 1.5);
+  const calibration_constant_k = Number(target.calibration_constant_k ?? 1.0);
+  const base_reference_critical_spacing_m = Number(target.base_reference_critical_spacing_m ?? 8.0);
+  const spacing_exponent = Number(target.spacing_exponent ?? 2.0);
 
   // Per-target condition factors (detectability_level key must be string)
   const F_time = conditionFactor(config, 'time_of_day', segment?.time_of_day || 'day', targetKey);
   const F_weather = conditionFactor(config, 'weather', segment?.weather || 'clear', targetKey);
   const F_detectability = conditionFactor(config, 'detectability_level', segment?.detectability_level ?? 3, targetKey);
 
-  // condition_multiplier_for_target = F_time * F_weather * F_detectability
+  // 1. condition_multiplier_for_target
   const C_t = F_time * F_weather * F_detectability;
 
-  // effective_detectability_for_target = base_detectability * condition_multiplier
-  const D_eff = base_detectability * C_t;
+  // 2. base_hazard_rate_for_target = -ln(1 - base_detectability)
+  //    Guard against base_detectability >= 1 which would give Infinity
+  const base_hazard_rate = -Math.log(1 - Math.min(base_detectability, 0.9999));
 
-  // reference_critical_spacing_raw = base_reference_critical_spacing_m (NOT multiplied by conditions)
-  const S_ref_raw = base_reference_critical_spacing_m;
-  const S_ref = clamp(S_ref_raw, bounds.min, bounds.max);
+  // 3. reference_critical_spacing_m = base * condition_multiplier (NOT clamped)
+  const S_ref = base_reference_critical_spacing_m * C_t;
 
-  // spacing_effectiveness_for_target = min(1, (S_ref / S_act)^spacing_exponent)
-  const E_space = spacingEffectiveness(S_ref, Number(segment?.critical_spacing_m), spacing_exponent);
+  // 4. effective_actual_critical_spacing_m = max(actual, min_effective)
+  const actual_spacing = Number(segment?.critical_spacing_m ?? 15);
+  const min_effective = bounds.min_effective;
+  const S_eff_act = Math.max(actual_spacing, min_effective);
 
-  // responsiveness_multiplier
+  // 5. spacing_ratio = (S_ref / S_eff_act) ^ spacing_exponent (NOT capped at 1)
+  const spacing_ratio = spacingEffectiveness(S_ref, S_eff_act, spacing_exponent);
+
+  // 6. responsiveness_multiplier
   const response = responseComponents(searchLevel || {}, config, targetKey);
   const M_resp = response.M_resp;
 
-  // completion_multiplier = clamp(area_coverage_pct / 100, 0, 1)
+  // 7. completion_multiplier = clamp(area_coverage_pct / 100, 0, 1)
   const M_comp = completionMultiplier(segment || {});
 
-  // Exponential POD formula:
-  // POD = clamp((1 - exp(-k * D_eff * E_space * M_resp)) * M_comp, 0, 0.99)
-  const POD_raw = 1 - Math.exp(-calibration_constant_k * D_eff * E_space * M_resp);
+  // 8. POD = clamp((1 - exp(-k * hazard * ratio * resp)) * comp, 0, 0.99)
+  const exponent_val = calibration_constant_k * base_hazard_rate * spacing_ratio * M_resp;
+  const POD_raw = 1 - Math.exp(-exponent_val);
   const POD_final = clamp(POD_raw * M_comp, 0, 0.99);
 
   return {
@@ -168,20 +189,22 @@ export function computeForTarget({ config, searchLevel, segment, targetKey }) {
     calibration_constant_k,
     base_reference_critical_spacing_m,
     spacing_exponent,
-    min_ref: bounds.min,
-    max_ref: bounds.max,
+    // Spacing bounds
+    min_effective,
+    max_effective: bounds.max_effective,
     // Condition factors
     F_time,
     F_weather,
     F_detectability,
     C_t,
-    // Effective detectability
-    D_eff,
-    // Reference spacing (raw = base, not multiplied by conditions)
-    S_ref_raw,
+    // Hazard rate
+    base_hazard_rate,
+    // Reference critical spacing (adjusted by conditions, NOT clamped)
     S_ref,
-    // Spacing effectiveness
-    E_space,
+    // Effective actual spacing (clamped to min)
+    S_eff_act,
+    // Spacing ratio (uncapped)
+    spacing_ratio,
     // Response
     M_resp,
     auditory_bonus: response.auditory_bonus,
@@ -216,6 +239,7 @@ export function selectedTargets(searchLevel) {
 
 /* ================================================================
    QA warning flags
+   Reads whatever flags exist in config.qa_flags.
    ================================================================ */
 
 export function generateQaWarnings(segment, config) {
@@ -230,6 +254,8 @@ export function generateQaWarnings(segment, config) {
   if (flags.warn_if_critical_spacing_m_gt_50 && spacing > 50) {
     warnings.push('Critical spacing is very large (> 50 m)');
   }
+  // YAML may still carry legacy searched_fraction / inaccessible_fraction flags;
+  // these are harmless — they reference inputs no longer collected, so never fire.
   if (flags.warn_if_area_coverage_pct_lt_50 && pct < 50) {
     warnings.push('Area coverage is low (< 50%)');
   }
