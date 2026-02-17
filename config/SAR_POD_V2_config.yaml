@@ -1,143 +1,156 @@
-version: "1.0"
-name: "GSAR Line Search PoD Model"
-description: >
-  Rural/backcountry GSAR line-search PoD calculator.
-  Outputs PoD by selected target class using condition-adjusted reference spacing
-  and nonlinear spacing effectiveness.
-
+version: 1.1-exp
+name: SAR_POD_V2_exponential
+description: Exponential POD model with per-target condition factors, spacing effectiveness, responsiveness, and completion limiter.
 units:
-  distance: "m"
-  time: "24h"
-  probability: "0-1"
+  distance: m
+  time: 24h
+  probability: 0-1
 
-# -----------------------------
-# INPUT CONTRACT (what app provides)
-# -----------------------------
 input_schema:
   search_level:
-    type_of_search: ["active_missing_person", "evidence_historical"]
-
-    # Multi-select within each type.
+    type_of_search:
+      - active_missing_person
+      - evidence_historical
     searching_for:
-      active_missing_person: ["adult", "child", "large_clues", "small_clues"]
+      active_missing_person:
+        - adult
+        - child
+        - large_clues
+        - small_clues
       evidence_historical:
-        # Mutually exclusive group (choose one in this subgroup)
-        remains_state: ["intact_remains", "partially_skeletonized", "skeletal_remains"]
-        # Plus optional evidence classes
-        evidence_classes: ["large_evidence", "small_evidence"]
-
-    # Active only:
+        remains_state:
+          - intact_remains
+          - partially_skeletonized
+          - skeletal_remains
+        evidence_classes:
+          - large_evidence
+          - small_evidence
     subject_responsiveness:
-      # Each axis mutually exclusive; both axes can be set.
-      auditory: ["none", "possible", "likely"]
-      visual: ["none", "possible", "likely"]
+      auditory:
+        - not expected
+        - possible
+        - likely
+      visual:
+        - not expected
+        - possible
+        - likely
 
   segment_level:
-
     conditions:
-      time_of_day: ["day", "dusk_dawn", "night"]
-      weather: ["clear", "rain", "snow"]
-      detectability_level: [1, 2, 3, 4, 5] # 1=low concealment ... 5=high concealment
-
+      time_of_day:
+        - day
+        - dusk_dawn
+        - night
+      weather:
+        - clear
+        - rain
+        - snow
+      detectability_level:
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
     execution:
-      # Critical spacing used in this segment (distance between searchers)
-      critical_spacing_m: "number > 0"
+      critical_spacing_m: number > 0
+      searched_fraction: number 0..1
+      inaccessible_fraction: number 0..1
 
-      # Fraction of planned segment actually searched (0..1)
-      searched_fraction: "number 0..1"
-
-      # Fraction of segment inaccessible/unsearchable due to hazards/terrain (0..1)
-      inaccessible_fraction: "number 0..1"
-
-# -----------------------------
-# TARGET DEFINITIONS
-# -----------------------------
 targets:
   adult:
-    group: "active_missing_person"
-    pod_ceiling: 0.97
-    base_reference_spacing_m: 25
-    spacing_exponent_k: 1.4
+    group: active_missing_person
+    base_detectability: 0.8
+    calibration_constant_k: 1.0
+    base_reference_critical_spacing_m: 8.0
+    spacing_exponent: 2.0
 
   child:
-    group: "active_missing_person"
-    pod_ceiling: 0.96
-    base_reference_spacing_m: 20
-    spacing_exponent_k: 1.5
+    group: active_missing_person
+    base_detectability: 0.9
+    calibration_constant_k: 1.05
+    base_reference_critical_spacing_m: 7.0
+    spacing_exponent: 2.2
 
   large_clues:
-    group: "active_missing_person"
-    pod_ceiling: 0.93
-    base_reference_spacing_m: 12
-    spacing_exponent_k: 1.7
+    group: active_missing_person
+    base_detectability: 0.7
+    calibration_constant_k: 1.0
+    base_reference_critical_spacing_m: 7.0
+    spacing_exponent: 2.2
 
   small_clues:
-    group: "active_missing_person"
-    pod_ceiling: 0.88
-    base_reference_spacing_m: 5
-    spacing_exponent_k: 2.0
+    group: active_missing_person
+    base_detectability: 0.5
+    calibration_constant_k: 0.95
+    base_reference_critical_spacing_m: 5.5
+    spacing_exponent: 2.6
 
   intact_remains:
-    group: "evidence_historical"
-    pod_ceiling: 0.95
-    base_reference_spacing_m: 14
-    spacing_exponent_k: 1.7
+    group: evidence_historical
+    base_detectability: 0.6
+    calibration_constant_k: 0.95
+    base_reference_critical_spacing_m: 6.0
+    spacing_exponent: 2.4
 
   partially_skeletonized:
-    group: "evidence_historical"
-    pod_ceiling: 0.91
-    base_reference_spacing_m: 10
-    spacing_exponent_k: 1.9
+    group: evidence_historical
+    base_detectability: 0.4
+    calibration_constant_k: 0.9
+    base_reference_critical_spacing_m: 5.0
+    spacing_exponent: 2.6
 
   skeletal_remains:
-    group: "evidence_historical"
-    pod_ceiling: 0.87
-    base_reference_spacing_m: 8
-    spacing_exponent_k: 2.0
+    group: evidence_historical
+    base_detectability: 0.4
+    calibration_constant_k: 0.9
+    base_reference_critical_spacing_m: 5.0
+    spacing_exponent: 2.6
 
   large_evidence:
-    group: "evidence_historical"
-    pod_ceiling: 0.92
-    base_reference_spacing_m: 12
-    spacing_exponent_k: 1.8
+    group: evidence_historical
+    base_detectability: 0.7
+    calibration_constant_k: 1.0
+    base_reference_critical_spacing_m: 7.0
+    spacing_exponent: 2.2
 
   small_evidence:
-    group: "evidence_historical"
-    pod_ceiling: 0.86
-    base_reference_spacing_m: 5
-    spacing_exponent_k: 2.1
+    group: evidence_historical
+    base_detectability: 0.5
+    calibration_constant_k: 0.95
+    base_reference_critical_spacing_m: 5.5
+    spacing_exponent: 2.6
 
-# -----------------------------
-# PRIMARY TARGET HIERARCHY
-# Used if app needs a single "primary target" context without adding more inputs.
-# -----------------------------
 primary_target_hierarchy:
-  active_missing_person: ["adult", "child", "large_clues", "small_clues"]
+  active_missing_person:
+    order:
+      - adult
+      - child
+      - large_clues
+      - small_clues
   evidence_historical:
-    # remains_state is usually primary if selected
-    order: ["intact_remains", "partially_skeletonized", "skeletal_remains", "large_evidence", "small_evidence"]
+    order:
+      - intact_remains
+      - partially_skeletonized
+      - skeletal_remains
+      - large_evidence
+      - small_evidence
 
-# -----------------------------
-# CONDITION FACTORS
-# Condition multiplier C_t = F_time * F_weather * F_detectability
-# Ref spacing S_ref_t = base_spacing_t * C_t
-# -----------------------------
+# NOTE: Condition factors below are preserved exactly from the first attachment (SAR_POD_V2_config1_exponential.yaml).
 condition_factors:
   time_of_day:
     day:
-      adult: 1.00
-      child: 1.00
-      large_clues: 1.00
-      small_clues: 1.00
-      intact_remains: 1.00
-      partially_skeletonized: 1.00
-      skeletal_remains: 1.00
-      large_evidence: 1.00
-      small_evidence: 1.00
-
+      adult: 1.0
+      child: 1.0
+      large_clues: 1.0
+      small_clues: 1.0
+      intact_remains: 1.0
+      partially_skeletonized: 1.0
+      skeletal_remains: 1.0
+      large_evidence: 1.0
+      small_evidence: 1.0
     dusk_dawn:
-      adult: 0.90
-      child: 0.90
+      adult: 0.9
+      child: 0.9
       large_clues: 0.82
       small_clues: 0.72
       intact_remains: 0.84
@@ -145,104 +158,100 @@ condition_factors:
       skeletal_remains: 0.74
       large_evidence: 0.82
       small_evidence: 0.72
-
     night:
       adult: 0.72
-      child: 0.70
+      child: 0.7
       large_clues: 0.58
       small_clues: 0.42
-      intact_remains: 0.60
-      partially_skeletonized: 0.50
+      intact_remains: 0.6
+      partially_skeletonized: 0.5
       skeletal_remains: 0.46
       large_evidence: 0.58
       small_evidence: 0.42
 
   weather:
     clear:
-      adult: 1.00
-      child: 1.00
-      large_clues: 1.00
-      small_clues: 1.00
-      intact_remains: 1.00
-      partially_skeletonized: 1.00
-      skeletal_remains: 1.00
-      large_evidence: 1.00
-      small_evidence: 1.00
-
+      adult: 1.0
+      child: 1.0
+      large_clues: 1.0
+      small_clues: 1.0
+      intact_remains: 1.0
+      partially_skeletonized: 1.0
+      skeletal_remains: 1.0
+      large_evidence: 1.0
+      small_evidence: 1.0
     rain:
-      adult: 0.90
-      child: 0.90
+      adult: 0.9
+      child: 0.9
       large_clues: 0.84
       small_clues: 0.74
       intact_remains: 0.86
-      partially_skeletonized: 0.80
+      partially_skeletonized: 0.8
       skeletal_remains: 0.76
       large_evidence: 0.84
       small_evidence: 0.74
-
     snow:
       adult: 0.82
       child: 0.82
       large_clues: 0.74
-      small_clues: 0.60
+      small_clues: 0.6
       intact_remains: 0.76
       partially_skeletonized: 0.66
       skeletal_remains: 0.62
       large_evidence: 0.74
-      small_evidence: 0.60
+      small_evidence: 0.6
 
   detectability_level:
-    # 1 = low concealment ... 5 = high concealment
-    "1":
-      adult: 1.10
+    '1':
+      adult: 1.1
       child: 1.08
       large_clues: 1.05
-      small_clues: 1.00
+      small_clues: 1.0
       intact_remains: 1.05
-      partially_skeletonized: 1.00
+      partially_skeletonized: 1.0
       skeletal_remains: 0.98
       large_evidence: 1.05
-      small_evidence: 1.00
-    "2":
-      adult: 1.00
+      small_evidence: 1.0
+    '2':
+      adult: 1.0
       child: 0.98
       large_clues: 0.94
       small_clues: 0.84
       intact_remains: 0.95
-      partially_skeletonized: 0.90
+      partially_skeletonized: 0.9
       skeletal_remains: 0.86
       large_evidence: 0.94
       small_evidence: 0.84
-    "3":
+    '3':
       adult: 0.88
       child: 0.86
       large_clues: 0.76
       small_clues: 0.62
       intact_remains: 0.78
-      partially_skeletonized: 0.70
+      partially_skeletonized: 0.7
       skeletal_remains: 0.66
       large_evidence: 0.76
       small_evidence: 0.62
-    "4":
+    '4':
       adult: 0.74
       child: 0.72
       large_clues: 0.58
       small_clues: 0.44
-      intact_remains: 0.60
+      intact_remains: 0.6
       partially_skeletonized: 0.52
       skeletal_remains: 0.48
       large_evidence: 0.58
       small_evidence: 0.44
-    "5":
-      adult: 0.60
+    '5':
+      adult: 0.6
       child: 0.58
       large_clues: 0.44
-      small_clues: 0.30
+      small_clues: 0.3
       intact_remains: 0.46
       partially_skeletonized: 0.38
       skeletal_remains: 0.34
       large_evidence: 0.44
-      small_evidence: 0.30
+      small_evidence: 0.3
 
 reference_spacing_bounds_m:
   min_by_target:
@@ -266,80 +275,142 @@ reference_spacing_bounds_m:
     large_evidence: 25
     small_evidence: 10
 
-# -----------------------------
-# RESPONSE BONUS (Active Missing Person only)
-# M_resp = 1 + auditory_bonus + visual_bonus, capped
-# -----------------------------
 response_model:
-  enabled_for_groups: ["active_missing_person"]
+  enabled_for_groups:
+    - active_missing_person
   auditory_bonus:
-    none: 0.00
+    none: 0.0
     possible: 0.05
-    likely: 0.10
+    likely: 0.1
   visual_bonus:
-    none: 0.00
+    none: 0.0
     possible: 0.03
     likely: 0.07
   max_total_multiplier: 1.25
 
-# -----------------------------
-# COMPLETION / INACCESSIBILITY
-# Hard cap on achieved PoD
-# -----------------------------
 completion_model:
-  formula: "M_comp = max(0, min(1, searched_fraction - inaccessible_fraction))"
-  # Alternative (less strict) option:
-  # formula: "M_comp = searched_fraction * (1 - inaccessible_fraction)"
+  # Hard limiter: completion multiplier always stays in [0, 1].
+  formula: completion_multiplier = max(0, min(1, searched_fraction - inaccessible_fraction))
   use_strict_subtractive_formula: true
 
-# -----------------------------
-# CORE FORMULAS
-# -----------------------------
 formulas:
-  condition_multiplier: "C_t = F_time[t] * F_weather[t] * F_detectability[t]"
-  reference_spacing_raw: "S_ref_raw_t = S_base_t * C_t"
-  reference_spacing_clamped: "S_ref_t = clamp(S_ref_raw_t, S_ref_min_t, S_ref_max_t)"
-  spacing_effectiveness: "E_space_t = min(1, (S_ref_t / S_act)^k_t)"
-  response_multiplier: "M_resp_t = min(response_cap, 1 + B_aud + B_vis)"
-  final_pod_pre_cap: "POD_pre_t = POD_ceiling_t * E_space_t * M_resp_t"
-  final_pod: "POD_t = clamp(POD_pre_t * M_comp, 0, 0.99)"
+  # ===== Per-target condition multiplier =====
+  # condition_multiplier_for_target = time_of_day_factor_for_target * weather_factor_for_target * detectability_level_factor_for_target
+  condition_multiplier:
+    text: >
+      condition_multiplier_for_target =
+      time_of_day_factor_for_target *
+      weather_factor_for_target *
+      detectability_level_factor_for_target
 
-# -----------------------------
-# OPTIONAL QA FLAGS (no score impact in v1)
-# -----------------------------
+  # ===== Effective detectability =====
+  # effective_detectability_for_target = base_detectability_for_target * condition_multiplier_for_target
+  effective_detectability:
+    text: >
+      effective_detectability_for_target =
+      base_detectability_for_target *
+      condition_multiplier_for_target
+
+  # ===== Reference (critical) spacing with clamp =====
+  # reference_critical_spacing_raw_for_target = base_reference_critical_spacing_m_for_target
+  # reference_critical_spacing_m_for_target = clamp(reference_critical_spacing_raw_for_target, reference_spacing_min_m_for_target, reference_spacing_max_m_for_target)
+  reference_critical_spacing:
+    raw_text: >
+      reference_critical_spacing_raw_for_target =
+      base_reference_critical_spacing_m_for_target
+    clamped_text: >
+      reference_critical_spacing_m_for_target =
+      clamp(
+        reference_critical_spacing_raw_for_target,
+        reference_spacing_min_m_for_target,
+        reference_spacing_max_m_for_target
+      )
+
+  # ===== Spacing effectiveness =====
+  # spacing_effectiveness_for_target = min(1, (reference_critical_spacing_m_for_target / actual_critical_spacing_m) ^ spacing_exponent_for_target)
+  spacing_effectiveness:
+    text: >
+      spacing_effectiveness_for_target =
+      min(
+        1,
+        (reference_critical_spacing_m_for_target / actual_critical_spacing_m) ^ spacing_exponent_for_target
+      )
+
+  # ===== Responsiveness multiplier (only when enabled_for_groups applies) =====
+  # responsiveness_multiplier = min(max_total_multiplier, 1 + auditory_bonus + visual_bonus)
+  response_multiplier:
+    text: >
+      responsiveness_multiplier =
+      min(
+        response_model.max_total_multiplier,
+        1 + auditory_response_bonus + visual_response_bonus
+      )
+
+  # ===== Completion multiplier (hard limiter) =====
+  completion_multiplier:
+    text: >
+      completion_multiplier =
+      max(
+        0,
+        min(
+          1,
+          searched_fraction - inaccessible_fraction
+        )
+      )
+
+  # ===== Final exponential POD =====
+  # pod_for_target = clamp( (1 - exp( - calibration_constant_k_for_target * effective_detectability_for_target * spacing_effectiveness_for_target * responsiveness_multiplier )) * completion_multiplier, 0, 0.99 )
+  final_pod:
+    text: >
+      probability_of_detection_for_target =
+      clamp(
+        (
+          1 - exp(
+            - calibration_constant_k_for_target *
+              effective_detectability_for_target *
+              spacing_effectiveness_for_target *
+              responsiveness_multiplier
+          )
+        ) *
+        completion_multiplier,
+        0,
+        0.99
+      )
+
 qa_flags:
   warn_if_critical_spacing_m_lt_1: true
   warn_if_critical_spacing_m_gt_50: true
   warn_if_searched_fraction_lt_0.5: true
   warn_if_inaccessible_fraction_gt_0.4: true
 
-# -----------------------------
-# CALIBRATION GUIDANCE
-# -----------------------------
 calibration:
   notes:
     - "Treat all values as initial SME priors."
     - "Back-test on historical segments and adjust quarterly."
-    - "Adjust in order: base_reference_spacing, detectability factors, spacing exponent k."
+    - "Adjust in order: base_reference_critical_spacing_m, condition_factors, spacing_exponent."
     - "Keep response bonuses small; avoid overpowering spacing effectiveness."
-    - "Do not set any POD ceiling to 1.00."
+    - "Do not set any POD ceiling to 1.00 (this model clamps at 0.99)."
+    - "Implementation note: detectability_level keys are strings '1'..'5' in condition_factors; cast input to string for lookup."
+    - "Implementation note: apply response_model only when target.group is in response_model.enabled_for_groups; otherwise responsiveness_multiplier = 1.0."
+    - "Implementation note: actual_critical_spacing_m is input_schema.segment_level.execution.critical_spacing_m."
 
 audit:
   save_inputs: true
   save_intermediate_values: true
   save_per_target_outputs: true
   fields_to_log:
-    - "selected_targets"
-    - "primary_target_inferred"
-    - "time_of_day"
-    - "weather"
-    - "detectability_level"
-    - "critical_spacing_m"
-    - "searched_fraction"
-    - "inaccessible_fraction"
-    - "C_t"
-    - "S_ref_t"
-    - "E_space_t"
-    - "M_resp_t"
-    - "M_comp"
-    - "POD_t"
+    - selected_targets
+    - primary_target_inferred
+    - time_of_day
+    - weather
+    - detectability_level
+    - critical_spacing_m
+    - searched_fraction
+    - inaccessible_fraction
+    - condition_multiplier_for_target
+    - effective_detectability_for_target
+    - reference_critical_spacing_m_for_target
+    - spacing_effectiveness_for_target
+    - responsiveness_multiplier
+    - completion_multiplier
+    - probability_of_detection_for_target
