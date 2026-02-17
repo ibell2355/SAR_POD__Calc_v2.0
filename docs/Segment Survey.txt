@@ -1,13 +1,28 @@
-Segment-level survey (dynamic each segment)
+Segment Survey (Conditions + Execution)
 
-- Segment start time (24h HH:MM)
-- Segment end time (24h HH:MM)
-- Time of day: day / dusk_dawn / night
-- Weather: clear / rain / snow
-- Detectability level: 1..5
-- Critical spacing (meters)
-- Area coverage (%)
+Segment Timing
+- Segment Start Time (24h HH:MM)
+- Segment End Time (24h HH:MM)
 
-Notes:
-- Critical spacing (meters) key: critical_spacing_m
-- Area coverage (%) key: area_coverage_pct
+Conditions
+Time of Day (mutually exclusive)
+- Day
+- Dusk/Dawn
+- Night
+
+Weather (mutually exclusive)
+- Clear
+- Rain
+- Snow
+
+Vegetation / Terrain / Detectability (single select)
+- 1 - Low Concealment
+- 2 - Low/Moderate Concealment
+- 3 - Moderate Concealment
+- 4 - Moderate/High Concealment
+- 5 - High Concealment
+
+Execution (for PoD calculation)
+- Actual spacing (meters)
+- Searched fraction (0.00-1.00)
+- Inaccessible fraction (0.00-1.00)

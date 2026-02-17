@@ -1,19 +1,22 @@
-Search-level survey (mission-stable)
-
 Type of Search
 - Active Missing Person
+  Searching For (multi-select)
+  - Adult
+  - Child
+  - Large clues
+  - Small clues
+
+  Subject Responsiveness
+  - Auditory: None / Possible / Likely (mutually exclusive)
+  - Visual: None / Possible / Likely (mutually exclusive)
+
 - Evidence/Historical
+  Searching For
+  Remains State (mutually exclusive)
+  - Intact remains
+  - Partially skeletalized remains
+  - Skeletal remains
 
-Active Missing Person > Searching For (multi-select)
-- Adult
-- Child
-- Large Clues
-- Small Clues
-
-Active Missing Person > Subject Responsiveness
-- Auditory: none / possible / likely
-- Visual: none / possible / likely
-
-Evidence/Historical > Searching For
-- Remains state: intact_remains / partially_skeletonized / skeletal_remains
-- Evidence classes: large_evidence / small_evidence
+  Evidence (multi-select)
+  - Large evidence
+  - Small evidence
