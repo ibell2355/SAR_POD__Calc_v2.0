@@ -3,6 +3,7 @@ import { computeForTarget, inferPrimaryTarget, selectedTargets } from './model/p
 import { buildReportText, renderLandingPage, renderReportPage, renderSegmentPage } from './ui/render.js';
 
 const STORAGE_KEY = 'sar_v2_session';
+const IS_DEV = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
 const defaultSearch = {
   type_of_search: 'active_missing_person',
@@ -43,20 +44,41 @@ const app = {
 start();
 
 async function start() {
-  const [{ config, diagnostics }, version] = await Promise.all([loadConfig(), getVersion()]);
-  app.config = config;
-  app.diagnostics = diagnostics;
-  app.version = version;
-  hydrate();
-  bindNetwork();
-  render();
-  registerServiceWorker();
+  try {
+    const [{ config, diagnostics, path, errors, valid }, version] = await Promise.all([loadConfig(), getVersion()]);
+    app.config = config;
+    app.diagnostics = diagnostics;
+    app.version = version;
+    app.configPath = path;
+    app.configErrors = errors || [];
+    app.configValid = valid;
+
+    const migrationInfo = hydrate();
+    logDevDiagnostics({ configPath: path, configValid: valid, configErrors: errors || [], migrationCount: migrationInfo.count, swVersion: 'v2' });
+
+    bindNetwork();
+    render();
+    registerServiceWorker();
+  } catch (error) {
+    console.error('[Startup Fatal]', error);
+    app.config = app.config || {};
+    app.diagnostics = `Fatal startup error: ${error.message}`;
+    app.configPath = app.configPath || './config/SAR_POD_V2_config.yaml';
+    app.configErrors = [{ code: 'STARTUP_FATAL', path: app.configPath, message: 'Application startup failed', cause: error.message }];
+    app.configValid = false;
+    bindNetwork();
+    render();
+  }
 }
 
 function render() {
   const root = document.querySelector('#app');
   if (app.view === 'segment') {
     const segment = app.segments.find((s) => s.id === app.editingSegmentId);
+    if (!segment) {
+      app.view = 'landing';
+      return render();
+    }
     renderSegmentPage(root, app, segment, { results: segment.results, primaryTarget: segment.primaryTarget });
   } else if (app.view === 'report') {
     renderReportPage(root, app, format24h(new Date()));
@@ -138,6 +160,11 @@ function recomputeAllSegments() {
 }
 
 function recomputeSegment(segment) {
+  if (!app.config?.pod || !app.config?.factors) {
+    segment.primaryTarget = null;
+    segment.results = [];
+    return;
+  }
   const targets = selectedTargets(app.searchLevel);
   segment.primaryTarget = inferPrimaryTarget(targets, app.config);
   segment.results = targets.map((target) => computeForTarget({ config: app.config, searchLevel: app.searchLevel, segment, targetKey: target }));
@@ -150,11 +177,57 @@ function autosave() {
 
 function hydrate() {
   const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-  if (!raw) return;
-  app.session = raw.session || app.session;
-  app.searchLevel = raw.searchLevel || app.searchLevel;
-  app.segments = raw.segments || [];
+  if (!raw) return { count: 0 };
+  const migrationInfo = migratePersistedState(raw);
+  app.session = migrationInfo.state.session;
+  app.searchLevel = migrationInfo.state.searchLevel;
+  app.segments = migrationInfo.state.segments;
   recomputeAllSegments();
+  return { count: migrationInfo.count };
+}
+
+function migratePersistedState(raw) {
+  let count = 0;
+  const migratedSegments = (raw?.segments || []).map((segment) => {
+    const next = {
+      ...defaultSegment(),
+      ...segment,
+      id: segment?.id || crypto.randomUUID(),
+      name: segment?.name || '',
+      segment_start_time: segment?.segment_start_time || '08:00',
+      segment_end_time: segment?.segment_end_time || '09:00',
+      time_of_day: segment?.time_of_day || 'day',
+      weather: segment?.weather || 'clear',
+      detectability_level: Number(segment?.detectability_level ?? 3)
+    };
+
+    if (next.critical_spacing_m == null && segment?.actual_spacing_m != null) {
+      next.critical_spacing_m = Number(segment.actual_spacing_m);
+      count += 1;
+    }
+    if (next.area_coverage_pct == null) {
+      if (segment?.searched_fraction != null) {
+        next.area_coverage_pct = Math.round(Number(segment.searched_fraction) * 100);
+      } else {
+        next.area_coverage_pct = 100;
+      }
+      count += 1;
+    }
+
+    next.critical_spacing_m = Number(next.critical_spacing_m ?? 15);
+    next.area_coverage_pct = Number(next.area_coverage_pct ?? 100);
+    next.area_coverage_pct = Math.max(0, Math.min(100, next.area_coverage_pct));
+    return next;
+  });
+
+  return {
+    count,
+    state: {
+      session: { ...app.session, ...(raw?.session || {}) },
+      searchLevel: { ...defaultSearch, ...(raw?.searchLevel || {}) },
+      segments: migratedSegments
+    }
+  };
 }
 
 async function getVersion() {
@@ -172,7 +245,31 @@ function bindNetwork() {
 }
 
 function registerServiceWorker() {
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js');
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('./service-worker.js').then((registration) => {
+    registration.addEventListener('updatefound', () => {
+      const worker = registration.installing;
+      if (!worker) return;
+      worker.addEventListener('statechange', () => {
+        if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+          app.newVersionAvailable = true;
+          render();
+          setTimeout(() => window.location.reload(), 1500);
+        }
+      });
+    });
+  }).catch((error) => {
+    if (IS_DEV) console.warn('SW registration failed:', error);
+  });
+}
+
+function logDevDiagnostics({ configPath, configValid, configErrors, migrationCount, swVersion }) {
+  if (!IS_DEV) return;
+  console.group('[SAR POD Calculator startup diagnostics]');
+  console.log('config:', { path: configPath, valid: configValid, errors: configErrors.length });
+  console.log('migration count:', migrationCount);
+  console.log('service worker version:', swVersion);
+  console.groupEnd();
 }
 
 function format24h(date) {
