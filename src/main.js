@@ -467,7 +467,7 @@ function updateConnectivity() {
   const online = navigator.onLine;
   const pill = document.getElementById('connectivity-pill');
   if (pill) {
-    pill.textContent = `${online ? 'Online' : 'Offline'} / Offline ready`;
+    pill.textContent = online ? 'Online / Offline ready' : 'Offline';
     pill.className = `connectivity-pill ${online ? 'online' : 'offline'}`;
   }
 }

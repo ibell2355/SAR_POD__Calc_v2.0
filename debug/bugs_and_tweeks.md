@@ -3,10 +3,12 @@ Once complete, mark with an X inside of the square brackets "[X]"
 
 # BUGS
 
+- [X] When the service is in offline mode, the indicator at the top that indicates "online / Offline ready" says "Offline / offline ready"
+	- When offline it should just say "Offline"
 
 # TWEEKS
 
-- [ ] 
+- [X]
 - [X] Under auditory responsiveness and visual responsiveness instead of 'none' but "Not Expected"
 - [X] The report should include the selection from the search page
 	- For example search type, active missing person, adult, etc. should show in the report as well
