@@ -5,55 +5,6 @@ units:
   distance: m
   time: 24h
   probability: 0-1
-input_schema:
-  search_level:
-    type_of_search:
-    - active_missing_person
-    - evidence_historical
-    searching_for:
-      active_missing_person:
-      - adult
-      - child
-      - large_clues
-      - small_clues
-      evidence_historical:
-        remains_state:
-        - intact_remains
-        - partially_skeletonized
-        - skeletal_remains
-        evidence_classes:
-        - large_evidence
-        - small_evidence
-    subject_responsiveness:
-      auditory:
-      - not expected
-      - possible
-      - likely
-      visual:
-      - not expected
-      - possible
-      - likely
-  segment_level:
-    conditions:
-      time_of_day:
-      - day
-      - dusk_dawn
-      - night
-      weather:
-      - clear
-      - rain
-      - snow
-      detectability_level:
-      - 1
-      - 2
-      - 3
-      - 4
-      - 5
-    execution:
-      critical_spacing_m: number > 0
-      searched_fraction: number 0..1
-      inaccessible_fraction: number 0..1
-      area_coverage_pct: number 0..100
 targets:
   adult:
     group: active_missing_person
@@ -109,6 +60,31 @@ targets:
     calibration_constant_k: 0.88
     base_reference_critical_spacing_m: 5.0
     spacing_exponent: .45
+spacing_bounds_m:
+  min_effective_actual_spacing_m_by_target:
+    adult: 4
+    child: 4
+    large_clues: 2
+    small_clues: 1
+    intact_remains: 2
+    partially_skeletonized: 1.5
+    skeletal_remains: 1.2
+    large_evidence: 2
+    small_evidence: 1
+  max_effective_actual_spacing_m_by_target:
+    adult: 40
+    child: 40
+    large_clues: 30
+    small_clues: 20
+    intact_remains: 40
+    partially_skeletonized: 40
+    skeletal_remains: 20
+    large_evidence: 30
+    small_evidence: 20
+  notes:
+  - This model clamps the BENEFIT of very tight spacing by enforcing a minimum effective actual spacing per target.
+  - Reference critical spacing is NOT clamped; it is computed from base_reference_critical_spacing_m_for_target and condition_multiplier_for_target.
+  - max_effective_actual_spacing_m_by_target is reserved for future use (e.g., optionally capping detriment for extremely wide spacing) and is not used in the current formulas.
 primary_target_hierarchy:
   active_missing_person:
     order:
@@ -123,6 +99,80 @@ primary_target_hierarchy:
     - skeletal_remains
     - large_evidence
     - small_evidence
+input_schema:
+  search_level:
+    type_of_search:
+    - active_missing_person
+    - evidence_historical
+    searching_for:
+      active_missing_person:
+      - adult
+      - child
+      - large_clues
+      - small_clues
+      evidence_historical:
+        remains_state:
+        - intact_remains
+        - partially_skeletonized
+        - skeletal_remains
+        evidence_classes:
+        - large_evidence
+        - small_evidence
+    subject_responsiveness:
+      auditory:
+      - not expected
+      - possible
+      - likely
+      visual:
+      - expected to evade
+      - not expected
+      - possible
+      - likely
+    subject_visibility:
+    - low
+    - medium
+    - high
+  segment_level:
+    conditions:
+      time_of_day:
+      - day
+      - dusk_dawn
+      - night
+      weather:
+      - clear
+      - rain
+      - snow
+      detectability_level:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      vegetation_density: 1..5
+      micro_terrain_complexity: 1..5
+      extenuating_factors: 1..5
+    execution:
+      critical_spacing_m: number > 0
+      searched_fraction: number 0..1
+      inaccessible_fraction: number 0..1
+      area_coverage_pct: number 0..100
+response_model:
+  enabled_for_groups:
+  - active_missing_person
+  auditory_bonus:
+    none: 0.0
+    possible: 0.04
+    likely: 0.08
+  visual_bonus:
+    evade: -0.02
+    none: 0.0
+    possible: 0.015
+    likely: 0.04
+  max_total_multiplier: 1.25
+subject_visibility_factor:
+  low: 0.80
+  medium: 1.0
+  high: 1.20
 condition_factors:
   adult:
     time_of_day:
@@ -259,18 +309,183 @@ condition_factors:
       '3': 1.0
       '4': 0.50
       '5': 0.20
-response_model:
-  enabled_for_groups:
-  - active_missing_person
-  auditory_bonus:
-    none: 0.0
-    possible: 0.04
-    likely: 0.08
-  visual_bonus:
-    none: 0.0
-    possible: 0.015
-    likely: 0.04
-  max_total_multiplier: 1.25
+segment_factor_weights:
+  adult:
+    vegetation_density:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+    micro_terrain_complexity:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+    extenuating_factors:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+  child:
+    vegetation_density:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+    micro_terrain_complexity:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+    extenuating_factors:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+  large_clues:
+    vegetation_density:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+    micro_terrain_complexity:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+    extenuating_factors:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+  small_clues:
+    vegetation_density:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+    micro_terrain_complexity:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+    extenuating_factors:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+  intact_remains:
+    vegetation_density:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+    micro_terrain_complexity:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+    extenuating_factors:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+  partially_skeletonized:
+    vegetation_density:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+    micro_terrain_complexity:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+    extenuating_factors:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+  skeletal_remains:
+    vegetation_density:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+    micro_terrain_complexity:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+    extenuating_factors:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+  large_evidence:
+    vegetation_density:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+    micro_terrain_complexity:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+    extenuating_factors:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+  small_evidence:
+    vegetation_density:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+    micro_terrain_complexity:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+    extenuating_factors:
+      '1': 1.0
+      '2': 1.0
+      '3': 1.0
+      '4': 1.0
+      '5': 1.0
+ui_tooltips:
+  subject_visibility: How visible is the subject expected to be? Low = camouflaged or buried. Medium = typical. High = bright clothing or open terrain.
+  vegetation_density: Density of vegetation in the search area. 1 = open/sparse, 5 = extremely dense. 3 is neutral.
+  micro_terrain_complexity: Complexity of ground surface and micro-terrain features. 1 = flat/simple, 5 = extremely rugged. 3 is neutral.
+  extenuating_factors: Other factors affecting detection not captured elsewhere. 1 = favorable, 5 = severely adverse. 3 is neutral.
 completion_model:
   formula: completion_multiplier = clamp(area_coverage_pct / 100, 0, 1)
   description: Hard limiter based on searched area coverage percentage. Applied as the final multiplier on probability_of_detection.
@@ -337,28 +552,3 @@ audit:
   - area_coverage_pct
   - effective_actual_critical_spacing_m_for_target
   - minimum_effective_actual_spacing_m_for_target
-spacing_bounds_m:
-  min_effective_actual_spacing_m_by_target:
-    adult: 4
-    child: 4
-    large_clues: 2
-    small_clues: 1
-    intact_remains: 2
-    partially_skeletonized: 1.5
-    skeletal_remains: 1.2
-    large_evidence: 2
-    small_evidence: 1
-  max_effective_actual_spacing_m_by_target:
-    adult: 40
-    child: 40
-    large_clues: 30
-    small_clues: 20
-    intact_remains: 40
-    partially_skeletonized: 40
-    skeletal_remains: 20
-    large_evidence: 30
-    small_evidence: 20
-  notes:
-  - This model clamps the BENEFIT of very tight spacing by enforcing a minimum effective actual spacing per target.
-  - Reference critical spacing is NOT clamped; it is computed from base_reference_critical_spacing_m_for_target and condition_multiplier_for_target.
-  - max_effective_actual_spacing_m_by_target is reserved for future use (e.g., optionally capping detriment for extremely wide spacing) and is not used in the current formulas.

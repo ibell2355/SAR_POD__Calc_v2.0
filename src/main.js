@@ -15,6 +15,7 @@ const defaultSearch = {
   active_targets: ['adult'],
   auditory: 'none',
   visual: 'none',
+  subject_visibility: 'medium',
   remains_state: 'intact_remains',
   evidence_classes: ['large_evidence'],
   evidence_categories: ['remains']
@@ -27,6 +28,9 @@ function newSegment() {
     time_of_day: 'day',
     weather: 'clear',
     detectability_level: 3,
+    vegetation_density: 3,
+    micro_terrain_complexity: 3,
+    extenuating_factors: 3,
     critical_spacing_m: 15,
     area_coverage_pct: 100,
     results: [],
@@ -115,11 +119,11 @@ function route() {
     if (!seg) { location.hash = '#/'; return; }
     renderSegment(root, seg,
       { results: seg.results, primaryTarget: seg.primaryTarget, qaWarnings: seg.qaWarnings },
-      saveState, configValid, configError);
+      saveState, configValid, configError, config);
   } else if (hash === '#/report') {
-    renderReport(root, state, appVersion, formatReportDate(new Date()), configValid, configError);
+    renderReport(root, state, appVersion, formatReportDate(new Date()), configValid, configError, config);
   } else {
-    renderHome(root, state, saveState, configValid, configError);
+    renderHome(root, state, saveState, configValid, configError, config);
   }
 }
 
@@ -168,11 +172,15 @@ function handleInput(el) {
     if (seg) {
       const segFields = [
         'name', 'critical_spacing_m', 'area_coverage_pct',
-        'time_of_day', 'weather', 'detectability_level'
+        'time_of_day', 'weather', 'detectability_level',
+        'vegetation_density', 'micro_terrain_complexity', 'extenuating_factors'
       ];
       if (segFields.includes(name)) {
         if (type === 'number' || name === 'detectability_level'
-            || name === 'area_coverage_pct') {
+            || name === 'area_coverage_pct'
+            || name === 'vegetation_density'
+            || name === 'micro_terrain_complexity'
+            || name === 'extenuating_factors') {
           seg[name] = Number(value);
         } else {
           seg[name] = value;
@@ -191,7 +199,7 @@ function handleInput(el) {
   }
 
   // ---- Search-level radios ----
-  if (['type_of_search', 'auditory', 'visual', 'remains_state'].includes(name)) {
+  if (['type_of_search', 'auditory', 'visual', 'subject_visibility', 'remains_state'].includes(name)) {
     state.searchLevel[name] = value;
 
     // Toggle survey sections via data attribute
@@ -405,6 +413,7 @@ function migrateState(raw) {
   };
 
   const searchLevel = { ...defaultSearch, ...(raw.searchLevel || {}) };
+  if (!searchLevel.subject_visibility) searchLevel.subject_visibility = 'medium';
   searchLevel.active_targets = Array.isArray(searchLevel.active_targets)
     ? searchLevel.active_targets
     : [...defaultSearch.active_targets];
@@ -439,6 +448,9 @@ function migrateState(raw) {
     next.critical_spacing_m = clampNum(next.critical_spacing_m, 15, 0.1, 10000);
     next.area_coverage_pct = clampNum(next.area_coverage_pct, 100, 0, 100);
     next.detectability_level = clampNum(Number(next.detectability_level), 3, 1, 5);
+    next.vegetation_density = clampNum(Number(next.vegetation_density), 3, 1, 5);
+    next.micro_terrain_complexity = clampNum(Number(next.micro_terrain_complexity), 3, 1, 5);
+    next.extenuating_factors = clampNum(Number(next.extenuating_factors), 3, 1, 5);
     next.results = [];
     next.primaryTarget = null;
     return next;

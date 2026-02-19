@@ -40,9 +40,22 @@ const config = {
   response_model: {
     enabled_for_groups: ['active_missing_person'],
     auditory_bonus: { none: 0, possible: 0.05, likely: 0.1 },
-    visual_bonus: { none: 0, possible: 0.03, likely: 0.07 },
+    visual_bonus: { evade: -0.02, none: 0, possible: 0.03, likely: 0.07 },
     max_total_multiplier: 1.25
   },
+  subject_visibility_factor: {
+    low: 0.80,
+    medium: 1.0,
+    high: 1.20
+  },
+  segment_factor_weights: Object.fromEntries(
+    ['adult','child','large_clues','small_clues','intact_remains','partially_skeletonized','skeletal_remains','large_evidence','small_evidence']
+      .map(t => [t, {
+        vegetation_density: { '1': 1.0, '2': 1.0, '3': 1.0, '4': 1.0, '5': 1.0 },
+        micro_terrain_complexity: { '1': 1.0, '2': 1.0, '3': 1.0, '4': 1.0, '5': 1.0 },
+        extenuating_factors: { '1': 1.0, '2': 1.0, '3': 1.0, '4': 1.0, '5': 1.0 }
+      }])
+  ),
   qa_flags: {
     warn_if_critical_spacing_m_lt_1: true,
     warn_if_critical_spacing_m_gt_50: true,
@@ -223,4 +236,65 @@ test('QA warnings empty for normal values', () => {
   const seg = { critical_spacing_m: 15, area_coverage_pct: 100 };
   const warnings = generateQaWarnings(seg, config);
   assert.equal(warnings.length, 0);
+});
+
+/* ================================================================
+   New factor tests (v2.2)
+   ================================================================ */
+
+test('subject_visibility: low reduces C_t, high increases C_t', () => {
+  const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 2, critical_spacing_m: 8, area_coverage_pct: 100, vegetation_density: 3, micro_terrain_complexity: 3, extenuating_factors: 3 };
+  const searchLow = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none', subject_visibility: 'low' };
+  const searchMed = { ...searchLow, subject_visibility: 'medium' };
+  const searchHigh = { ...searchLow, subject_visibility: 'high' };
+
+  const rLow = computeForTarget({ config, searchLevel: searchLow, segment, targetKey: 'adult' });
+  const rMed = computeForTarget({ config, searchLevel: searchMed, segment, targetKey: 'adult' });
+  const rHigh = computeForTarget({ config, searchLevel: searchHigh, segment, targetKey: 'adult' });
+
+  assert.ok(rLow.C_t < rMed.C_t, 'Low visibility should reduce C_t');
+  assert.ok(rHigh.C_t > rMed.C_t, 'High visibility should increase C_t');
+  assert.ok(Math.abs(rLow.F_visibility - 0.80) < 0.0001);
+  assert.ok(Math.abs(rMed.F_visibility - 1.0) < 0.0001);
+  assert.ok(Math.abs(rHigh.F_visibility - 1.20) < 0.0001);
+});
+
+test('segment_factor_weights: default value 3 gives factor 1.0 (no effect)', () => {
+  const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 2, critical_spacing_m: 8, area_coverage_pct: 100, vegetation_density: 3, micro_terrain_complexity: 3, extenuating_factors: 3 };
+  const searchLevel = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none', subject_visibility: 'medium' };
+  const r = computeForTarget({ config, searchLevel, segment, targetKey: 'adult' });
+
+  assert.ok(Math.abs(r.F_veg - 1.0) < 0.0001);
+  assert.ok(Math.abs(r.F_terrain - 1.0) < 0.0001);
+  assert.ok(Math.abs(r.F_extenuating - 1.0) < 0.0001);
+});
+
+test('visual evade gives negative bonus and reduces M_resp', () => {
+  const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 2, critical_spacing_m: 8, area_coverage_pct: 100 };
+  const searchLevel = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'evade' };
+  const r = computeForTarget({ config, searchLevel, segment, targetKey: 'adult' });
+
+  assert.ok(r.visual_bonus < 0, 'Evade should give negative visual bonus');
+  assert.ok(r.M_resp < 1, 'M_resp should be < 1 with evade and no auditory');
+  assert.ok(Math.abs(r.M_resp - 0.98) < 0.0001, 'M_resp should be 1 + 0 + (-0.02) = 0.98');
+});
+
+test('missing subject_visibility_factor in config falls back to 1.0', () => {
+  const minConfig = { ...config };
+  delete minConfig.subject_visibility_factor;
+  const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 2, critical_spacing_m: 8, area_coverage_pct: 100 };
+  const searchLevel = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none', subject_visibility: 'low' };
+  const r = computeForTarget({ config: minConfig, searchLevel, segment, targetKey: 'adult' });
+
+  assert.ok(Math.abs(r.F_visibility - 1.0) < 0.0001, 'Should fall back to 1.0 when config key missing');
+});
+
+test('missing segment_factor_weights in config falls back to 1.0', () => {
+  const minConfig = { ...config };
+  delete minConfig.segment_factor_weights;
+  const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 2, critical_spacing_m: 8, area_coverage_pct: 100, vegetation_density: 5 };
+  const searchLevel = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none', subject_visibility: 'medium' };
+  const r = computeForTarget({ config: minConfig, searchLevel, segment, targetKey: 'adult' });
+
+  assert.ok(Math.abs(r.F_veg - 1.0) < 0.0001, 'Should fall back to 1.0 when segment_factor_weights missing');
 });

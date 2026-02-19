@@ -13,7 +13,9 @@ export const LABELS = {
     evidence_historical: 'Evidence/Historical'
   },
   active_targets: { adult: 'Adult', child: 'Child', large_clues: 'Large Clues', small_clues: 'Small Clues' },
-  responsiveness: { none: 'Not Expected', possible: 'Possible', likely: 'Likely' },
+  auditory_responsiveness: { none: 'Not Expected', possible: 'Possible', likely: 'Likely' },
+  visual_responsiveness: { evade: 'Expected to Evade', none: 'Not Expected', possible: 'Possible', likely: 'Likely' },
+  subject_visibility: { low: 'Low', medium: 'Medium', high: 'High' },
   evidence_categories: { remains: 'Remains', evidence: 'Evidence' },
   remains_state: {
     intact_remains: 'Intact Remains',
@@ -23,11 +25,13 @@ export const LABELS = {
   evidence_classes: { large_evidence: 'Large Evidence', small_evidence: 'Small Evidence' }
 };
 
+const SEGMENT_FACTOR_LABELS = { '1': '1', '2': '2', '3': '3', '4': '4', '5': '5' };
+
 /* ================================================================
    Landing page
    ================================================================ */
 
-export function renderHome(root, state, savedLabel, configValid, configError) {
+export function renderHome(root, state, savedLabel, configValid, configError, config) {
   root.innerHTML = `
     ${configNotice(configValid, configError)}
 
@@ -39,7 +43,7 @@ export function renderHome(root, state, savedLabel, configValid, configError) {
       ${textField('Your Name', 'your_name', state.session.your_name)}
       ${textField('Search Name', 'search_name', state.session.search_name, 'Do not include case numbers or subjects\u2019 names')}
       ${textField('Team Name', 'team_name', state.session.team_name)}
-      ${searchSurvey(state.searchLevel)}
+      ${searchSurvey(state.searchLevel, config)}
     </section>
 
     <section class="panel">
@@ -88,7 +92,7 @@ export function segmentListHtml(segments) {
    Segment edit page
    ================================================================ */
 
-export function renderSegment(root, segment, computed, savedLabel, configValid, configError) {
+export function renderSegment(root, segment, computed, savedLabel, configValid, configError, config) {
   root.innerHTML = `
     ${configNotice(configValid, configError)}
 
@@ -112,6 +116,16 @@ export function renderSegment(root, segment, computed, savedLabel, configValid, 
       <h3>Vegetation / Terrain / Detectability</h3>
       <span class="hint">Consider all factors that would make your primary subject more difficult to spot. For example, evidence buried under duff layer, snow cover, hiding places, hard-to-spot natural shelters, dense vegetation, etc.</span>
       ${radioChips('detectability_level', LABELS.detectability_level, String(segment.detectability_level), true)}
+
+      <h3>Vegetation Density</h3>
+      ${tooltip(config, 'vegetation_density')}
+      ${radioChips('vegetation_density', SEGMENT_FACTOR_LABELS, String(segment.vegetation_density || 3))}
+      <h3>Micro-terrain Complexity</h3>
+      ${tooltip(config, 'micro_terrain_complexity')}
+      ${radioChips('micro_terrain_complexity', SEGMENT_FACTOR_LABELS, String(segment.micro_terrain_complexity || 3))}
+      <h3>Extenuating Factors</h3>
+      ${tooltip(config, 'extenuating_factors')}
+      ${radioChips('extenuating_factors', SEGMENT_FACTOR_LABELS, String(segment.extenuating_factors || 3))}
     </section>
 
     <div class="sticky-result" id="pod-result">
@@ -166,7 +180,7 @@ export function podResultHtml(segment, computed) {
    Report page
    ================================================================ */
 
-export function renderReport(root, state, version, generatedAt, configValid, configError) {
+export function renderReport(root, state, version, generatedAt, configValid, configError, config) {
   root.innerHTML = `
     <div class="row between" style="margin-bottom:12px">
       <button class="btn" data-action="go-home">\u2190 Back</button>
@@ -224,7 +238,10 @@ export function buildReportText(state, version, generatedAt) {
       `Area Coverage: ${seg.area_coverage_pct}%`,
       `Time of Day: ${LABELS.time_of_day[seg.time_of_day] || seg.time_of_day}`,
       `Weather: ${LABELS.weather[seg.weather] || seg.weather}`,
-      `Vegetation / Terrain / Detectability: ${seg.detectability_level}`
+      `Vegetation / Terrain / Detectability: ${seg.detectability_level}`,
+      `Vegetation Density: ${seg.vegetation_density || 3}`,
+      `Micro-terrain Complexity: ${seg.micro_terrain_complexity || 3}`,
+      `Extenuating Factors: ${seg.extenuating_factors || 3}`
     ];
     lines.push(`Inputs: ${inputs.join(' | ')}`);
 
@@ -255,7 +272,7 @@ export function buildReportText(state, version, generatedAt) {
    Internal helpers
    ================================================================ */
 
-function searchSurvey(s) {
+function searchSurvey(s, config) {
   const cats = s.evidence_categories || [];
   return `
     <div class="survey-group" id="search-survey" data-search-type="${s.type_of_search}">
@@ -270,13 +287,16 @@ function searchSurvey(s) {
         <div class="grid-2">
           <div>
             <p class="subtle" style="margin:0 0 4px"><strong>Auditory</strong></p>
-            ${radioChips('auditory', LABELS.responsiveness, s.auditory)}
+            ${radioChips('auditory', LABELS.auditory_responsiveness, s.auditory)}
           </div>
           <div>
             <p class="subtle" style="margin:0 0 4px"><strong>Visual</strong></p>
-            ${radioChips('visual', LABELS.responsiveness, s.visual)}
+            ${radioChips('visual', LABELS.visual_responsiveness, s.visual)}
           </div>
         </div>
+        <h3>Subject Visibility</h3>
+        ${tooltip(config, 'subject_visibility')}
+        ${radioChips('subject_visibility', LABELS.subject_visibility, s.subject_visibility || 'medium')}
       </div>
 
       <div class="evidence-only" id="evidence-cats" data-has-remains="${cats.includes('remains')}" data-has-evidence="${cats.includes('evidence')}">
@@ -309,8 +329,9 @@ function searchInfoItems(s) {
   if (s.type_of_search === 'active_missing_person') {
     const targets = (s.active_targets || []).map((t) => LABELS.active_targets[t] || t).join(', ');
     items.push(`<li><strong>Searching For:</strong> ${esc(targets)}</li>`);
-    items.push(`<li><strong>Auditory Responsiveness:</strong> ${esc(LABELS.responsiveness[s.auditory] || s.auditory)}</li>`);
-    items.push(`<li><strong>Visual Responsiveness:</strong> ${esc(LABELS.responsiveness[s.visual] || s.visual)}</li>`);
+    items.push(`<li><strong>Auditory Responsiveness:</strong> ${esc(LABELS.auditory_responsiveness[s.auditory] || s.auditory)}</li>`);
+    items.push(`<li><strong>Visual Responsiveness:</strong> ${esc(LABELS.visual_responsiveness[s.visual] || s.visual)}</li>`);
+    items.push(`<li><strong>Subject Visibility:</strong> ${esc(LABELS.subject_visibility[s.subject_visibility] || s.subject_visibility || 'Medium')}</li>`);
   } else {
     const cats = (s.evidence_categories || []).map((c) => LABELS.evidence_categories[c] || c).join(', ');
     items.push(`<li><strong>Categories:</strong> ${esc(cats)}</li>`);
@@ -332,8 +353,9 @@ function searchInfoText(s) {
   if (s.type_of_search === 'active_missing_person') {
     const targets = (s.active_targets || []).map((t) => LABELS.active_targets[t] || t).join(', ');
     lines.push(`Searching For: ${targets}`);
-    lines.push(`Auditory Responsiveness: ${LABELS.responsiveness[s.auditory] || s.auditory}`);
-    lines.push(`Visual Responsiveness: ${LABELS.responsiveness[s.visual] || s.visual}`);
+    lines.push(`Auditory Responsiveness: ${LABELS.auditory_responsiveness[s.auditory] || s.auditory}`);
+    lines.push(`Visual Responsiveness: ${LABELS.visual_responsiveness[s.visual] || s.visual}`);
+    lines.push(`Subject Visibility: ${LABELS.subject_visibility[s.subject_visibility] || s.subject_visibility || 'Medium'}`);
   } else {
     const cats = (s.evidence_categories || []).map((c) => LABELS.evidence_categories[c] || c).join(', ');
     lines.push(`Categories: ${cats}`);
@@ -356,7 +378,10 @@ function reportSegmentHtml(segment) {
     `Area Coverage: ${segment.area_coverage_pct}%`,
     `Time of Day: ${LABELS.time_of_day[segment.time_of_day] || segment.time_of_day}`,
     `Weather: ${LABELS.weather[segment.weather] || segment.weather}`,
-    `Vegetation / Terrain / Detectability: ${segment.detectability_level}`
+    `Vegetation / Terrain / Detectability: ${segment.detectability_level}`,
+    `Vegetation Density: ${segment.vegetation_density || 3}`,
+    `Micro-terrain Complexity: ${segment.micro_terrain_complexity || 3}`,
+    `Extenuating Factors: ${segment.extenuating_factors || 3}`
   ];
 
   // Primary POD
@@ -399,7 +424,8 @@ function reportDetailHtml(segment, r) {
 
 1. Condition multiplier (per-target):
   F_time = ${n(r.F_time)},  F_weather = ${n(r.F_weather)},  F_detectability = ${n(r.F_detectability)}
-  condition_multiplier = F_time \u00d7 F_weather \u00d7 F_detectability = ${n(r.C_t)}
+  F_visibility = ${n(r.F_visibility)},  F_veg = ${n(r.F_veg)},  F_terrain = ${n(r.F_terrain)},  F_ext = ${n(r.F_extenuating)}
+  condition_multiplier = ${n(r.C_t)}
 
 2. Base hazard rate:
   base_hazard_rate = \u2212ln(1 \u2212 base_detectability)
@@ -439,10 +465,18 @@ function reportDetailHtml(segment, r) {
 
 function reportDetailText(segment, r) {
   return [
-    `    C_t=${n(r.C_t)}  hazard=${n(r.base_hazard_rate)}  S_ref=${n(r.S_ref)}  S_eff_act=${n(r.S_eff_act)}`,
+    `    C_t=${n(r.C_t)}  F_vis=${n(r.F_visibility)}  F_veg=${n(r.F_veg)}  F_terrain=${n(r.F_terrain)}  F_ext=${n(r.F_extenuating)}`,
+    `    hazard=${n(r.base_hazard_rate)}  S_ref=${n(r.S_ref)}  S_eff_act=${n(r.S_eff_act)}`,
     `    spacing_ratio=${n(r.spacing_ratio)}  M_resp=${n(r.M_resp)}  M_comp=${n(r.M_comp)}`,
     `    POD_raw=${n(r.POD_raw)}  POD_final=${n(r.POD_final)}`
   ].join('\n');
+}
+
+/* ---- Tooltip from config ---- */
+
+function tooltip(config, key) {
+  const text = config?.ui_tooltips?.[key] || '';
+  return text ? `<span class="hint">${esc(text)}</span>` : '';
 }
 
 /* ---- Form field generators ---- */

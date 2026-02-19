@@ -37,6 +37,22 @@ function spacingBounds(config, targetKey) {
   };
 }
 
+function subjectVisibilityFactor(config, level) {
+  return Number(config?.subject_visibility_factor?.[level] ?? 1);
+}
+
+function segmentFactorWeight(config, targetKey, factorName, level) {
+  return Number(config?.segment_factor_weights?.[targetKey]?.[factorName]?.[String(level)] ?? 1);
+}
+
+let _configWarned = false;
+function warnMissingConfigKeys(config) {
+  const keys = ['subject_visibility_factor', 'segment_factor_weights', 'ui_tooltips'];
+  keys.forEach(k => {
+    if (!config?.[k]) console.warn(`[POD] Config missing ${k}; using defaults`);
+  });
+}
+
 function responseModel(config) {
   const rm = config?.response_model || {};
   return {
@@ -138,6 +154,8 @@ export function completionMultiplier(segment) {
    ================================================================ */
 
 export function computeForTarget({ config, searchLevel, segment, targetKey }) {
+  if (!_configWarned) { warnMissingConfigKeys(config); _configWarned = true; }
+
   const target = targetDef(config, targetKey);
   const bounds = spacingBounds(config, targetKey);
 
@@ -152,8 +170,14 @@ export function computeForTarget({ config, searchLevel, segment, targetKey }) {
   const F_weather = conditionFactor(config, 'weather', segment?.weather || 'clear', targetKey);
   const F_detectability = conditionFactor(config, 'detectability_level', segment?.detectability_level ?? 3, targetKey);
 
-  // 1. condition_multiplier_for_target
-  const C_t = F_time * F_weather * F_detectability;
+  // New factors (v2.2): search-level visibility + per-segment terrain/vegetation/extenuating
+  const F_visibility = subjectVisibilityFactor(config, searchLevel?.subject_visibility || 'medium');
+  const F_veg = segmentFactorWeight(config, targetKey, 'vegetation_density', segment?.vegetation_density ?? 3);
+  const F_terrain = segmentFactorWeight(config, targetKey, 'micro_terrain_complexity', segment?.micro_terrain_complexity ?? 3);
+  const F_extenuating = segmentFactorWeight(config, targetKey, 'extenuating_factors', segment?.extenuating_factors ?? 3);
+
+  // 1. condition_multiplier_for_target (includes new factors)
+  const C_t = F_time * F_weather * F_detectability * F_visibility * F_veg * F_terrain * F_extenuating;
 
   // 2. base_hazard_rate_for_target = -ln(1 - base_detectability)
   //    Guard against base_detectability >= 1 which would give Infinity
@@ -196,6 +220,10 @@ export function computeForTarget({ config, searchLevel, segment, targetKey }) {
     F_time,
     F_weather,
     F_detectability,
+    F_visibility,
+    F_veg,
+    F_terrain,
+    F_extenuating,
     C_t,
     // Hazard rate
     base_hazard_rate,

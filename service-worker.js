@@ -14,7 +14,7 @@
  * force-purge the entire cache.
  */
 
-const CACHE_NAME = 'psar-pod-v3';
+const CACHE_NAME = 'psar-pod-v4';
 
 const APP_SHELL = [
   './',

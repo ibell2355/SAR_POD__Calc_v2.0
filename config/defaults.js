@@ -1,6 +1,16 @@
 /* Emergency fallback matching SAR_POD_V2_config.yaml structure.
    Used only when config cannot be loaded or parsed. */
 
+const ALL_TARGETS = ['adult', 'child', 'large_clues', 'small_clues', 'intact_remains', 'partially_skeletonized', 'skeletal_remains', 'large_evidence', 'small_evidence'];
+
+function neutralSegmentWeights() {
+  return {
+    vegetation_density: { '1': 1.0, '2': 1.0, '3': 1.0, '4': 1.0, '5': 1.0 },
+    micro_terrain_complexity: { '1': 1.0, '2': 1.0, '3': 1.0, '4': 1.0, '5': 1.0 },
+    extenuating_factors: { '1': 1.0, '2': 1.0, '3': 1.0, '4': 1.0, '5': 1.0 }
+  };
+}
+
 export const emergencyDefaults = {
   targets: {
     adult:                  { group: 'active_missing_person', base_detectability: 0.8,  calibration_constant_k: 1.0, base_reference_critical_spacing_m: 8.0, spacing_exponent: 2.0 },
@@ -43,8 +53,25 @@ export const emergencyDefaults = {
   response_model: {
     enabled_for_groups: ['active_missing_person'],
     auditory_bonus: { none: 0, possible: 0.05, likely: 0.1 },
-    visual_bonus: { none: 0, possible: 0.03, likely: 0.07 },
+    visual_bonus: { evade: -0.02, none: 0, possible: 0.03, likely: 0.07 },
     max_total_multiplier: 1.25
+  },
+
+  subject_visibility_factor: {
+    low: 0.80,
+    medium: 1.0,
+    high: 1.20
+  },
+
+  segment_factor_weights: Object.fromEntries(
+    ALL_TARGETS.map(t => [t, neutralSegmentWeights()])
+  ),
+
+  ui_tooltips: {
+    subject_visibility: 'How visible is the subject expected to be? Low = camouflaged or buried. Medium = typical. High = bright clothing or open terrain.',
+    vegetation_density: 'Density of vegetation in the search area. 1 = open/sparse, 5 = extremely dense. 3 is neutral.',
+    micro_terrain_complexity: 'Complexity of ground surface and micro-terrain features. 1 = flat/simple, 5 = extremely rugged. 3 is neutral.',
+    extenuating_factors: 'Other factors affecting detection not captured elsewhere. 1 = favorable, 5 = severely adverse. 3 is neutral.'
   },
 
   completion_model: {
