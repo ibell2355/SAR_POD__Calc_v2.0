@@ -48,7 +48,7 @@ const state = {
 let config = null;
 let configValid = true;
 let configError = '';
-let appVersion = '2.1.0';
+let appVersion = '2.1.1';
 let appBuildDate = '';
 let saveTimer = null;
 let saveState = 'Saved';
@@ -68,6 +68,8 @@ async function init() {
     configError = cfgResult.valid ? '' : (cfgResult.diagnostics || 'Config failed to load.');
     appVersion = pkgInfo.version;
     appBuildDate = pkgInfo.buildDate;
+
+    console.log(`[PSAR POD] v${pkgInfo.version} · built ${pkgInfo.buildDate}`);
 
     document.getElementById('app-version').textContent = pkgInfo.version;
     const stampEl = document.getElementById('build-stamp');
@@ -457,9 +459,9 @@ function uid() {
 async function fetchPackageInfo() {
   try {
     const pkg = await fetch('./package.json').then((r) => r.json());
-    return { version: pkg.version || '2.1.0', buildDate: pkg.buildDate || '' };
+    return { version: pkg.version || '2.1.1', buildDate: pkg.buildDate || '' };
   } catch {
-    return { version: '2.1.0', buildDate: '' };
+    return { version: '2.1.1', buildDate: '' };
   }
 }
 
@@ -496,6 +498,8 @@ function registerSW() {
 
   navigator.serviceWorker.register('./service-worker.js')
     .then((reg) => {
+      console.log('[PSAR POD] SW registered, scope:', reg.scope);
+
       // Proactively check for SW updates (mobile browsers can be lazy)
       reg.update().catch(() => {});
 

@@ -14,7 +14,7 @@
  * force-purge the entire cache.
  */
 
-const CACHE_NAME = 'psar-pod-v2.1.1';
+const CACHE_NAME = 'psar-pod-v3';
 
 const APP_SHELL = [
   './',
@@ -33,7 +33,8 @@ const APP_SHELL = [
   './manifest.webmanifest',
   './assets/logo-placeholder.svg',
   './assets/icon-192.svg',
-  './assets/icon-512.svg'
+  './assets/icon-512.svg',
+  './assets/qrcode.png'
 ];
 
 /* ---- Install: pre-cache app shell ---- */
