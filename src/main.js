@@ -487,10 +487,26 @@ function registerSW() {
   }
 
   // Production: register SW and auto-refresh once when a new version activates
-  navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+  let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloading) return;
+    reloading = true;
     location.reload();
   });
+
+  navigator.serviceWorker.register('./service-worker.js')
+    .then((reg) => {
+      // Proactively check for SW updates (mobile browsers can be lazy)
+      reg.update().catch(() => {});
+
+      // Re-check when the app returns from background on mobile
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          reg.update().catch(() => {});
+        }
+      });
+    })
+    .catch(() => {});
 }
 
 function showToast(msg, duration = 2500) {

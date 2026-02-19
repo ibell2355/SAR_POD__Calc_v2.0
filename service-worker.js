@@ -2,14 +2,16 @@
  * Service Worker — PSAR POD Calculator
  *
  * Strategy:
- *   HTML navigation  → network-first  (always check for new deploy)
- *   Same-origin assets → stale-while-revalidate (instant load + background refresh)
+ *   HTML navigation    → network-first (fall back to cached index.html for SPA)
+ *   Same-origin assets → network-first (fall back to cache when offline)
  *   Cross-origin       → network only
  *
- * The cache is populated on install and continuously refreshed in the background.
- * Routine code changes do NOT require bumping CACHE_NAME — the stale-while-revalidate
- * strategy keeps it fresh automatically. Only bump CACHE_NAME when you need to
- * force-purge the entire cache (e.g., removing files from APP_SHELL).
+ * All same-origin requests try the network first so that new deployments are
+ * picked up immediately when the device is online. The cache (populated on
+ * install) provides full offline support as a fallback.
+ *
+ * Bump CACHE_NAME when you add/remove files from APP_SHELL or want to
+ * force-purge the entire cache.
  */
 
 const CACHE_NAME = 'psar-pod-v2.1.1';
@@ -76,26 +78,19 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Same-origin static assets: stale-while-revalidate
+  // Same-origin static assets: network-first, cache fallback
   // Strip query params so ?v= busters share the same cache entry as bare URLs
   if (isSameOrigin) {
     const cacheKey = new Request(url.pathname);
     event.respondWith(
-      caches.open(CACHE_NAME).then((cache) =>
-        cache.match(cacheKey).then((cached) => {
-          const freshFetch = fetch(event.request).then((resp) => {
-            if (resp.ok) cache.put(cacheKey, resp.clone());
-            return resp;
-          });
-          if (cached) {
-            // Return cached immediately; update cache in background
-            freshFetch.catch(() => {});
-            return cached;
+      fetch(event.request)
+        .then((resp) => {
+          if (resp.ok) {
+            caches.open(CACHE_NAME).then((c) => c.put(cacheKey, resp.clone()));
           }
-          // No cache: wait for network
-          return freshFetch;
+          return resp;
         })
-      )
+        .catch(() => caches.open(CACHE_NAME).then((c) => c.match(cacheKey)))
     );
     return;
   }
