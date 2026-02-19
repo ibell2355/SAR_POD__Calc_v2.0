@@ -25,7 +25,37 @@ export const LABELS = {
   evidence_classes: { large_evidence: 'Large Evidence', small_evidence: 'Small Evidence' }
 };
 
-const SEGMENT_FACTOR_LABELS = { '1': '1', '2': '2', '3': '3', '4': '4', '5': '5' };
+const VEGETATION_DENSITY_LABELS = {
+  '1': '1 - Low Vegetation',
+  '2': '2 - Low/Moderate Vegetation',
+  '3': '3 - Moderate Vegetation',
+  '4': '4 - Moderate/High Vegetation',
+  '5': '5 - High Vegetation'
+};
+
+const MICRO_TERRAIN_LABELS = {
+  '1': '1 - Minimal Micro-terrain',
+  '2': '2 - Minimal/Moderate Micro-terrain',
+  '3': '3 - Moderate Micro-terrain',
+  '4': '4 - Moderate/Extensive Micro-terrain',
+  '5': '5 - Extensive Micro-terrain'
+};
+
+const EXTENUATING_FACTORS_LABELS = {
+  '1': '1 - Strongly Favorable',
+  '2': '2 - Somewhat Favorable',
+  '3': '3 - Neutral',
+  '4': '4 - Somewhat Adverse',
+  '5': '5 - Strongly Adverse'
+};
+
+const BURIAL_OR_COVER_LABELS = {
+  '1': '1 - Fully Exposed',
+  '2': '2 - Light Cover',
+  '3': '3 - Moderate Cover',
+  '4': '4 - Heavy Cover',
+  '5': '5 - Completely Buried'
+};
 
 /* ================================================================
    Landing page
@@ -37,7 +67,7 @@ export function renderHome(root, state, savedLabel, configValid, configError, co
 
     <section class="panel">
       <div class="row between align-center">
-        <h2>Session</h2>
+        <h2>Search Details</h2>
         <span id="save-indicator" class="subtle">${esc(savedLabel)}</span>
       </div>
       ${textField('Your Name', 'your_name', state.session.your_name)}
@@ -92,7 +122,7 @@ export function segmentListHtml(segments) {
    Segment edit page
    ================================================================ */
 
-export function renderSegment(root, segment, computed, savedLabel, configValid, configError, config) {
+export function renderSegment(root, segment, computed, savedLabel, configValid, configError, config, searchType) {
   root.innerHTML = `
     ${configNotice(configValid, configError)}
 
@@ -113,19 +143,27 @@ export function renderSegment(root, segment, computed, savedLabel, configValid, 
       ${radioChips('time_of_day', LABELS.time_of_day, segment.time_of_day)}
       <h3>Weather</h3>
       ${radioChips('weather', LABELS.weather, segment.weather)}
-      <h3>Vegetation / Terrain / Detectability</h3>
-      <span class="hint">Consider all factors that would make your primary subject more difficult to spot. For example, evidence buried under duff layer, snow cover, hiding places, hard-to-spot natural shelters, dense vegetation, etc.</span>
+      ${searchType === 'evidence_historical' ? `
+      <h3>Detectability Level</h3>
+      <span class="hint">Consider all factors that would make your primary subject more difficult to spot.</span>
       ${radioChips('detectability_level', LABELS.detectability_level, String(segment.detectability_level), true)}
+      ` : ''}
 
       <h3>Vegetation Density</h3>
       ${tooltip(config, 'vegetation_density')}
-      ${radioChips('vegetation_density', SEGMENT_FACTOR_LABELS, String(segment.vegetation_density || 3))}
+      ${radioChips('vegetation_density', VEGETATION_DENSITY_LABELS, String(segment.vegetation_density || 3), 'tight')}
       <h3>Micro-terrain Complexity</h3>
       ${tooltip(config, 'micro_terrain_complexity')}
-      ${radioChips('micro_terrain_complexity', SEGMENT_FACTOR_LABELS, String(segment.micro_terrain_complexity || 3))}
+      ${radioChips('micro_terrain_complexity', MICRO_TERRAIN_LABELS, String(segment.micro_terrain_complexity || 3), 'tight')}
+      ${searchType === 'evidence_historical' ? `
+      <h3>Burial / Cover</h3>
+      ${tooltip(config, 'burial_or_cover')}
+      ${radioChips('burial_or_cover', BURIAL_OR_COVER_LABELS, String(segment.burial_or_cover || 3), 'tight')}
+      ` : `
       <h3>Extenuating Factors</h3>
       ${tooltip(config, 'extenuating_factors')}
-      ${radioChips('extenuating_factors', SEGMENT_FACTOR_LABELS, String(segment.extenuating_factors || 3))}
+      ${radioChips('extenuating_factors', EXTENUATING_FACTORS_LABELS, String(segment.extenuating_factors || 3), 'tight')}
+      `}
     </section>
 
     <div class="sticky-result" id="pod-result">
@@ -203,7 +241,7 @@ export function renderReport(root, state, version, generatedAt, configValid, con
 
         <h3>Search Areas</h3>
         ${(state.segments || []).length
-          ? (state.segments || []).map((seg) => reportSegmentHtml(seg)).join('')
+          ? (state.segments || []).map((seg) => reportSegmentHtml(seg, state.searchLevel.type_of_search)).join('')
           : '<p class="subtle">No segments added.</p>'}
       </article>
     </section>
@@ -230,6 +268,7 @@ export function buildReportText(state, version, generatedAt) {
     ''
   ];
 
+  const isEvidence = state.searchLevel.type_of_search === 'evidence_historical';
   state.segments.forEach((seg) => {
     lines.push(`--- ${seg.name || 'Unnamed'} ---`);
 
@@ -238,10 +277,10 @@ export function buildReportText(state, version, generatedAt) {
       `Area Coverage: ${seg.area_coverage_pct}%`,
       `Time of Day: ${LABELS.time_of_day[seg.time_of_day] || seg.time_of_day}`,
       `Weather: ${LABELS.weather[seg.weather] || seg.weather}`,
-      `Vegetation / Terrain / Detectability: ${seg.detectability_level}`,
+      ...(isEvidence ? [`Detectability Level: ${seg.detectability_level}`] : []),
       `Vegetation Density: ${seg.vegetation_density || 3}`,
       `Micro-terrain Complexity: ${seg.micro_terrain_complexity || 3}`,
-      `Extenuating Factors: ${seg.extenuating_factors || 3}`
+      isEvidence ? `Burial / Cover: ${seg.burial_or_cover || 3}` : `Extenuating Factors: ${seg.extenuating_factors || 3}`
     ];
     lines.push(`Inputs: ${inputs.join(' | ')}`);
 
@@ -283,18 +322,14 @@ function searchSurvey(s, config) {
         <h3>Searching For</h3>
         <span class="hint">Select all that apply</span>
         ${checkboxChips('active_targets', LABELS.active_targets, s.active_targets)}
-        <h3>Subject Responsiveness</h3>
-        <div class="grid-2">
-          <div>
-            <p class="subtle" style="margin:0 0 4px"><strong>Auditory</strong></p>
-            ${radioChips('auditory', LABELS.auditory_responsiveness, s.auditory)}
-          </div>
-          <div>
-            <p class="subtle" style="margin:0 0 4px"><strong>Visual</strong></p>
-            ${radioChips('visual', LABELS.visual_responsiveness, s.visual)}
-          </div>
-        </div>
-        <h3>Subject Visibility</h3>
+        <h3>Subject</h3>
+        <p class="subtle" style="margin:0 0 4px"><strong>Auditory</strong></p>
+        ${tooltip(config, 'auditory')}
+        ${radioChips('auditory', LABELS.auditory_responsiveness, s.auditory)}
+        <p class="subtle" style="margin:10px 0 4px"><strong>Visual</strong></p>
+        ${tooltip(config, 'visual')}
+        ${radioChips('visual', LABELS.visual_responsiveness, s.visual)}
+        <p class="subtle" style="margin:10px 0 4px"><strong>Visibility</strong></p>
         ${tooltip(config, 'subject_visibility')}
         ${radioChips('subject_visibility', LABELS.subject_visibility, s.subject_visibility || 'medium')}
       </div>
@@ -370,18 +405,19 @@ function searchInfoText(s) {
   return lines;
 }
 
-function reportSegmentHtml(segment) {
+function reportSegmentHtml(segment, searchType) {
   const results = segment.results || [];
   const primaryResult = results.find((r) => r.target === segment.primaryTarget);
+  const isEvidence = searchType === 'evidence_historical';
   const inputs = [
     `Critical Spacing: ${segment.critical_spacing_m} m`,
     `Area Coverage: ${segment.area_coverage_pct}%`,
     `Time of Day: ${LABELS.time_of_day[segment.time_of_day] || segment.time_of_day}`,
     `Weather: ${LABELS.weather[segment.weather] || segment.weather}`,
-    `Vegetation / Terrain / Detectability: ${segment.detectability_level}`,
+    ...(isEvidence ? [`Detectability Level: ${segment.detectability_level}`] : []),
     `Vegetation Density: ${segment.vegetation_density || 3}`,
     `Micro-terrain Complexity: ${segment.micro_terrain_complexity || 3}`,
-    `Extenuating Factors: ${segment.extenuating_factors || 3}`
+    isEvidence ? `Burial / Cover: ${segment.burial_or_cover || 3}` : `Extenuating Factors: ${segment.extenuating_factors || 3}`
   ];
 
   // Primary POD
@@ -424,7 +460,7 @@ function reportDetailHtml(segment, r) {
 
 1. Condition multiplier (per-target):
   F_time = ${n(r.F_time)},  F_weather = ${n(r.F_weather)},  F_detectability = ${n(r.F_detectability)}
-  F_visibility = ${n(r.F_visibility)},  F_veg = ${n(r.F_veg)},  F_terrain = ${n(r.F_terrain)},  F_ext = ${n(r.F_extenuating)}
+  F_visibility = ${n(r.F_visibility)},  F_veg = ${n(r.F_veg)},  F_terrain = ${n(r.F_terrain)},  F_ext = ${n(r.F_extenuating)},  F_burial = ${n(r.F_burial)}
   condition_multiplier = ${n(r.C_t)}
 
 2. Base hazard rate:
@@ -465,7 +501,7 @@ function reportDetailHtml(segment, r) {
 
 function reportDetailText(segment, r) {
   return [
-    `    C_t=${n(r.C_t)}  F_vis=${n(r.F_visibility)}  F_veg=${n(r.F_veg)}  F_terrain=${n(r.F_terrain)}  F_ext=${n(r.F_extenuating)}`,
+    `    C_t=${n(r.C_t)}  F_vis=${n(r.F_visibility)}  F_veg=${n(r.F_veg)}  F_terrain=${n(r.F_terrain)}  F_ext=${n(r.F_extenuating)}  F_burial=${n(r.F_burial)}`,
     `    hazard=${n(r.base_hazard_rate)}  S_ref=${n(r.S_ref)}  S_eff_act=${n(r.S_eff_act)}`,
     `    spacing_ratio=${n(r.spacing_ratio)}  M_resp=${n(r.M_resp)}  M_comp=${n(r.M_comp)}`,
     `    POD_raw=${n(r.POD_raw)}  POD_final=${n(r.POD_final)}`
@@ -482,7 +518,7 @@ function tooltip(config, key) {
 /* ---- Form field generators ---- */
 
 function radioChips(name, options, current, vertical = false) {
-  const cls = vertical ? 'chip-col' : 'chip-row';
+  const cls = vertical === 'tight' ? 'chip-col-tight' : vertical ? 'chip-col' : 'chip-row';
   return `<div class="${cls}">${Object.entries(options).map(([val, label]) =>
     `<label class="chip"><input type="radio" name="${name}" value="${val}"${String(current) === String(val) ? ' checked' : ''}><span>${label}</span></label>`
   ).join('')}</div>`;

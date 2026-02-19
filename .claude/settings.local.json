@@ -5,7 +5,8 @@
       "Bash(node -e:*)",
       "Bash(grep:*)",
       "Bash(npx vitest run)",
-      "Bash(node --test:*)"
+      "Bash(node --test:*)",
+      "Bash(node tests/podEngine.test.js:*)"
     ]
   }
 }

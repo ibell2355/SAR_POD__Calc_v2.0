@@ -151,6 +151,7 @@ input_schema:
       vegetation_density: 1..5
       micro_terrain_complexity: 1..5
       extenuating_factors: 1..5
+      burial_or_cover: 1..5
     execution:
       critical_spacing_m: number > 0
       searched_fraction: number 0..1
@@ -189,128 +190,6 @@ condition_factors:
       '3': 1.0
       '4': 0.75
       '5': 0.45
-  child:
-    time_of_day:
-      day: 1.0
-      dusk_dawn: 0.9
-      night: 0.52
-    weather:
-      clear: 1.0
-      rain: 0.93
-      snow: 0.78
-    detectability_level:
-      '1': 1.70
-      '2': 1.30
-      '3': 1.0
-      '4': 0.65
-      '5': 0.40
-  large_clues:
-    time_of_day:
-      day: 1.0
-      dusk_dawn: 0.9
-      night: 0.50
-    weather:
-      clear: 1.0
-      rain: 0.92
-      snow: 0.76
-    detectability_level:
-      '1': 1.70
-      '2': 1.30
-      '3': 1.0
-      '4': 0.65
-      '5': 0.35
-  small_clues:
-    time_of_day:
-      day: 1.0
-      dusk_dawn: 0.88
-      night: 0.40
-    weather:
-      clear: 1.0
-      rain: 0.90
-      snow: 0.45
-    detectability_level:
-      '1': 1.65
-      '2': 1.20
-      '3': 1.0
-      '4': 0.50
-      '5': 0.20
-  intact_remains:
-    time_of_day:
-      day: 1.0
-      dusk_dawn: 0.9
-      night: 0.56
-    weather:
-      clear: 1.0
-      rain: 0.96
-      snow: 0.80
-    detectability_level:
-      '1': 1.75
-      '2': 1.35
-      '3': 1.0
-      '4': 0.75
-      '5': 0.45
-  partially_skeletonized:
-    time_of_day:
-      day: 1.0
-      dusk_dawn: 0.9
-      night: 0.52
-    weather:
-      clear: 1.0
-      rain: 0.93
-      snow: 0.78
-    detectability_level:
-      '1': 1.70
-      '2': 1.30
-      '3': 1.0
-      '4': 0.65
-      '5': 0.40
-  skeletal_remains:
-    time_of_day:
-      day: 1.0
-      dusk_dawn: 0.88
-      night: 0.40
-    weather:
-      clear: 1.0
-      rain: 0.90
-      snow: 0.45
-    detectability_level:
-      '1': 1.65
-      '2': 1.20
-      '3': 1.0
-      '4': 0.50
-      '5': 0.20
-  large_evidence:
-    time_of_day:
-      day: 1.0
-      dusk_dawn: 0.9
-      night: 0.50
-    weather:
-      clear: 1.0
-      rain: 0.92
-      snow: 0.76
-    detectability_level:
-      '1': 1.70
-      '2': 1.30
-      '3': 1.0
-      '4': 0.65
-      '5': 0.35
-  small_evidence:
-    time_of_day:
-      day: 1.0
-      dusk_dawn: 0.88
-      night: 0.40
-    weather:
-      clear: 1.0
-      rain: 0.90
-      snow: 0.45
-    detectability_level:
-      '1': 1.65
-      '2': 1.20
-      '3': 1.0
-      '4': 0.50
-      '5': 0.20
-segment_factor_weights:
-  adult:
     vegetation_density:
       '1': 1.0
       '2': 1.0
@@ -330,6 +209,20 @@ segment_factor_weights:
       '4': 1.0
       '5': 1.0
   child:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.9
+      night: 0.52
+    weather:
+      clear: 1.0
+      rain: 0.93
+      snow: 0.78
+    detectability_level:
+      '1': 1.70
+      '2': 1.30
+      '3': 1.0
+      '4': 0.65
+      '5': 0.40
     vegetation_density:
       '1': 1.0
       '2': 1.0
@@ -349,6 +242,20 @@ segment_factor_weights:
       '4': 1.0
       '5': 1.0
   large_clues:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.9
+      night: 0.50
+    weather:
+      clear: 1.0
+      rain: 0.92
+      snow: 0.76
+    detectability_level:
+      '1': 1.70
+      '2': 1.30
+      '3': 1.0
+      '4': 0.65
+      '5': 0.35
     vegetation_density:
       '1': 1.0
       '2': 1.0
@@ -368,6 +275,20 @@ segment_factor_weights:
       '4': 1.0
       '5': 1.0
   small_clues:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.88
+      night: 0.40
+    weather:
+      clear: 1.0
+      rain: 0.90
+      snow: 0.45
+    detectability_level:
+      '1': 1.65
+      '2': 1.20
+      '3': 1.0
+      '4': 0.50
+      '5': 0.20
     vegetation_density:
       '1': 1.0
       '2': 1.0
@@ -387,6 +308,20 @@ segment_factor_weights:
       '4': 1.0
       '5': 1.0
   intact_remains:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.9
+      night: 0.56
+    weather:
+      clear: 1.0
+      rain: 0.96
+      snow: 0.80
+    detectability_level:
+      '1': 1.75
+      '2': 1.35
+      '3': 1.0
+      '4': 0.75
+      '5': 0.45
     vegetation_density:
       '1': 1.0
       '2': 1.0
@@ -399,13 +334,27 @@ segment_factor_weights:
       '3': 1.0
       '4': 1.0
       '5': 1.0
-    extenuating_factors:
+    burial_or_cover:
       '1': 1.0
       '2': 1.0
       '3': 1.0
       '4': 1.0
       '5': 1.0
   partially_skeletonized:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.9
+      night: 0.52
+    weather:
+      clear: 1.0
+      rain: 0.93
+      snow: 0.78
+    detectability_level:
+      '1': 1.70
+      '2': 1.30
+      '3': 1.0
+      '4': 0.65
+      '5': 0.40
     vegetation_density:
       '1': 1.0
       '2': 1.0
@@ -418,13 +367,27 @@ segment_factor_weights:
       '3': 1.0
       '4': 1.0
       '5': 1.0
-    extenuating_factors:
+    burial_or_cover:
       '1': 1.0
       '2': 1.0
       '3': 1.0
       '4': 1.0
       '5': 1.0
   skeletal_remains:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.88
+      night: 0.40
+    weather:
+      clear: 1.0
+      rain: 0.90
+      snow: 0.45
+    detectability_level:
+      '1': 1.65
+      '2': 1.20
+      '3': 1.0
+      '4': 0.50
+      '5': 0.20
     vegetation_density:
       '1': 1.0
       '2': 1.0
@@ -437,13 +400,27 @@ segment_factor_weights:
       '3': 1.0
       '4': 1.0
       '5': 1.0
-    extenuating_factors:
+    burial_or_cover:
       '1': 1.0
       '2': 1.0
       '3': 1.0
       '4': 1.0
       '5': 1.0
   large_evidence:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.9
+      night: 0.50
+    weather:
+      clear: 1.0
+      rain: 0.92
+      snow: 0.76
+    detectability_level:
+      '1': 1.70
+      '2': 1.30
+      '3': 1.0
+      '4': 0.65
+      '5': 0.35
     vegetation_density:
       '1': 1.0
       '2': 1.0
@@ -456,13 +433,27 @@ segment_factor_weights:
       '3': 1.0
       '4': 1.0
       '5': 1.0
-    extenuating_factors:
+    burial_or_cover:
       '1': 1.0
       '2': 1.0
       '3': 1.0
       '4': 1.0
       '5': 1.0
   small_evidence:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.88
+      night: 0.40
+    weather:
+      clear: 1.0
+      rain: 0.90
+      snow: 0.45
+    detectability_level:
+      '1': 1.65
+      '2': 1.20
+      '3': 1.0
+      '4': 0.50
+      '5': 0.20
     vegetation_density:
       '1': 1.0
       '2': 1.0
@@ -475,17 +466,20 @@ segment_factor_weights:
       '3': 1.0
       '4': 1.0
       '5': 1.0
-    extenuating_factors:
+    burial_or_cover:
       '1': 1.0
       '2': 1.0
       '3': 1.0
       '4': 1.0
       '5': 1.0
 ui_tooltips:
-  subject_visibility: How visible is the subject expected to be? Low = camouflaged or buried. Medium = typical. High = bright clothing or open terrain.
-  vegetation_density: Density of vegetation in the search area. 1 = open/sparse, 5 = extremely dense. 3 is neutral.
-  micro_terrain_complexity: Complexity of ground surface and micro-terrain features. 1 = flat/simple, 5 = extremely rugged. 3 is neutral.
-  extenuating_factors: Other factors affecting detection not captured elsewhere. 1 = favorable, 5 = severely adverse. 3 is neutral.
+  subject_visibility: How visible is the subject expected to be? Camouflaged or buried, bright clothing or open terrain.
+  auditory: Subject likelihood to signal verbally.
+  visual: Subject likelihood to signal visually.
+  vegetation_density: Line-of-sight blockers such as tree and bush density, tall grass/brush, thick understory, canopy layering, slash/deadfall, and other vegetation that obscures the subject.
+  micro_terrain_complexity: Terrain features that create hiding spots or visual clutter, like rocks/boulder fields, gullies and cutbanks, root wads, deadfall piles, depressions, animal burrows, and uneven ground.
+  extenuating_factors: Catch-all for anything not already covered that makes detection easier or harder, such as heavy smoke/dust/fog, noise masking, altered landscape / disturbance, or seracher experience.
+  burial_or_cover: Degree of burial or concealment by debris, snow, duff, or other covering material
 completion_model:
   formula: completion_multiplier = clamp(area_coverage_pct / 100, 0, 1)
   description: Hard limiter based on searched area coverage percentage. Applied as the final multiplier on probability_of_detection.

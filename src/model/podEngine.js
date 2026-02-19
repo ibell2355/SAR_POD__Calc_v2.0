@@ -41,13 +41,9 @@ function subjectVisibilityFactor(config, level) {
   return Number(config?.subject_visibility_factor?.[level] ?? 1);
 }
 
-function segmentFactorWeight(config, targetKey, factorName, level) {
-  return Number(config?.segment_factor_weights?.[targetKey]?.[factorName]?.[String(level)] ?? 1);
-}
-
 let _configWarned = false;
 function warnMissingConfigKeys(config) {
-  const keys = ['subject_visibility_factor', 'segment_factor_weights', 'ui_tooltips'];
+  const keys = ['subject_visibility_factor', 'ui_tooltips'];
   keys.forEach(k => {
     if (!config?.[k]) console.warn(`[POD] Config missing ${k}; using defaults`);
   });
@@ -168,16 +164,22 @@ export function computeForTarget({ config, searchLevel, segment, targetKey }) {
   // Per-target condition factors (detectability_level key must be string)
   const F_time = conditionFactor(config, 'time_of_day', segment?.time_of_day || 'day', targetKey);
   const F_weather = conditionFactor(config, 'weather', segment?.weather || 'clear', targetKey);
-  const F_detectability = conditionFactor(config, 'detectability_level', segment?.detectability_level ?? 3, targetKey);
+  // detectability_level applies to evidence/historical only; active missing person uses the three new levers instead
+  const F_detectability = searchLevel?.type_of_search === 'active_missing_person'
+    ? 1.0
+    : conditionFactor(config, 'detectability_level', segment?.detectability_level ?? 3, targetKey);
 
-  // New factors (v2.2): search-level visibility + per-segment terrain/vegetation/extenuating
+  // New factors (v2.2): search-level visibility + per-segment condition factors
   const F_visibility = subjectVisibilityFactor(config, searchLevel?.subject_visibility || 'medium');
-  const F_veg = segmentFactorWeight(config, targetKey, 'vegetation_density', segment?.vegetation_density ?? 3);
-  const F_terrain = segmentFactorWeight(config, targetKey, 'micro_terrain_complexity', segment?.micro_terrain_complexity ?? 3);
-  const F_extenuating = segmentFactorWeight(config, targetKey, 'extenuating_factors', segment?.extenuating_factors ?? 3);
+  const F_veg = conditionFactor(config, 'vegetation_density', segment?.vegetation_density ?? 3, targetKey);
+  const F_terrain = conditionFactor(config, 'micro_terrain_complexity', segment?.micro_terrain_complexity ?? 3, targetKey);
+  const F_extenuating = conditionFactor(config, 'extenuating_factors', segment?.extenuating_factors ?? 3, targetKey);
+  const F_burial = conditionFactor(config, 'burial_or_cover', segment?.burial_or_cover ?? 3, targetKey);
 
   // 1. condition_multiplier_for_target (includes new factors)
-  const C_t = F_time * F_weather * F_detectability * F_visibility * F_veg * F_terrain * F_extenuating;
+  // Missing axes fall back to 1.0 via conditionFactor: active targets lack burial_or_cover,
+  // evidence targets lack extenuating_factors — so only the relevant factor has effect.
+  const C_t = F_time * F_weather * F_detectability * F_visibility * F_veg * F_terrain * F_extenuating * F_burial;
 
   // 2. base_hazard_rate_for_target = -ln(1 - base_detectability)
   //    Guard against base_detectability >= 1 which would give Infinity
@@ -224,6 +226,7 @@ export function computeForTarget({ config, searchLevel, segment, targetKey }) {
     F_veg,
     F_terrain,
     F_extenuating,
+    F_burial,
     C_t,
     // Hazard rate
     base_hazard_rate,

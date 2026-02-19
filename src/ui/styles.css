@@ -221,6 +221,7 @@ textarea { min-height: 90px; resize: vertical; }
 
 .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 10px; }
 .chip-col { display: flex; flex-direction: column; gap: 6px; margin: 6px 0 10px; }
+.chip-col-tight { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 8px; }
 .chip { position: relative; cursor: pointer; }
 .chip input { position: absolute; opacity: 0; pointer-events: none; }
 .chip span {

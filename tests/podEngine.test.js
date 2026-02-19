@@ -22,17 +22,20 @@ const config = {
     active_missing_person: { order: ['adult', 'child', 'large_clues', 'small_clues'] },
     evidence_historical: { order: ['intact_remains', 'partially_skeletonized', 'skeletal_remains', 'large_evidence', 'small_evidence'] }
   },
-  condition_factors: {
-    adult:                  { time_of_day: { day: 1.0, dusk_dawn: 0.9, night: 0.72 }, weather: { clear: 1.0, rain: 0.9, snow: 0.82 }, detectability_level: { '1': 1.1, '2': 1.0, '3': 0.88, '4': 0.74, '5': 0.6 } },
-    child:                  { time_of_day: { day: 1.0, dusk_dawn: 0.9, night: 0.7 },  weather: { clear: 1.0, rain: 0.9, snow: 0.82 }, detectability_level: { '1': 1.08, '2': 0.98, '3': 0.86, '4': 0.72, '5': 0.58 } },
-    large_clues:            { time_of_day: { day: 1.0, dusk_dawn: 0.82, night: 0.58 }, weather: { clear: 1.0, rain: 0.84, snow: 0.74 }, detectability_level: { '1': 1.05, '2': 0.94, '3': 0.76, '4': 0.58, '5': 0.44 } },
-    small_clues:            { time_of_day: { day: 1.0, dusk_dawn: 0.72, night: 0.42 }, weather: { clear: 1.0, rain: 0.74, snow: 0.6 },  detectability_level: { '1': 1.0, '2': 0.84, '3': 0.62, '4': 0.44, '5': 0.3 } },
-    intact_remains:         { time_of_day: { day: 1.0, dusk_dawn: 0.84, night: 0.6 },  weather: { clear: 1.0, rain: 0.86, snow: 0.76 }, detectability_level: { '1': 1.05, '2': 0.95, '3': 0.78, '4': 0.6, '5': 0.46 } },
-    partially_skeletonized: { time_of_day: { day: 1.0, dusk_dawn: 0.78, night: 0.5 },  weather: { clear: 1.0, rain: 0.8, snow: 0.66 },  detectability_level: { '1': 1.0, '2': 0.9, '3': 0.7, '4': 0.52, '5': 0.38 } },
-    skeletal_remains:       { time_of_day: { day: 1.0, dusk_dawn: 0.74, night: 0.46 }, weather: { clear: 1.0, rain: 0.76, snow: 0.62 }, detectability_level: { '1': 0.98, '2': 0.86, '3': 0.66, '4': 0.48, '5': 0.34 } },
-    large_evidence:         { time_of_day: { day: 1.0, dusk_dawn: 0.82, night: 0.58 }, weather: { clear: 1.0, rain: 0.84, snow: 0.74 }, detectability_level: { '1': 1.05, '2': 0.94, '3': 0.76, '4': 0.58, '5': 0.44 } },
-    small_evidence:         { time_of_day: { day: 1.0, dusk_dawn: 0.72, night: 0.42 }, weather: { clear: 1.0, rain: 0.74, snow: 0.6 },  detectability_level: { '1': 1.0, '2': 0.84, '3': 0.62, '4': 0.44, '5': 0.3 } }
-  },
+  condition_factors: (() => {
+    const N5 = { '1': 1.0, '2': 1.0, '3': 1.0, '4': 1.0, '5': 1.0 };
+    return {
+      adult:                  { time_of_day: { day: 1.0, dusk_dawn: 0.9, night: 0.72 }, weather: { clear: 1.0, rain: 0.9, snow: 0.82 }, detectability_level: { '1': 1.1, '2': 1.0, '3': 0.88, '4': 0.74, '5': 0.6 }, vegetation_density: N5, micro_terrain_complexity: N5, extenuating_factors: N5 },
+      child:                  { time_of_day: { day: 1.0, dusk_dawn: 0.9, night: 0.7 },  weather: { clear: 1.0, rain: 0.9, snow: 0.82 }, detectability_level: { '1': 1.08, '2': 0.98, '3': 0.86, '4': 0.72, '5': 0.58 }, vegetation_density: N5, micro_terrain_complexity: N5, extenuating_factors: N5 },
+      large_clues:            { time_of_day: { day: 1.0, dusk_dawn: 0.82, night: 0.58 }, weather: { clear: 1.0, rain: 0.84, snow: 0.74 }, detectability_level: { '1': 1.05, '2': 0.94, '3': 0.76, '4': 0.58, '5': 0.44 }, vegetation_density: N5, micro_terrain_complexity: N5, extenuating_factors: N5 },
+      small_clues:            { time_of_day: { day: 1.0, dusk_dawn: 0.72, night: 0.42 }, weather: { clear: 1.0, rain: 0.74, snow: 0.6 },  detectability_level: { '1': 1.0, '2': 0.84, '3': 0.62, '4': 0.44, '5': 0.3 }, vegetation_density: N5, micro_terrain_complexity: N5, extenuating_factors: N5 },
+      intact_remains:         { time_of_day: { day: 1.0, dusk_dawn: 0.84, night: 0.6 },  weather: { clear: 1.0, rain: 0.86, snow: 0.76 }, detectability_level: { '1': 1.05, '2': 0.95, '3': 0.78, '4': 0.6, '5': 0.46 }, vegetation_density: N5, micro_terrain_complexity: N5, burial_or_cover: N5 },
+      partially_skeletonized: { time_of_day: { day: 1.0, dusk_dawn: 0.78, night: 0.5 },  weather: { clear: 1.0, rain: 0.8, snow: 0.66 },  detectability_level: { '1': 1.0, '2': 0.9, '3': 0.7, '4': 0.52, '5': 0.38 }, vegetation_density: N5, micro_terrain_complexity: N5, burial_or_cover: N5 },
+      skeletal_remains:       { time_of_day: { day: 1.0, dusk_dawn: 0.74, night: 0.46 }, weather: { clear: 1.0, rain: 0.76, snow: 0.62 }, detectability_level: { '1': 0.98, '2': 0.86, '3': 0.66, '4': 0.48, '5': 0.34 }, vegetation_density: N5, micro_terrain_complexity: N5, burial_or_cover: N5 },
+      large_evidence:         { time_of_day: { day: 1.0, dusk_dawn: 0.82, night: 0.58 }, weather: { clear: 1.0, rain: 0.84, snow: 0.74 }, detectability_level: { '1': 1.05, '2': 0.94, '3': 0.76, '4': 0.58, '5': 0.44 }, vegetation_density: N5, micro_terrain_complexity: N5, burial_or_cover: N5 },
+      small_evidence:         { time_of_day: { day: 1.0, dusk_dawn: 0.72, night: 0.42 }, weather: { clear: 1.0, rain: 0.74, snow: 0.6 },  detectability_level: { '1': 1.0, '2': 0.84, '3': 0.62, '4': 0.44, '5': 0.3 }, vegetation_density: N5, micro_terrain_complexity: N5, burial_or_cover: N5 }
+    };
+  })(),
   spacing_bounds_m: {
     min_effective_actual_spacing_m_by_target: { adult: 3, child: 3, large_clues: 2, small_clues: 1, intact_remains: 2, partially_skeletonized: 1.5, skeletal_remains: 1.2, large_evidence: 2, small_evidence: 1 },
     max_effective_actual_spacing_m_by_target: { adult: 40, child: 35, large_clues: 25, small_clues: 10, intact_remains: 28, partially_skeletonized: 18, skeletal_remains: 15, large_evidence: 25, small_evidence: 10 }
@@ -48,14 +51,6 @@ const config = {
     medium: 1.0,
     high: 1.20
   },
-  segment_factor_weights: Object.fromEntries(
-    ['adult','child','large_clues','small_clues','intact_remains','partially_skeletonized','skeletal_remains','large_evidence','small_evidence']
-      .map(t => [t, {
-        vegetation_density: { '1': 1.0, '2': 1.0, '3': 1.0, '4': 1.0, '5': 1.0 },
-        micro_terrain_complexity: { '1': 1.0, '2': 1.0, '3': 1.0, '4': 1.0, '5': 1.0 },
-        extenuating_factors: { '1': 1.0, '2': 1.0, '3': 1.0, '4': 1.0, '5': 1.0 }
-      }])
-  ),
   qa_flags: {
     warn_if_critical_spacing_m_lt_1: true,
     warn_if_critical_spacing_m_gt_50: true,
@@ -104,12 +99,18 @@ test('effective_actual_spacing: actual below min_effective uses min_effective', 
 
 /* --- 3. detectability_level numeric input resolves via string key --- */
 
-test('detectability_level: numeric input resolves correctly via string key', () => {
-  const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 3, critical_spacing_m: 8, area_coverage_pct: 100 };
-  const searchLevel = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none' };
-  const r = computeForTarget({ config, searchLevel, segment, targetKey: 'adult' });
+test('detectability_level: skipped for active_missing_person, applied for evidence', () => {
+  // Active: detectability_level is ignored (F_detectability = 1.0)
+  const segActive = { time_of_day: 'day', weather: 'clear', detectability_level: 3, critical_spacing_m: 8, area_coverage_pct: 100 };
+  const searchActive = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none' };
+  const rActive = computeForTarget({ config, searchLevel: searchActive, segment: segActive, targetKey: 'adult' });
+  assert.ok(Math.abs(rActive.F_detectability - 1.0) < 0.0001, 'F_detectability should be 1.0 for active_missing_person');
 
-  assert.ok(Math.abs(r.F_detectability - 0.88) < 0.0001, 'detectability_level 3 for adult should be 0.88');
+  // Evidence: detectability_level applies via conditionFactor
+  const segEvidence = { time_of_day: 'day', weather: 'clear', detectability_level: 3, critical_spacing_m: 6, area_coverage_pct: 100 };
+  const searchEvidence = { type_of_search: 'evidence_historical', auditory: 'none', visual: 'none' };
+  const rEvidence = computeForTarget({ config, searchLevel: searchEvidence, segment: segEvidence, targetKey: 'intact_remains' });
+  assert.ok(Math.abs(rEvidence.F_detectability - 0.78) < 0.0001, 'detectability_level 3 for intact_remains should be 0.78');
 });
 
 /* --- 4. response_model: disabled groups force M_resp = 1.0 --- */
@@ -207,15 +208,14 @@ test('computeForTarget with harsh conditions reduces POD', () => {
   const segment = {
     time_of_day: 'night',
     weather: 'snow',
-    detectability_level: 5,
     critical_spacing_m: 15,
     area_coverage_pct: 70
   };
   const searchLevel = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none' };
   const r = computeForTarget({ config, searchLevel, segment, targetKey: 'adult' });
 
-  // C_t = 0.72 * 0.82 * 0.6 = 0.35424
-  assert.ok(Math.abs(r.C_t - 0.35424) < 0.0001);
+  // C_t = F_time(0.72) * F_weather(0.82) = 0.5904 (detectability_level not applied for active)
+  assert.ok(Math.abs(r.C_t - 0.5904) < 0.0001);
   assert.ok(Math.abs(r.M_comp - 0.7) < 0.0001);
   assert.ok(r.POD_final < 0.3);
   assert.ok(r.POD_final > 0);
@@ -259,13 +259,25 @@ test('subject_visibility: low reduces C_t, high increases C_t', () => {
   assert.ok(Math.abs(rHigh.F_visibility - 1.20) < 0.0001);
 });
 
-test('segment_factor_weights: default value 3 gives factor 1.0 (no effect)', () => {
+test('condition_factors: default value 3 gives factor 1.0 for vegetation/terrain/extenuating', () => {
   const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 2, critical_spacing_m: 8, area_coverage_pct: 100, vegetation_density: 3, micro_terrain_complexity: 3, extenuating_factors: 3 };
   const searchLevel = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none', subject_visibility: 'medium' };
   const r = computeForTarget({ config, searchLevel, segment, targetKey: 'adult' });
 
   assert.ok(Math.abs(r.F_veg - 1.0) < 0.0001);
   assert.ok(Math.abs(r.F_terrain - 1.0) < 0.0001);
+  assert.ok(Math.abs(r.F_extenuating - 1.0) < 0.0001);
+  // burial_or_cover axis doesn't exist for active targets — falls back to 1.0
+  assert.ok(Math.abs(r.F_burial - 1.0) < 0.0001);
+});
+
+test('condition_factors: evidence target uses burial_or_cover, not extenuating_factors', () => {
+  const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 2, critical_spacing_m: 6, area_coverage_pct: 100, vegetation_density: 3, micro_terrain_complexity: 3, burial_or_cover: 3 };
+  const searchLevel = { type_of_search: 'evidence_historical', auditory: 'none', visual: 'none', subject_visibility: 'medium' };
+  const r = computeForTarget({ config, searchLevel, segment, targetKey: 'intact_remains' });
+
+  assert.ok(Math.abs(r.F_burial - 1.0) < 0.0001);
+  // extenuating_factors axis doesn't exist for evidence targets — falls back to 1.0
   assert.ok(Math.abs(r.F_extenuating - 1.0) < 0.0001);
 });
 
@@ -289,12 +301,13 @@ test('missing subject_visibility_factor in config falls back to 1.0', () => {
   assert.ok(Math.abs(r.F_visibility - 1.0) < 0.0001, 'Should fall back to 1.0 when config key missing');
 });
 
-test('missing segment_factor_weights in config falls back to 1.0', () => {
-  const minConfig = { ...config };
-  delete minConfig.segment_factor_weights;
+test('missing condition factor axis falls back to 1.0', () => {
+  // Create config where adult has no vegetation_density axis
+  const minConfig = JSON.parse(JSON.stringify(config));
+  delete minConfig.condition_factors.adult.vegetation_density;
   const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 2, critical_spacing_m: 8, area_coverage_pct: 100, vegetation_density: 5 };
   const searchLevel = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none', subject_visibility: 'medium' };
   const r = computeForTarget({ config: minConfig, searchLevel, segment, targetKey: 'adult' });
 
-  assert.ok(Math.abs(r.F_veg - 1.0) < 0.0001, 'Should fall back to 1.0 when segment_factor_weights missing');
+  assert.ok(Math.abs(r.F_veg - 1.0) < 0.0001, 'Should fall back to 1.0 when condition factor axis missing');
 });

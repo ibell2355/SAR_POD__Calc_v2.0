@@ -31,6 +31,7 @@ function newSegment() {
     vegetation_density: 3,
     micro_terrain_complexity: 3,
     extenuating_factors: 3,
+    burial_or_cover: 3,
     critical_spacing_m: 15,
     area_coverage_pct: 100,
     results: [],
@@ -119,7 +120,7 @@ function route() {
     if (!seg) { location.hash = '#/'; return; }
     renderSegment(root, seg,
       { results: seg.results, primaryTarget: seg.primaryTarget, qaWarnings: seg.qaWarnings },
-      saveState, configValid, configError, config);
+      saveState, configValid, configError, config, state.searchLevel.type_of_search);
   } else if (hash === '#/report') {
     renderReport(root, state, appVersion, formatReportDate(new Date()), configValid, configError, config);
   } else {
@@ -173,14 +174,15 @@ function handleInput(el) {
       const segFields = [
         'name', 'critical_spacing_m', 'area_coverage_pct',
         'time_of_day', 'weather', 'detectability_level',
-        'vegetation_density', 'micro_terrain_complexity', 'extenuating_factors'
+        'vegetation_density', 'micro_terrain_complexity', 'extenuating_factors', 'burial_or_cover'
       ];
       if (segFields.includes(name)) {
         if (type === 'number' || name === 'detectability_level'
             || name === 'area_coverage_pct'
             || name === 'vegetation_density'
             || name === 'micro_terrain_complexity'
-            || name === 'extenuating_factors') {
+            || name === 'extenuating_factors'
+            || name === 'burial_or_cover') {
           seg[name] = Number(value);
         } else {
           seg[name] = value;
@@ -451,6 +453,7 @@ function migrateState(raw) {
     next.vegetation_density = clampNum(Number(next.vegetation_density), 3, 1, 5);
     next.micro_terrain_complexity = clampNum(Number(next.micro_terrain_complexity), 3, 1, 5);
     next.extenuating_factors = clampNum(Number(next.extenuating_factors), 3, 1, 5);
+    next.burial_or_cover = clampNum(Number(next.burial_or_cover), 3, 1, 5);
     next.results = [];
     next.primaryTarget = null;
     return next;
