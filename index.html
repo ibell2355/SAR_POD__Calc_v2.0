@@ -19,7 +19,7 @@
           <h1>PSAR POD Calculator</h1>
           <p class="subtle">Parallel Sweep (V1) &middot; v<span id="app-version">&hellip;</span></p>
         </div>
-        <img class="header-qr" src="./assets/qrcode.png" alt="QR Code">
+        <img class="header-qr" id="header-qr" src="./assets/qrcode.png" alt="QR Code" role="button" tabindex="0">
       </div>
       <div id="connectivity-pill" class="connectivity-pill online">Online / Offline ready</div>
     </header>
@@ -27,5 +27,16 @@
     <footer class="build-stamp" id="build-stamp"></footer>
   </div>
   <script type="module" src="./src/main.js"></script>
+  <script>
+    /* QR code tap-to-enlarge (self-contained, no app dependency) */
+    document.getElementById('header-qr').addEventListener('click', function () {
+      if (document.getElementById('qr-overlay')) return;
+      var overlay = document.createElement('div');
+      overlay.id = 'qr-overlay';
+      overlay.innerHTML = '<img src="./assets/qrcode.png" alt="QR Code">';
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', function () { overlay.remove(); });
+    });
+  </script>
 </body>
 </html>

@@ -52,7 +52,7 @@ const state = {
 let config = null;
 let configValid = true;
 let configError = '';
-let appVersion = '2.1.1';
+let appVersion = '2.2.0';
 let appBuildDate = '';
 let saveTimer = null;
 let saveState = 'Saved';
@@ -471,9 +471,9 @@ function uid() {
 async function fetchPackageInfo() {
   try {
     const pkg = await fetch('./package.json').then((r) => r.json());
-    return { version: pkg.version || '2.1.1', buildDate: pkg.buildDate || '' };
+    return { version: pkg.version || '2.2.0', buildDate: pkg.buildDate || '' };
   } catch {
-    return { version: '2.1.1', buildDate: '' };
+    return { version: '2.2.0', buildDate: '' };
   }
 }
 
