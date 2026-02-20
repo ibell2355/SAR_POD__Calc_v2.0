@@ -8,12 +8,12 @@ Once complete, mark with an X inside of the square brackets "[X]"
 
 # TWEEKS
 
-- [ ] Reduce spacing between one to five options on the segment section by 40% specifically for vegetation density, micro-terrain complexity, and extenuating factors
+- [X] Reduce spacing between one to five options on the segment section by 50% specifically for vegetation density, micro-terrain complexity, and extenuating factors
 - [X] On search main page It says "session" at the top; it should say "Search Details"
 - [X] Under Subject Responsiveness:
 	- Move Visual and its selector buttons in line below Auditory.
 	- Change heading Subject Responsiveness to just say Subject.
-	- For Subject Visibility just call it Visibility and make it the same font as Auditory and Visual.
+	- For Subject Visibility just call it Visibility and make it the same font as AudBurial or cover didn't reduce, maybe reduced them by 50%? itory and Visual.
 	- Add Tool Tip for Auditory and Visual as "Likelihood to signal verbally" and "Likelihood to signal visually".
 - [X] Under auditory responsiveness and visual responsiveness instead of 'none' but "Not Expected"
 - [X] The report should include the selection from the search page
