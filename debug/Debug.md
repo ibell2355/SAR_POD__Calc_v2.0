@@ -66,62 +66,62 @@
 
   LOW (12)
 
-[ ]  
+[X] - Added select to onChange matcher
  #: 12
   Location: main.js:142
   Issue: onChange only matches radio/checkbox — no <select> handling (none exist currently)
   ────────────────────────────────────────
-[ ] 
+[X] - Replaced shallow spread with structuredClone(defaultSearch) at all 3 sites
   #: 13
   Location: main.js:49,329
   Issue: Shallow spread of defaultSearch copies array references (safe due to reassignment pattern, but fragile)
   ────────────────────────────────────────
-[ ] 
+[X] - Added input[type="range"] to onInput matcher
   #: 14
   Location: main.js:136
   Issue: onInput doesn't match input[type="range"] (none exist currently)
   ────────────────────────────────────────
-[ ] 
+[X] - Added min/max to numField: spacing 1-100, coverage 0-100
   #: 15
   Location: main.js:180
   Issue: No HTML min attribute on spacing input — negative values possible during editing (guarded by min_effective)
   ────────────────────────────────────────
-[ ] 
+[X] - Skipped; block scalar path isn't used by current config, removing would cause misparsing
   #: 16
   Location: simpleYaml.js:76
   Issue: Block scalar content (> / `
   ────────────────────────────────────────
-[ ] 
+[X] - Skipped; formula text strings with \n aren't rendered anywhere in the UI
   #: 17
   Location: simpleYaml.js
   Issue: YAML escape sequences (\n) in double-quoted strings are not interpreted
   ────────────────────────────────────────
-[ ] 
+[X] - Deleted parseTimeToMinutes and durationMinutes
   #: 18
   Location: math.js:3-17
   Issue: parseTimeToMinutes and durationMinutes are dead code
   ────────────────────────────────────────
-[ ] 
+[X] - Exported esc() from render.js, deleted duplicate escapeHtml from main.js
   #: 19
   Location: main.js, render.js
   Issue: escapeHtml/esc duplicated across two files
   ────────────────────────────────────────
-[ ] 
+[X] - Strip results/primaryTarget/qaWarnings before saving to IDB; recomputed on hydrate
   #: 20
   Location: main.js:380-407
   Issue: Hydrate persists computed results arrays to IDB (wasteful, not incorrect)
   ────────────────────────────────────────
-[ ] 
+[X] - Skipped; cosmetic only, icons display correctly on current devices
   #: 21
   Location: manifest.webmanifest:10
   Issue: Combined any maskable icon purpose may cause cropping on some devices
   ────────────────────────────────────────
-[ ] 
+[X] - Skipped; flag works as intended since config is loaded once at startup
   #: 22
   Location: podEngine.js:44
   Issue: _configWarned flag never resets (config doesn't change at runtime)
   ────────────────────────────────────────
-[ ] 
+[X] - Reordered clampNum to (val, min, max, fallback) and updated all call sites
   #: 23
   Location: main.js:441
   Issue: clampNum argument ordering in migration code is confusing (functionally correct)

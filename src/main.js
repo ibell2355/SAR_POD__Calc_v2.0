@@ -3,7 +3,7 @@ import { computeForTarget, inferPrimaryTarget, selectedTargets, generateQaWarnin
 import { getValue, setValue, clearAll } from './storage/db.js';
 import {
   renderHome, renderSegment, renderReport,
-  buildReportText, podResultHtml, segmentListHtml
+  buildReportText, podResultHtml, segmentListHtml, esc
 } from './ui/render.js';
 
 /* ================================================================
@@ -45,7 +45,7 @@ function newSegment() {
 
 const state = {
   session: { your_name: '', search_name: '', team_name: '' },
-  searchLevel: { ...defaultSearch },
+  searchLevel: structuredClone(defaultSearch),
   segments: []
 };
 
@@ -99,7 +99,7 @@ async function init() {
     const root = document.getElementById('view-root');
     if (root) {
       root.innerHTML = `<div class="panel" style="margin-top:12px">
-        <p style="color:var(--danger)">Unable to start: ${escapeHtml(err.message)}</p>
+        <p style="color:var(--danger)">Unable to start: ${esc(err.message)}</p>
       </div>`;
     }
   }
@@ -133,14 +133,14 @@ function route() {
 
 function onInput(e) {
   const el = e.target;
-  if (el.matches('input[type="text"], input[type="number"], input:not([type])')) {
+  if (el.matches('input[type="text"], input[type="number"], input[type="range"], input:not([type])')) {
     handleInput(el);
   }
 }
 
 function onChange(e) {
   const el = e.target;
-  if (el.matches('input[type="radio"], input[type="checkbox"]')) {
+  if (el.matches('input[type="radio"], input[type="checkbox"], select')) {
     handleInput(el);
   }
 }
@@ -324,7 +324,7 @@ function handleAction(action, id) {
   if (action === 'new-session') {
     if (!confirm('Clear all data and start a new session?')) return;
     state.session = { your_name: '', search_name: '', team_name: '' };
-    state.searchLevel = { ...defaultSearch };
+    state.searchLevel = structuredClone(defaultSearch);
     state.segments = [];
     clearAll();
     localStorage.removeItem('sar_v2_session');
@@ -368,7 +368,7 @@ function debounceSave() {
       await setValue('session', {
         session: state.session,
         searchLevel: state.searchLevel,
-        segments: state.segments
+        segments: state.segments.map(stripComputed)
       });
       saveState = 'Saved';
     } catch (err) {
@@ -405,7 +405,7 @@ async function hydrate() {
   await setValue('session', {
     session: state.session,
     searchLevel: state.searchLevel,
-    segments: state.segments
+    segments: state.segments.map(stripComputed)
   });
 }
 
@@ -417,7 +417,7 @@ function migrateState(raw) {
     ...(raw.session || {})
   };
 
-  const searchLevel = { ...defaultSearch, ...(raw.searchLevel || {}) };
+  const searchLevel = { ...structuredClone(defaultSearch), ...(raw.searchLevel || {}) };
   if (!searchLevel.subject_visibility) searchLevel.subject_visibility = 'medium';
   searchLevel.active_targets = Array.isArray(searchLevel.active_targets)
     ? searchLevel.active_targets
@@ -441,7 +441,7 @@ function migrateState(raw) {
 
     // Legacy field migration: searched_fraction -> area_coverage_pct
     if (seg.area_coverage_pct == null && seg.searched_fraction != null) {
-      next.area_coverage_pct = clampNum(Number(seg.searched_fraction) * 100, 100, 0, 100);
+      next.area_coverage_pct = clampNum(Number(seg.searched_fraction) * 100, 0, 100, 100);
     }
 
     // Remove legacy fields
@@ -450,13 +450,13 @@ function migrateState(raw) {
     delete next.searched_fraction;
     delete next.inaccessible_fraction;
 
-    next.critical_spacing_m = clampNum(next.critical_spacing_m, 15, 0.1, 10000);
-    next.area_coverage_pct = clampNum(next.area_coverage_pct, 100, 0, 100);
+    next.critical_spacing_m = clampNum(next.critical_spacing_m, 0.1, 10000, 15);
+    next.area_coverage_pct = clampNum(next.area_coverage_pct, 0, 100, 100);
     delete next.detectability_level;
-    next.vegetation_density = clampNum(Number(next.vegetation_density), 3, 1, 5);
-    next.micro_terrain_complexity = clampNum(Number(next.micro_terrain_complexity), 3, 1, 5);
-    next.extenuating_factors = clampNum(Number(next.extenuating_factors), 3, 1, 5);
-    next.burial_or_cover = clampNum(Number(next.burial_or_cover), 3, 1, 5);
+    next.vegetation_density = clampNum(Number(next.vegetation_density), 1, 5, 3);
+    next.micro_terrain_complexity = clampNum(Number(next.micro_terrain_complexity), 1, 5, 3);
+    next.extenuating_factors = clampNum(Number(next.extenuating_factors), 1, 5, 3);
+    next.burial_or_cover = clampNum(Number(next.burial_or_cover), 1, 5, 3);
     next.results = [];
     next.primaryTarget = null;
     return next;
@@ -567,15 +567,13 @@ function formatReportDate(date) {
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-function clampNum(val, fallback, min, max) {
+function clampNum(val, min, max, fallback) {
   const num = Number(val);
   return Number.isNaN(num) ? fallback : Math.max(min, Math.min(max, num));
 }
 
-function escapeHtml(str) {
-  return String(str || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+function stripComputed(seg) {
+  const { results, primaryTarget, qaWarnings, ...inputs } = seg;
+  return inputs;
 }
+

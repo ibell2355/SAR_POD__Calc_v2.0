@@ -70,7 +70,7 @@ test('base_hazard_rate: when all multipliers are 1, POD equals base_detectabilit
   // S_ref = 8 * 1.0 = 8, spacing_ratio = (8/8)^2 = 1.
   // hazard = -ln(1 - 0.8) = 1.6094..., exponent = 1 * 1.6094 * 1 * 1 = 1.6094
   // POD_raw = 1 - exp(-1.6094) = 0.8 (exact calibration property)
-  const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 2, critical_spacing_m: 8, area_coverage_pct: 100 };
+  const segment = { time_of_day: 'day', weather: 'clear', critical_spacing_m: 8, area_coverage_pct: 100 };
   const searchLevel = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none' };
   const r = computeForTarget({ config, searchLevel, segment, targetKey: 'adult' });
 
@@ -83,7 +83,7 @@ test('base_hazard_rate: when all multipliers are 1, POD equals base_detectabilit
 
 test('effective_actual_spacing: actual below min_effective uses min_effective', () => {
   // Adult min_effective = 3m. If actual = 1m, S_eff_act should be 3m (not 1m).
-  const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 2, critical_spacing_m: 1, area_coverage_pct: 100 };
+  const segment = { time_of_day: 'day', weather: 'clear', critical_spacing_m: 1, area_coverage_pct: 100 };
   const searchLevel = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none' };
   const r = computeForTarget({ config, searchLevel, segment, targetKey: 'adult' });
 
@@ -96,26 +96,12 @@ test('effective_actual_spacing: actual below min_effective uses min_effective', 
   assert.ok(Math.abs(r.POD_final - r3.POD_final) < 0.0001, 'POD should be identical when both clamp to min');
 });
 
-/* --- 3. detectability_level numeric input resolves via string key --- */
-
-test('detectability_level: skipped for active_missing_person, applied for evidence', () => {
-  // Active: detectability_level is ignored (F_detectability = 1.0)
-  const segActive = { time_of_day: 'day', weather: 'clear', detectability_level: 3, critical_spacing_m: 8, area_coverage_pct: 100 };
-  const searchActive = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none' };
-  const rActive = computeForTarget({ config, searchLevel: searchActive, segment: segActive, targetKey: 'adult' });
-  assert.ok(Math.abs(rActive.F_detectability - 1.0) < 0.0001, 'F_detectability should be 1.0 for active_missing_person');
-
-  // Evidence: detectability_level applies via conditionFactor
-  const segEvidence = { time_of_day: 'day', weather: 'clear', detectability_level: 3, critical_spacing_m: 6, area_coverage_pct: 100 };
-  const searchEvidence = { type_of_search: 'evidence_historical', auditory: 'none', visual: 'none' };
-  const rEvidence = computeForTarget({ config, searchLevel: searchEvidence, segment: segEvidence, targetKey: 'intact_remains' });
-  assert.ok(Math.abs(rEvidence.F_detectability - 0.78) < 0.0001, 'detectability_level 3 for intact_remains should be 0.78');
-});
+/* --- 3. (removed — detectability_level replaced by vegetation/terrain/extenuating factors) --- */
 
 /* --- 4. response_model: disabled groups force M_resp = 1.0 --- */
 
 test('response_model: M_resp = 1 for evidence_historical (disabled group)', () => {
-  const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 2, critical_spacing_m: 6, area_coverage_pct: 100 };
+  const segment = { time_of_day: 'day', weather: 'clear', critical_spacing_m: 6, area_coverage_pct: 100 };
   const searchLevel = { type_of_search: 'evidence_historical', auditory: 'likely', visual: 'likely' };
 
   // intact_remains is evidence_historical → response disabled
@@ -142,7 +128,7 @@ test('completion_multiplier: area_coverage_pct is a final hard cap on POD', () =
   assert.equal(completionMultiplier({ area_coverage_pct: -10 }), 0);
 
   // Verify M_comp actually scales final POD
-  const segment80 = { time_of_day: 'day', weather: 'clear', detectability_level: 2, critical_spacing_m: 8, area_coverage_pct: 80 };
+  const segment80 = { time_of_day: 'day', weather: 'clear', critical_spacing_m: 8, area_coverage_pct: 80 };
   const segment100 = { ...segment80, area_coverage_pct: 100 };
   const searchLevel = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none' };
   const r80 = computeForTarget({ config, searchLevel, segment: segment80, targetKey: 'adult' });
@@ -252,7 +238,7 @@ test('QA warning thresholds are configurable', () => {
    ================================================================ */
 
 test('subject_visibility: low reduces C_t, high increases C_t', () => {
-  const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 2, critical_spacing_m: 8, area_coverage_pct: 100, vegetation_density: 3, micro_terrain_complexity: 3, extenuating_factors: 3 };
+  const segment = { time_of_day: 'day', weather: 'clear', critical_spacing_m: 8, area_coverage_pct: 100, vegetation_density: 3, micro_terrain_complexity: 3, extenuating_factors: 3 };
   const searchLow = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none', subject_visibility: 'low' };
   const searchMed = { ...searchLow, subject_visibility: 'medium' };
   const searchHigh = { ...searchLow, subject_visibility: 'high' };
@@ -269,7 +255,7 @@ test('subject_visibility: low reduces C_t, high increases C_t', () => {
 });
 
 test('condition_factors: default value 3 gives factor 1.0 for vegetation/terrain/extenuating', () => {
-  const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 2, critical_spacing_m: 8, area_coverage_pct: 100, vegetation_density: 3, micro_terrain_complexity: 3, extenuating_factors: 3 };
+  const segment = { time_of_day: 'day', weather: 'clear', critical_spacing_m: 8, area_coverage_pct: 100, vegetation_density: 3, micro_terrain_complexity: 3, extenuating_factors: 3 };
   const searchLevel = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none', subject_visibility: 'medium' };
   const r = computeForTarget({ config, searchLevel, segment, targetKey: 'adult' });
 
@@ -281,7 +267,7 @@ test('condition_factors: default value 3 gives factor 1.0 for vegetation/terrain
 });
 
 test('condition_factors: evidence target uses burial_or_cover, not extenuating_factors', () => {
-  const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 2, critical_spacing_m: 6, area_coverage_pct: 100, vegetation_density: 3, micro_terrain_complexity: 3, burial_or_cover: 3 };
+  const segment = { time_of_day: 'day', weather: 'clear', critical_spacing_m: 6, area_coverage_pct: 100, vegetation_density: 3, micro_terrain_complexity: 3, burial_or_cover: 3 };
   const searchLevel = { type_of_search: 'evidence_historical', auditory: 'none', visual: 'none', subject_visibility: 'medium' };
   const r = computeForTarget({ config, searchLevel, segment, targetKey: 'intact_remains' });
 
@@ -291,7 +277,7 @@ test('condition_factors: evidence target uses burial_or_cover, not extenuating_f
 });
 
 test('visual evade gives negative bonus and reduces M_resp', () => {
-  const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 2, critical_spacing_m: 8, area_coverage_pct: 100 };
+  const segment = { time_of_day: 'day', weather: 'clear', critical_spacing_m: 8, area_coverage_pct: 100 };
   const searchLevel = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'evade' };
   const r = computeForTarget({ config, searchLevel, segment, targetKey: 'adult' });
 
@@ -303,7 +289,7 @@ test('visual evade gives negative bonus and reduces M_resp', () => {
 test('missing subject_visibility_factor in config falls back to 1.0', () => {
   const minConfig = { ...config };
   delete minConfig.subject_visibility_factor;
-  const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 2, critical_spacing_m: 8, area_coverage_pct: 100 };
+  const segment = { time_of_day: 'day', weather: 'clear', critical_spacing_m: 8, area_coverage_pct: 100 };
   const searchLevel = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none', subject_visibility: 'low' };
   const r = computeForTarget({ config: minConfig, searchLevel, segment, targetKey: 'adult' });
 
@@ -314,7 +300,7 @@ test('missing condition factor axis falls back to 1.0', () => {
   // Create config where adult has no vegetation_density axis
   const minConfig = JSON.parse(JSON.stringify(config));
   delete minConfig.condition_factors.adult.vegetation_density;
-  const segment = { time_of_day: 'day', weather: 'clear', detectability_level: 2, critical_spacing_m: 8, area_coverage_pct: 100, vegetation_density: 5 };
+  const segment = { time_of_day: 'day', weather: 'clear', critical_spacing_m: 8, area_coverage_pct: 100, vegetation_density: 5 };
   const searchLevel = { type_of_search: 'active_missing_person', auditory: 'none', visual: 'none', subject_visibility: 'medium' };
   const r = computeForTarget({ config: minConfig, searchLevel, segment, targetKey: 'adult' });
 

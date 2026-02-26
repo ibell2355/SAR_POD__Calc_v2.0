@@ -86,7 +86,6 @@ export function renderHome(root, state, savedLabel, configValid, configError, co
         <button class="btn" data-action="copy-report">Copy Report</button>
         <button class="btn btn-danger" data-action="new-session">New Session (Clear)</button>
       </div>
-      <p class="subtle" style="text-align:center;margin-top:8px">All data stays on your device. Nothing is sent to any server.</p>
     </section>
   `;
 }
@@ -128,8 +127,8 @@ export function renderSegment(root, segment, computed, savedLabel, configValid, 
       <h2>Edit Segment</h2>
       ${textField('Segment Name', 'name', segment.name)}
       <div class="grid-2">
-        ${numField('Critical Spacing (m)', 'critical_spacing_m', segment.critical_spacing_m, '0.1', 'Distance between searchers')}
-        ${numField('Area Coverage (%)', 'area_coverage_pct', segment.area_coverage_pct, '1', 'Account for incomplete segments or unsearchable area.')}
+        ${numField('Critical Spacing (m)', 'critical_spacing_m', segment.critical_spacing_m, '0.1', 'Distance between searchers', 1, 100)}
+        ${numField('Area Coverage (%)', 'area_coverage_pct', segment.area_coverage_pct, '1', 'Account for incomplete segments or unsearchable area.', 0, 100)}
       </div>
 
       <h3>Time of Day</h3>
@@ -515,8 +514,10 @@ function textField(label, name, value, hint = '') {
   return `<label>${esc(label)}${hint ? `<span class="hint">${hint}</span>` : ''}<input name="${name}" value="${esc(value || '')}"/></label>`;
 }
 
-function numField(label, name, value, step, hint = '') {
-  return `<label>${esc(label)}${hint ? `<span class="hint">${hint}</span>` : ''}<input type="number" step="${step}" name="${name}" value="${esc(value ?? '')}"/></label>`;
+function numField(label, name, value, step, hint = '', min = '', max = '') {
+  const minAttr = min !== '' ? ` min="${min}"` : '';
+  const maxAttr = max !== '' ? ` max="${max}"` : '';
+  return `<label>${esc(label)}${hint ? `<span class="hint">${hint}</span>` : ''}<input type="number" step="${step}"${minAttr}${maxAttr} name="${name}" value="${esc(value ?? '')}"/></label>`;
 }
 
 /* ---- Formatting ---- */
@@ -527,7 +528,7 @@ function prettyTarget(key) {
 
 function n(v) { return Number(v ?? 0).toFixed(4); }
 
-function esc(str) {
+export function esc(str) {
   return String(str || '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
