@@ -10,55 +10,55 @@ targets:
     group: active_missing_person
     base_detectability: 0.75
     calibration_constant_k: 1.0
-    base_reference_critical_spacing_m: 10.0
-    spacing_exponent: .75
+    base_reference_critical_spacing_m: 15.0
+    spacing_exponent: .7
   child:
     group: active_missing_person
-    base_detectability: 0.72
-    calibration_constant_k: 0.97
-    base_reference_critical_spacing_m: 10.0
-    spacing_exponent: .7
+    base_detectability: 0.75
+    calibration_constant_k: 0.98
+    base_reference_critical_spacing_m: 12.0
+    spacing_exponent: .65
   large_clues:
     group: active_missing_person
-    base_detectability: 0.7
-    calibration_constant_k: 1.0
-    base_reference_critical_spacing_m: 7.0
-    spacing_exponent: .65
+    base_detectability: 0.73
+    calibration_constant_k: .98
+    base_reference_critical_spacing_m: 11.0
+    spacing_exponent: .60
   small_clues:
     group: active_missing_person
     base_detectability: 0.7
     calibration_constant_k: 0.9
-    base_reference_critical_spacing_m: 5.0
+    base_reference_critical_spacing_m: 7.0
     spacing_exponent: .45
   intact_remains:
     group: evidence_historical
     base_detectability: 0.75
     calibration_constant_k: 0.98
-    base_reference_critical_spacing_m: 10.0
+    base_reference_critical_spacing_m: 15.0
     spacing_exponent: .75
   partially_skeletonized:
     group: evidence_historical
     base_detectability: 0.70
     calibration_constant_k: 0.98
-    base_reference_critical_spacing_m: 8.0
+    base_reference_critical_spacing_m: 10.0
     spacing_exponent: .70
   skeletal_remains:
     group: active_missing_person
     base_detectability: 0.7
     calibration_constant_k: 0.95
-    base_reference_critical_spacing_m: 6.0
+    base_reference_critical_spacing_m: 8.0
     spacing_exponent: .45
   large_evidence:
     group: active_missing_person
     base_detectability: 0.7
     calibration_constant_k: 0.98
-    base_reference_critical_spacing_m: 7.0
+    base_reference_critical_spacing_m: 10.0
     spacing_exponent: .65
   small_evidence:
     group: active_missing_person
     base_detectability: 0.7
     calibration_constant_k: 0.88
-    base_reference_critical_spacing_m: 5.0
+    base_reference_critical_spacing_m: 7.0
     spacing_exponent: .45
 spacing_bounds_m:
   min_effective_actual_spacing_m_by_target:
@@ -165,15 +165,15 @@ response_model:
     possible: 0.04
     likely: 0.08
   visual_bonus:
-    evade: -0.02
+    evade: -0.10
     none: 0.0
     possible: 0.015
-    likely: 0.04
+    likely: 0.05
   max_total_multiplier: 1.25
 subject_visibility_factor:
-  low: 0.80
+  low: 0.85
   medium: 1.0
-  high: 1.20
+  high: 1.15
 condition_factors:
   adult:
     time_of_day:
@@ -183,64 +183,52 @@ condition_factors:
     weather:
       clear: 1.0
       rain: 0.96
-      snow: 0.80
-    detectability_level:
-      '1': 1.75
-      '2': 1.35
+      snow: 0.88
+    vegetation_density:
+      '1': 1.8
+      '2': 1.45
+      '3': 1.0
+      '4': 0.65
+      '5': 0.45
+    micro_terrain_complexity:
+      '1': 1.30
+      '2': 1.15
+      '3': 1.0
+      '4': 0.85
+      '5': 0.70
+    extenuating_factors:
+      '1': 1.50
+      '2': 1.25
       '3': 1.0
       '4': 0.75
-      '5': 0.45
-    vegetation_density:
-      '1': 1.0
-      '2': 1.0
-      '3': 1.0
-      '4': 1.0
-      '5': 1.0
-    micro_terrain_complexity:
-      '1': 1.0
-      '2': 1.0
-      '3': 1.0
-      '4': 1.0
-      '5': 1.0
-    extenuating_factors:
-      '1': 1.0
-      '2': 1.0
-      '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '5': 0.50
   child:
     time_of_day:
       day: 1.0
       dusk_dawn: 0.9
-      night: 0.52
+      night: 0.50
     weather:
       clear: 1.0
       rain: 0.93
       snow: 0.78
-    detectability_level:
-      '1': 1.70
-      '2': 1.30
+    vegetation_density:
+      '1': 1.8
+      '2': 1.45
       '3': 1.0
       '4': 0.65
-      '5': 0.40
-    vegetation_density:
-      '1': 1.0
-      '2': 1.0
-      '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '5': 0.45
     micro_terrain_complexity:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.40
+      '2': 1.25
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.65
+      '5': 0.50
     extenuating_factors:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.50
+      '2': 1.25
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.75
+      '5': 0.50
   large_clues:
     time_of_day:
       day: 1.0
@@ -250,30 +238,24 @@ condition_factors:
       clear: 1.0
       rain: 0.92
       snow: 0.76
-    detectability_level:
-      '1': 1.70
-      '2': 1.30
+    vegetation_density:
+      '1': 1.8
+      '2': 1.45
       '3': 1.0
       '4': 0.65
-      '5': 0.35
-    vegetation_density:
-      '1': 1.0
-      '2': 1.0
-      '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '5': 0.45
     micro_terrain_complexity:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.40
+      '2': 1.25
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.65
+      '5': 0.50
     extenuating_factors:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.50
+      '2': 1.25
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.75
+      '5': 0.50
   small_clues:
     time_of_day:
       day: 1.0
@@ -282,31 +264,25 @@ condition_factors:
     weather:
       clear: 1.0
       rain: 0.90
-      snow: 0.45
-    detectability_level:
-      '1': 1.65
-      '2': 1.20
-      '3': 1.0
-      '4': 0.50
-      '5': 0.20
+      snow: 0.40
     vegetation_density:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.75
+      '2': 1.40
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.60
+      '5': 0.40
     micro_terrain_complexity:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.40
+      '2': 1.25
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.55
+      '5': 0.40
     extenuating_factors:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.50
+      '2': 1.25
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.75
+      '5': 0.50
   intact_remains:
     time_of_day:
       day: 1.0
@@ -316,30 +292,24 @@ condition_factors:
       clear: 1.0
       rain: 0.96
       snow: 0.80
-    detectability_level:
-      '1': 1.75
-      '2': 1.35
-      '3': 1.0
-      '4': 0.75
-      '5': 0.45
     vegetation_density:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.8
+      '2': 1.45
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.65
+      '5': 0.45
     micro_terrain_complexity:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.30
+      '2': 1.15
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.85
+      '5': 0.70
     burial_or_cover:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.30
+      '2': 1.15
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.85
+      '5': 0.70
   partially_skeletonized:
     time_of_day:
       day: 1.0
@@ -349,30 +319,24 @@ condition_factors:
       clear: 1.0
       rain: 0.93
       snow: 0.78
-    detectability_level:
-      '1': 1.70
-      '2': 1.30
+    vegetation_density:
+      '1': 1.8
+      '2': 1.45
       '3': 1.0
       '4': 0.65
-      '5': 0.40
-    vegetation_density:
-      '1': 1.0
-      '2': 1.0
-      '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '5': 0.45
     micro_terrain_complexity:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.30
+      '2': 1.15
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.85
+      '5': 0.70
     burial_or_cover:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.40
+      '2': 1.20
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.75
+      '5': 0.60
   skeletal_remains:
     time_of_day:
       day: 1.0
@@ -381,31 +345,25 @@ condition_factors:
     weather:
       clear: 1.0
       rain: 0.90
-      snow: 0.45
-    detectability_level:
-      '1': 1.65
-      '2': 1.20
-      '3': 1.0
-      '4': 0.50
-      '5': 0.20
+      snow: 0.40
     vegetation_density:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.8
+      '2': 1.45
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.65
+      '5': 0.45
     micro_terrain_complexity:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.30
+      '2': 1.15
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.85
+      '5': 0.70
     burial_or_cover:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.40
+      '2': 1.30
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.65
+      '5': 0.35
   large_evidence:
     time_of_day:
       day: 1.0
@@ -415,30 +373,24 @@ condition_factors:
       clear: 1.0
       rain: 0.92
       snow: 0.76
-    detectability_level:
-      '1': 1.70
-      '2': 1.30
+    vegetation_density:
+      '1': 1.8
+      '2': 1.45
       '3': 1.0
       '4': 0.65
-      '5': 0.35
-    vegetation_density:
-      '1': 1.0
-      '2': 1.0
-      '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '5': 0.45
     micro_terrain_complexity:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.30
+      '2': 1.15
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.85
+      '5': 0.70
     burial_or_cover:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.40
+      '2': 1.20
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.75
+      '5': 0.60
   small_evidence:
     time_of_day:
       day: 1.0
@@ -447,31 +399,25 @@ condition_factors:
     weather:
       clear: 1.0
       rain: 0.90
-      snow: 0.45
-    detectability_level:
-      '1': 1.65
-      '2': 1.20
-      '3': 1.0
-      '4': 0.50
-      '5': 0.20
+      snow: 0.40
     vegetation_density:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.8
+      '2': 1.45
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.65
+      '5': 0.45
     micro_terrain_complexity:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.30
+      '2': 1.15
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.85
+      '5': 0.70
     burial_or_cover:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.40
+      '2': 1.30
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.65
+      '5': 0.35
 ui_tooltips:
   subject_visibility: How visible is the subject expected to be? Camouflaged or buried, bright clothing or open terrain.
   auditory: Subject likelihood to signal verbally.

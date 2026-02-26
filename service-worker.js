@@ -14,7 +14,7 @@
  * force-purge the entire cache.
  */
 
-const CACHE_NAME = 'psar-pod-v11';
+const CACHE_NAME = 'psar-pod-v12';
 
 const APP_SHELL = [
   './',
@@ -31,7 +31,7 @@ const APP_SHELL = [
   './config/defaults.js',
   './package.json',
   './manifest.webmanifest',
-  './assets/logo-placeholder.svg',
+  './assets/PSAR Logo.png',
   './assets/icon-192.svg',
   './assets/icon-512.svg',
   './assets/qrcode.png'

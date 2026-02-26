@@ -40,11 +40,10 @@ body {
 }
 
 .logo {
-  width: 56px;
-  height: 56px;
-  border-radius: 10px;
-  background: #fff;
-  border: 1px solid var(--border);
+  width: 62px;
+  height: 62px;
+  background: transparent;
+  border: none;
 }
 
 .header-title {
