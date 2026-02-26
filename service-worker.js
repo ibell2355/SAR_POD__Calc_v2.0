@@ -32,7 +32,7 @@ const APP_SHELL = [
   './manifest.webmanifest',
   './assets/psar_logo.svg',
   './assets/icon-192.png',
-  './assets/icon-512.svg',
+  './assets/icon-512.png',
   './assets/qrcode.png'
 ];
 
