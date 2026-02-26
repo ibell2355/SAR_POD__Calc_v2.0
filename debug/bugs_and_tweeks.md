@@ -8,6 +8,7 @@ Once complete, mark with an X inside of the square brackets "[X]"
 
 # TWEEKS
 
+
 - [X] Reduce spacing between one to five options on the segment section by 50% specifically for vegetation density, micro-terrain complexity, and extenuating factors
 - [X] On search main page It says "session" at the top; it should say "Search Details"
 - [X] Under Subject Responsiveness:
