@@ -11,7 +11,7 @@ function targetDef(config, targetKey) {
 /**
  * Condition factors are organized by target:
  *   config.condition_factors[targetKey][axis][level]
- * Detectability level keys in YAML are strings ('1'..'5'); cast input to string.
+ * Numeric keys in YAML are strings ('1'..'5'); cast input to string.
  */
 function conditionFactor(config, axis, level, targetKey) {
   return Number(config?.condition_factors?.[targetKey]?.[axis]?.[String(level)] ?? 1);
@@ -137,7 +137,7 @@ export function completionMultiplier(segment) {
 /* ================================================================
    Full per-target POD computation — Exponential detection model
 
-   1) condition_multiplier = F_time * F_weather * F_detectability
+   1) condition_multiplier = F_time * F_weather * F_visibility * F_veg * F_terrain * F_ext * F_burial
    2) base_hazard_rate = -ln(1 - base_detectability)
    3) reference_critical_spacing_m = base * condition_multiplier
    4) effective_actual_critical_spacing_m = max(actual, min_effective)
@@ -161,15 +161,11 @@ export function computeForTarget({ config, searchLevel, segment, targetKey }) {
   const base_reference_critical_spacing_m = Number(target.base_reference_critical_spacing_m ?? 8.0);
   const spacing_exponent = Number(target.spacing_exponent ?? 2.0);
 
-  // Per-target condition factors (detectability_level key must be string)
+  // Per-target condition factors
   const F_time = conditionFactor(config, 'time_of_day', segment?.time_of_day || 'day', targetKey);
   const F_weather = conditionFactor(config, 'weather', segment?.weather || 'clear', targetKey);
-  // detectability_level applies to evidence/historical only; active missing person uses the three new levers instead
-  const F_detectability = searchLevel?.type_of_search === 'active_missing_person'
-    ? 1.0
-    : conditionFactor(config, 'detectability_level', segment?.detectability_level ?? 3, targetKey);
 
-  // New factors (v2.2): search-level visibility + per-segment condition factors
+  // Search-level visibility + per-segment condition factors
   const F_visibility = subjectVisibilityFactor(config, searchLevel?.subject_visibility || 'medium');
   const F_veg = conditionFactor(config, 'vegetation_density', segment?.vegetation_density ?? 3, targetKey);
   const F_terrain = conditionFactor(config, 'micro_terrain_complexity', segment?.micro_terrain_complexity ?? 3, targetKey);
@@ -179,7 +175,7 @@ export function computeForTarget({ config, searchLevel, segment, targetKey }) {
   // 1. condition_multiplier_for_target (includes new factors)
   // Missing axes fall back to 1.0 via conditionFactor: active targets lack burial_or_cover,
   // evidence targets lack extenuating_factors — so only the relevant factor has effect.
-  const C_t = F_time * F_weather * F_detectability * F_visibility * F_veg * F_terrain * F_extenuating * F_burial;
+  const C_t = F_time * F_weather * F_visibility * F_veg * F_terrain * F_extenuating * F_burial;
 
   // 2. base_hazard_rate_for_target = -ln(1 - base_detectability)
   //    Guard against base_detectability >= 1 which would give Infinity
@@ -221,7 +217,6 @@ export function computeForTarget({ config, searchLevel, segment, targetKey }) {
     // Condition factors
     F_time,
     F_weather,
-    F_detectability,
     F_visibility,
     F_veg,
     F_terrain,
@@ -279,16 +274,11 @@ export function generateQaWarnings(segment, config) {
   const spacing = Number(segment?.critical_spacing_m);
   const pct = Number(segment?.area_coverage_pct ?? 100);
 
-  if (flags.warn_if_critical_spacing_m_lt_1 && spacing < 1) {
-    warnings.push('Critical spacing is very small (< 1 m)');
+  if (flags.warn_if_critical_spacing_m_gt && spacing > flags.warn_if_critical_spacing_m_gt) {
+    warnings.push(`Critical spacing is very large (> ${flags.warn_if_critical_spacing_m_gt} m)`);
   }
-  if (flags.warn_if_critical_spacing_m_gt_50 && spacing > 50) {
-    warnings.push('Critical spacing is very large (> 50 m)');
-  }
-  // YAML may still carry legacy searched_fraction / inaccessible_fraction flags;
-  // these are harmless — they reference inputs no longer collected, so never fire.
-  if (flags.warn_if_area_coverage_pct_lt_50 && pct < 50) {
-    warnings.push('Area coverage is low (< 50%)');
+  if (flags.warn_if_area_coverage_pct_lt && pct < flags.warn_if_area_coverage_pct_lt) {
+    warnings.push(`Area coverage is low (< ${flags.warn_if_area_coverage_pct_lt}%)`);
   }
 
   return warnings;

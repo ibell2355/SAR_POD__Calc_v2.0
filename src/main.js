@@ -27,7 +27,6 @@ function newSegment() {
     name: '',
     time_of_day: 'day',
     weather: 'clear',
-    detectability_level: 3,
     vegetation_density: 3,
     micro_terrain_complexity: 3,
     extenuating_factors: 3,
@@ -173,12 +172,11 @@ function handleInput(el) {
     if (seg) {
       const segFields = [
         'name', 'critical_spacing_m', 'area_coverage_pct',
-        'time_of_day', 'weather', 'detectability_level',
+        'time_of_day', 'weather',
         'vegetation_density', 'micro_terrain_complexity', 'extenuating_factors', 'burial_or_cover'
       ];
       if (segFields.includes(name)) {
-        if (type === 'number' || name === 'detectability_level'
-            || name === 'area_coverage_pct'
+        if (type === 'number' || name === 'area_coverage_pct'
             || name === 'vegetation_density'
             || name === 'micro_terrain_complexity'
             || name === 'extenuating_factors'
@@ -366,12 +364,17 @@ function debounceSave() {
 
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
-    await setValue('session', {
-      session: state.session,
-      searchLevel: state.searchLevel,
-      segments: state.segments
-    });
-    saveState = 'Saved';
+    try {
+      await setValue('session', {
+        session: state.session,
+        searchLevel: state.searchLevel,
+        segments: state.segments
+      });
+      saveState = 'Saved';
+    } catch (err) {
+      console.error('[PSAR POD] Save failed:', err);
+      saveState = 'Save failed';
+    }
     const ind = document.getElementById('save-indicator');
     if (ind) ind.textContent = saveState;
   }, 250);
@@ -449,7 +452,7 @@ function migrateState(raw) {
 
     next.critical_spacing_m = clampNum(next.critical_spacing_m, 15, 0.1, 10000);
     next.area_coverage_pct = clampNum(next.area_coverage_pct, 100, 0, 100);
-    next.detectability_level = clampNum(Number(next.detectability_level), 3, 1, 5);
+    delete next.detectability_level;
     next.vegetation_density = clampNum(Number(next.vegetation_density), 3, 1, 5);
     next.micro_terrain_complexity = clampNum(Number(next.micro_terrain_complexity), 3, 1, 5);
     next.extenuating_factors = clampNum(Number(next.extenuating_factors), 3, 1, 5);

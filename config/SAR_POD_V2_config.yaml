@@ -43,19 +43,19 @@ targets:
     base_reference_critical_spacing_m: 10.0
     spacing_exponent: .70
   skeletal_remains:
-    group: active_missing_person
+    group: evidence_historical
     base_detectability: 0.7
     calibration_constant_k: 0.95
     base_reference_critical_spacing_m: 8.0
     spacing_exponent: .45
   large_evidence:
-    group: active_missing_person
+    group: evidence_historical
     base_detectability: 0.7
     calibration_constant_k: 0.98
     base_reference_critical_spacing_m: 10.0
     spacing_exponent: .65
   small_evidence:
-    group: active_missing_person
+    group: evidence_historical
     base_detectability: 0.7
     calibration_constant_k: 0.88
     base_reference_critical_spacing_m: 7.0
@@ -142,12 +142,6 @@ input_schema:
       - clear
       - rain
       - snow
-      detectability_level:
-      - 1
-      - 2
-      - 3
-      - 4
-      - 5
       vegetation_density: 1..5
       micro_terrain_complexity: 1..5
       extenuating_factors: 1..5
@@ -431,7 +425,7 @@ completion_model:
   description: Hard limiter based on searched area coverage percentage. Applied as the final multiplier on probability_of_detection.
 formulas:
   condition_multiplier:
-    text: "condition_multiplier_for_target =\n  time_of_day_factor_for_target *\n  weather_factor_for_target *\n  detectability_level_factor_for_target\n"
+    text: "condition_multiplier_for_target =\n  time_of_day_factor_for_target *\n  weather_factor_for_target *\n  visibility_factor *\n  vegetation_density_factor_for_target *\n  micro_terrain_complexity_factor_for_target *\n  extenuating_or_burial_factor_for_target\n"
   base_hazard_rate:
     text: "base_hazard_rate_for_target =\n  - ln(1 - base_detectability_for_target)\n"
   reference_critical_spacing:
@@ -447,10 +441,8 @@ formulas:
   final_pod:
     text: "probability_of_detection_for_target =\n  clamp(\n    (\n      1 - exp(\n        - calibration_constant_k_for_target *\n          base_hazard_rate_for_target *\n          spacing_ratio_for_target *\n          responsiveness_multiplier\n      )\n    ) *\n    completion_multiplier,\n    0,\n    0.99\n  )\n"
 qa_flags:
-  warn_if_critical_spacing_m_lt_1: true
-  warn_if_critical_spacing_m_gt_50: true
-  warn_if_searched_fraction_lt_0.5: true
-  warn_if_inaccessible_fraction_gt_0.4: true
+  warn_if_critical_spacing_m_gt: 50
+  warn_if_area_coverage_pct_lt: 50
 calibration:
   notes:
   - Treat all values as initial SME priors.
@@ -458,10 +450,10 @@ calibration:
   - 'Adjust in order: base_reference_critical_spacing_m, condition_factors, spacing_exponent.'
   - Keep response bonuses small; avoid overpowering spacing effectiveness.
   - Do not set any POD ceiling to 1.00 (this model clamps at 0.99).
-  - 'Implementation note: detectability_level keys are strings ''1''..''5'' in condition_factors; cast input to string for lookup.'
+  - 'Implementation note: numeric condition factor keys are strings ''1''..''5'' in condition_factors; cast input to string for lookup.'
   - 'Implementation note: apply response_model only when target.group is in response_model.enabled_for_groups; otherwise responsiveness_multiplier = 1.0.'
   - 'Implementation note: actual_critical_spacing_m is input_schema.segment_level.execution.critical_spacing_m.'
-  - Condition factors are organized by target (adult/child/etc.) with nested time_of_day, weather, and detectability_level tables.
+  - Condition factors are organized by target (adult/child/etc.) with nested time_of_day, weather, vegetation_density, micro_terrain_complexity, and extenuating_factors or burial_or_cover tables.
   - 'Completion uses area_coverage_pct as a final hard multiplier: completion_multiplier = clamp(area_coverage_pct / 100, 0, 1).'
   - Base detectability is mapped to an exponential hazard rate using base_hazard_rate_for_target = - ln(1 - base_detectability_for_target) so that, when spacing_ratio_for_target = 1, responsiveness_multiplier = 1, completion_multiplier = 1, and calibration_constant_k_for_target = 1, probability_of_detection_for_target equals base_detectability_for_target.
   - 'Model change: reference_critical_spacing_m_for_target is not clamped; it is computed as base_reference_critical_spacing_m_for_target * condition_multiplier_for_target.'
@@ -476,7 +468,6 @@ audit:
   - primary_target_inferred
   - time_of_day
   - weather
-  - detectability_level
   - critical_spacing_m
   - searched_fraction
   - inaccessible_fraction

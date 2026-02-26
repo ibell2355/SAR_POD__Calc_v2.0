@@ -1,4 +1,3 @@
-import { emergencyDefaults } from '../../config/defaults.js';
 import { parseSimpleYaml } from '../utils/simpleYaml.js';
 
 const CONFIG_CANDIDATES = [
@@ -43,8 +42,8 @@ export async function loadConfig() {
       const detail = structuredErrors.map((e) => `${e.code}: ${e.message}${e.cause ? ' — ' + e.cause : ''}`).join('; ');
       console.error('[configLoader] All config candidates failed:', structuredErrors);
       return {
-        config: emergencyDefaults,
-        diagnostics: `No readable config found. Using emergency defaults. (${detail})`,
+        config: null,
+        diagnostics: `No readable config found. (${detail})`,
         valid: false,
         path: selectedPath,
         errors: structuredErrors
@@ -52,12 +51,15 @@ export async function loadConfig() {
     }
 
     // Basic sanity check: ensure required top-level keys exist
-    // Accept either new spacing_bounds_m or legacy reference_spacing_bounds_m
     const required = ['targets', 'condition_factors', 'response_model'];
     const missing = required.filter((k) => !config[k]);
+    // Accept either new spacing_bounds_m or legacy reference_spacing_bounds_m
+    if (!config.spacing_bounds_m && !config.reference_spacing_bounds_m) {
+      missing.push('spacing_bounds_m');
+    }
     if (missing.length) {
       return {
-        config: emergencyDefaults,
+        config: null,
         diagnostics: `Config missing required keys: ${missing.join(', ')}`,
         valid: false,
         path: selectedPath,
@@ -68,7 +70,7 @@ export async function loadConfig() {
     return { config, diagnostics: '', valid: true, path: selectedPath, errors: [] };
   } catch (error) {
     return {
-      config: emergencyDefaults,
+      config: null,
       diagnostics: `Unable to load config: ${error.message}`,
       valid: false,
       path: selectedPath,

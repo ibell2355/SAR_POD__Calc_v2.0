@@ -1,13 +1,6 @@
 export const LABELS = {
   time_of_day: { day: 'Day', dusk_dawn: 'Dusk/Dawn', night: 'Night' },
   weather: { clear: 'Clear', rain: 'Raining', snow: 'Snowing' },
-  detectability_level: {
-    '1': '1 - Low Concealment',
-    '2': '2 - Low/Moderate Concealment',
-    '3': '3 - Moderate Concealment',
-    '4': '4 - Moderate/High Concealment',
-    '5': '5 - High Concealment'
-  },
   type_of_search: {
     active_missing_person: 'Active Missing Person',
     evidence_historical: 'Evidence/Historical'
@@ -143,11 +136,6 @@ export function renderSegment(root, segment, computed, savedLabel, configValid, 
       ${radioChips('time_of_day', LABELS.time_of_day, segment.time_of_day)}
       <h3>Weather</h3>
       ${radioChips('weather', LABELS.weather, segment.weather)}
-      ${searchType === 'evidence_historical' ? `
-      <h3>Detectability Level</h3>
-      <span class="hint">Consider all factors that would make your primary subject more difficult to spot.</span>
-      ${radioChips('detectability_level', LABELS.detectability_level, String(segment.detectability_level), true)}
-      ` : ''}
 
       <h3>Vegetation Density</h3>
       ${tooltip(config, 'vegetation_density')}
@@ -197,14 +185,6 @@ export function podResultHtml(segment, computed) {
       results.map((r) =>
         `<span style="margin-right:12px">${esc(prettyTarget(r.target))}: ${(r.POD_final * 100).toFixed(1)}%</span>`
       ).join('') + '</div>';
-  }
-
-  // QA warnings
-  const warnings = computed.qaWarnings || [];
-  if (warnings.length) {
-    html += '<div style="margin-top:8px;font-size:0.85rem;color:var(--danger)">';
-    warnings.forEach((w) => { html += `<p style="margin:2px 0">\u26a0 ${esc(w)}</p>`; });
-    html += '</div>';
   }
 
   if (!results.length) {
@@ -277,7 +257,6 @@ export function buildReportText(state, version, generatedAt) {
       `Area Coverage: ${seg.area_coverage_pct}%`,
       `Time of Day: ${LABELS.time_of_day[seg.time_of_day] || seg.time_of_day}`,
       `Weather: ${LABELS.weather[seg.weather] || seg.weather}`,
-      ...(isEvidence ? [`Detectability Level: ${seg.detectability_level}`] : []),
       `Vegetation Density: ${seg.vegetation_density || 3}`,
       `Micro-terrain Complexity: ${seg.micro_terrain_complexity || 3}`,
       isEvidence ? `Burial / Cover: ${seg.burial_or_cover || 3}` : `Extenuating Factors: ${seg.extenuating_factors || 3}`
@@ -414,7 +393,6 @@ function reportSegmentHtml(segment, searchType) {
     `Area Coverage: ${segment.area_coverage_pct}%`,
     `Time of Day: ${LABELS.time_of_day[segment.time_of_day] || segment.time_of_day}`,
     `Weather: ${LABELS.weather[segment.weather] || segment.weather}`,
-    ...(isEvidence ? [`Detectability Level: ${segment.detectability_level}`] : []),
     `Vegetation Density: ${segment.vegetation_density || 3}`,
     `Micro-terrain Complexity: ${segment.micro_terrain_complexity || 3}`,
     isEvidence ? `Burial / Cover: ${segment.burial_or_cover || 3}` : `Extenuating Factors: ${segment.extenuating_factors || 3}`
@@ -438,6 +416,9 @@ function reportSegmentHtml(segment, searchType) {
       ${results.length
         ? `<p>${results.map((r) => `<strong>${esc(prettyTarget(r.target))}:</strong> ${(r.POD_final * 100).toFixed(1)}%`).join(' &middot; ')}</p>`
         : '<p class="subtle">No targets selected.</p>'}
+      ${(segment.qaWarnings || []).length
+        ? `<div style="margin-top:6px;font-size:0.85rem;color:var(--danger)">${segment.qaWarnings.map((w) => `<p style="margin:2px 0">\u26a0 ${esc(w)}</p>`).join('')}</div>`
+        : ''}
       <h4 style="margin-bottom:2px">Inputs</h4>
       <ul class="report-list">${inputs.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>
       <p class="hint" style="margin-top:12px;font-style:italic">For development only</p>
@@ -459,7 +440,7 @@ function reportDetailHtml(segment, r) {
   min_effective_actual_spacing = ${n(r.min_effective)}
 
 1. Condition multiplier (per-target):
-  F_time = ${n(r.F_time)},  F_weather = ${n(r.F_weather)},  F_detectability = ${n(r.F_detectability)}
+  F_time = ${n(r.F_time)},  F_weather = ${n(r.F_weather)}
   F_visibility = ${n(r.F_visibility)},  F_veg = ${n(r.F_veg)},  F_terrain = ${n(r.F_terrain)},  F_ext = ${n(r.F_extenuating)},  F_burial = ${n(r.F_burial)}
   condition_multiplier = ${n(r.C_t)}
 

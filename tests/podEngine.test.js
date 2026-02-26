@@ -52,9 +52,8 @@ const config = {
     high: 1.20
   },
   qa_flags: {
-    warn_if_critical_spacing_m_lt_1: true,
-    warn_if_critical_spacing_m_gt_50: true,
-    warn_if_area_coverage_pct_lt_50: true
+    warn_if_critical_spacing_m_gt: 50,
+    warn_if_area_coverage_pct_lt: 50
   }
 };
 
@@ -222,9 +221,11 @@ test('computeForTarget with harsh conditions reduces POD', () => {
 });
 
 test('QA warnings fire on extreme values', () => {
-  const seg1 = { critical_spacing_m: 0.5, area_coverage_pct: 30 };
+  const seg1 = { critical_spacing_m: 60, area_coverage_pct: 30 };
   const warnings = generateQaWarnings(seg1, config);
   assert.equal(warnings.length, 2);
+  assert.ok(warnings[0].includes('> 50'));
+  assert.ok(warnings[1].includes('< 50'));
 
   const seg2 = { critical_spacing_m: 60, area_coverage_pct: 100 };
   const warnings2 = generateQaWarnings(seg2, config);
@@ -236,6 +237,14 @@ test('QA warnings empty for normal values', () => {
   const seg = { critical_spacing_m: 15, area_coverage_pct: 100 };
   const warnings = generateQaWarnings(seg, config);
   assert.equal(warnings.length, 0);
+});
+
+test('QA warning thresholds are configurable', () => {
+  const customConfig = { ...config, qa_flags: { warn_if_critical_spacing_m_gt: 30 } };
+  const seg = { critical_spacing_m: 35, area_coverage_pct: 100 };
+  const warnings = generateQaWarnings(seg, customConfig);
+  assert.equal(warnings.length, 1);
+  assert.ok(warnings[0].includes('> 30'));
 });
 
 /* ================================================================

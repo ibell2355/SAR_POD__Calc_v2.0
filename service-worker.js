@@ -28,11 +28,10 @@ const APP_SHELL = [
   './src/utils/simpleYaml.js',
   './src/storage/db.js',
   './config/SAR_POD_V2_config.yaml',
-  './config/defaults.js',
   './package.json',
   './manifest.webmanifest',
-  './assets/PSAR Logo.png',
-  './assets/icon-192.svg',
+  './assets/psar_logo.svg',
+  './assets/icon-192.png',
   './assets/icon-512.svg',
   './assets/qrcode.png'
 ];
