@@ -139,17 +139,21 @@ export function renderSegment(root, segment, computed, savedLabel, configValid, 
       <h3>Vegetation Density</h3>
       ${tooltip(config, 'vegetation_density')}
       ${radioChips('vegetation_density', VEGETATION_DENSITY_LABELS, String(segment.vegetation_density || 3), 'tight')}
+      ${noteSection('vegetation_density', segment)}
       <h3>Micro-terrain Complexity</h3>
       ${tooltip(config, 'micro_terrain_complexity')}
       ${radioChips('micro_terrain_complexity', MICRO_TERRAIN_LABELS, String(segment.micro_terrain_complexity || 3), 'tight')}
+      ${noteSection('micro_terrain_complexity', segment)}
       ${searchType === 'evidence_historical' ? `
       <h3>Burial / Cover</h3>
       ${tooltip(config, 'burial_or_cover')}
       ${radioChips('burial_or_cover', BURIAL_OR_COVER_LABELS, String(segment.burial_or_cover || 3), 'tight')}
+      ${noteSection('burial_or_cover', segment)}
       ` : `
       <h3>Extenuating Factors</h3>
       ${tooltip(config, 'extenuating_factors')}
       ${radioChips('extenuating_factors', EXTENUATING_FACTORS_LABELS, String(segment.extenuating_factors || 3), 'tight')}
+      ${noteSection('extenuating_factors', segment)}
       `}
     </section>
 
@@ -251,6 +255,7 @@ export function buildReportText(state, version, generatedAt) {
   state.segments.forEach((seg) => {
     lines.push(`--- ${seg.name || 'Unnamed'} ---`);
 
+    const notes = seg.notes || {};
     const inputs = [
       `Critical Spacing: ${seg.critical_spacing_m} m`,
       `Area Coverage: ${seg.area_coverage_pct}%`,
@@ -261,6 +266,18 @@ export function buildReportText(state, version, generatedAt) {
       isEvidence ? `Burial / Cover: ${seg.burial_or_cover || 3}` : `Extenuating Factors: ${seg.extenuating_factors || 3}`
     ];
     lines.push(`Inputs: ${inputs.join(' | ')}`);
+
+    const noteFields = [
+      ['vegetation_density', 'Vegetation Density'],
+      ['micro_terrain_complexity', 'Micro-terrain Complexity'],
+      isEvidence ? ['burial_or_cover', 'Burial / Cover'] : ['extenuating_factors', 'Extenuating Factors']
+    ];
+    noteFields.forEach(([key, label]) => {
+      const note = notes[key];
+      if (note && note.trim()) {
+        lines.push(`  ${label} Note: ${note.trim()}`);
+      }
+    });
 
     // Primary POD
     const results = seg.results || [];
@@ -383,18 +400,30 @@ function searchInfoText(s) {
   return lines;
 }
 
+function reportInputLi(text, noteText) {
+  let html = `<li>${esc(text)}`;
+  if (noteText && noteText.trim()) {
+    html += `<div class="report-note">Note: ${esc(noteText.trim())}</div>`;
+  }
+  html += '</li>';
+  return html;
+}
+
 function reportSegmentHtml(segment, searchType) {
   const results = segment.results || [];
   const primaryResult = results.find((r) => r.target === segment.primaryTarget);
   const isEvidence = searchType === 'evidence_historical';
-  const inputs = [
-    `Critical Spacing: ${segment.critical_spacing_m} m`,
-    `Area Coverage: ${segment.area_coverage_pct}%`,
-    `Time of Day: ${LABELS.time_of_day[segment.time_of_day] || segment.time_of_day}`,
-    `Weather: ${LABELS.weather[segment.weather] || segment.weather}`,
-    `Vegetation Density: ${segment.vegetation_density || 3}`,
-    `Micro-terrain Complexity: ${segment.micro_terrain_complexity || 3}`,
-    isEvidence ? `Burial / Cover: ${segment.burial_or_cover || 3}` : `Extenuating Factors: ${segment.extenuating_factors || 3}`
+  const notes = segment.notes || {};
+  const inputItems = [
+    reportInputLi(`Critical Spacing: ${segment.critical_spacing_m} m`),
+    reportInputLi(`Area Coverage: ${segment.area_coverage_pct}%`),
+    reportInputLi(`Time of Day: ${LABELS.time_of_day[segment.time_of_day] || segment.time_of_day}`),
+    reportInputLi(`Weather: ${LABELS.weather[segment.weather] || segment.weather}`),
+    reportInputLi(`Vegetation Density: ${segment.vegetation_density || 3}`, notes.vegetation_density),
+    reportInputLi(`Micro-terrain Complexity: ${segment.micro_terrain_complexity || 3}`, notes.micro_terrain_complexity),
+    isEvidence
+      ? reportInputLi(`Burial / Cover: ${segment.burial_or_cover || 3}`, notes.burial_or_cover)
+      : reportInputLi(`Extenuating Factors: ${segment.extenuating_factors || 3}`, notes.extenuating_factors)
   ];
 
   // Primary POD
@@ -419,7 +448,7 @@ function reportSegmentHtml(segment, searchType) {
         ? `<div style="margin-top:6px;font-size:0.85rem;color:var(--danger)">${segment.qaWarnings.map((w) => `<p style="margin:2px 0">\u26a0 ${esc(w)}</p>`).join('')}</div>`
         : ''}
       <h4 style="margin-bottom:2px">Inputs</h4>
-      <ul class="report-list">${inputs.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>
+      <ul class="report-list">${inputItems.join('')}</ul>
       <p class="hint" style="margin-top:12px;font-style:italic">For development only</p>
       ${results.map((r) => reportDetailHtml(segment, r)).join('')}
     </div>`;
@@ -493,6 +522,19 @@ function reportDetailText(segment, r) {
 function tooltip(config, key) {
   const text = config?.ui_tooltips?.[key] || '';
   return text ? `<span class="hint">${esc(text)}</span>` : '';
+}
+
+/* ---- Note toggle + textarea ---- */
+
+function noteSection(fieldName, segment) {
+  const note = (segment.notes && segment.notes[fieldName]) || '';
+  const open = note.length > 0;
+  return `<div class="note-section">
+      <button class="btn btn-note-toggle" data-action="toggle-note" data-field="${fieldName}">${open ? 'Hide note' : 'Add note'}</button>
+      <div class="note-input" id="note-wrap-${fieldName}" style="${open ? '' : 'display:none'}">
+        <textarea name="note_${fieldName}" placeholder="Add a note\u2026">${esc(note)}</textarea>
+      </div>
+    </div>`;
 }
 
 /* ---- Form field generators ---- */

@@ -241,6 +241,30 @@ textarea { min-height: 90px; resize: vertical; }
   color: var(--primary);
 }
 
+/* ---- Segment note toggle ---- */
+
+.note-section { margin: 2px 0 4px; }
+.btn-note-toggle {
+  font-size: 0.82rem;
+  padding: 4px 10px;
+  min-height: auto;
+  border-radius: 8px;
+}
+.note-input { margin-top: 4px; }
+.note-input textarea {
+  min-height: 60px;
+  font-size: 0.88rem;
+}
+
+/* ---- Report note sub-line ---- */
+
+.report-note {
+  margin-left: 1.5em;
+  font-size: 0.88rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
 /* ---- Search-level survey ---- */
 
 .survey-group {

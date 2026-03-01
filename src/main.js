@@ -33,6 +33,7 @@ function newSegment() {
     burial_or_cover: 3,
     critical_spacing_m: 15,
     area_coverage_pct: 100,
+    notes: {},
     results: [],
     primaryTarget: null,
     qaWarnings: []
@@ -133,7 +134,7 @@ function route() {
 
 function onInput(e) {
   const el = e.target;
-  if (el.matches('input[type="text"], input[type="number"], input[type="range"], input:not([type])')) {
+  if (el.matches('input[type="text"], input[type="number"], input[type="range"], input:not([type]), textarea')) {
     handleInput(el);
   }
 }
@@ -147,7 +148,7 @@ function onChange(e) {
 
 function onClick(e) {
   const btn = e.target.closest('[data-action]');
-  if (btn) handleAction(btn.dataset.action, btn.dataset.id);
+  if (btn) handleAction(btn.dataset.action, btn.dataset.id, btn);
 }
 
 /* ================================================================
@@ -170,6 +171,15 @@ function handleInput(el) {
     const segId = hash.slice('#/segment/'.length);
     const seg = state.segments.find((s) => s.id === segId);
     if (seg) {
+      // ---- Note fields (textarea) ----
+      if (name.startsWith('note_')) {
+        const noteField = name.slice(5);
+        if (!seg.notes) seg.notes = {};
+        seg.notes[noteField] = value;
+        debounceSave();
+        return;
+      }
+
       const segFields = [
         'name', 'critical_spacing_m', 'area_coverage_pct',
         'time_of_day', 'weather',
@@ -273,7 +283,22 @@ function handleInput(el) {
    Actions
    ================================================================ */
 
-function handleAction(action, id) {
+function handleAction(action, id, btn) {
+  if (action === 'toggle-note') {
+    const field = btn.dataset.field;
+    const wrap = document.getElementById(`note-wrap-${field}`);
+    if (wrap) {
+      const isHidden = wrap.style.display === 'none';
+      wrap.style.display = isHidden ? '' : 'none';
+      btn.textContent = isHidden ? 'Hide note' : 'Add note';
+      if (isHidden) {
+        const ta = wrap.querySelector('textarea');
+        if (ta) ta.focus();
+      }
+    }
+    return;
+  }
+
   if (action === 'add-segment') {
     const seg = newSegment();
     recomputeSegment(seg);
@@ -457,6 +482,7 @@ function migrateState(raw) {
     next.micro_terrain_complexity = clampNum(Number(next.micro_terrain_complexity), 1, 5, 3);
     next.extenuating_factors = clampNum(Number(next.extenuating_factors), 1, 5, 3);
     next.burial_or_cover = clampNum(Number(next.burial_or_cover), 1, 5, 3);
+    if (!next.notes || typeof next.notes !== 'object') next.notes = {};
     next.results = [];
     next.primaryTarget = null;
     return next;
