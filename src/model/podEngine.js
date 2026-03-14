@@ -1,6 +1,17 @@
 import { clamp } from '../utils/math.js';
 
 /* ================================================================
+   V3 — Koopman Random Search POD Engine
+
+   POD_segment = clamp(1 - exp(-coverage_C), 0, 0.99)
+   where coverage_C = (W_eff * L_total) / A_m2
+
+   W_eff = clamp(W0_m * C_t * M_resp, w_eff_min, w_eff_max)
+   C_t   = F_time * F_weather * F_visibility * F_veg
+           * F_terrain * F_extenuating * F_burial
+   ================================================================ */
+
+/* ================================================================
    Safe accessors — pull per-target values from config, with fallbacks
    ================================================================ */
 
@@ -8,37 +19,20 @@ function targetDef(config, targetKey) {
   return config?.targets?.[targetKey] || {};
 }
 
-/**
- * Condition factors are organized by target:
- *   config.condition_factors[targetKey][axis][level]
- * Numeric keys in YAML are strings ('1'..'5'); cast input to string.
- */
 function conditionFactor(config, axis, level, targetKey) {
   return Number(config?.condition_factors?.[targetKey]?.[axis]?.[String(level)] ?? 1);
 }
 
-/**
- * Spacing bounds from config.spacing_bounds_m.
- * Falls back to config.reference_spacing_bounds_m for backward compat.
- */
-function spacingBounds(config, targetKey) {
-  const sb = config?.spacing_bounds_m;
-  if (sb) {
-    return {
-      min_effective: Number(sb.min_effective_actual_spacing_m_by_target?.[targetKey] ?? 1),
-      max_effective: Number(sb.max_effective_actual_spacing_m_by_target?.[targetKey] ?? 200)
-    };
-  }
-  // Fallback to legacy structure
-  const rb = config?.reference_spacing_bounds_m || {};
-  return {
-    min_effective: Number(rb.min_by_target?.[targetKey] ?? 1),
-    max_effective: Number(rb.max_by_target?.[targetKey] ?? 200)
-  };
-}
-
 function subjectVisibilityFactor(config, level) {
   return Number(config?.subject_visibility_factor?.[level] ?? 1);
+}
+
+function wEffBounds(config) {
+  const b = config?.w_eff_bounds_m || {};
+  return {
+    min: Number(b.min ?? 0.5),
+    max: Number(b.max ?? 100)
+  };
 }
 
 let _configWarned = false;
@@ -61,7 +55,6 @@ function responseModel(config) {
 
 /* ================================================================
    Primary target inference
-   Uses primary_target_hierarchy.<group>.order for ALL groups.
    ================================================================ */
 
 export function inferPrimaryTarget(selectedTargets, config, searchType) {
@@ -72,7 +65,6 @@ export function inferPrimaryTarget(selectedTargets, config, searchType) {
     return order.find((t) => selectedTargets.includes(t)) || selectedTargets[0] || null;
   }
 
-  // Default: active_missing_person — always use .order sub-key
   const order = hierarchy.active_missing_person?.order
     || hierarchy.active_missing_person
     || ['adult', 'child', 'large_clues', 'small_clues'];
@@ -82,8 +74,6 @@ export function inferPrimaryTarget(selectedTargets, config, searchType) {
 
 /* ================================================================
    Response multiplier (active_missing_person group only)
-   M_resp = min(max_total_multiplier, 1 + auditory_bonus + visual_bonus)
-   If target.group NOT in enabled_for_groups → 1.0
    ================================================================ */
 
 export function responseMultiplier(searchLevel, config, targetKey) {
@@ -114,133 +104,107 @@ export function responseComponents(searchLevel, config, targetKey) {
 }
 
 /* ================================================================
-   Spacing ratio (replaces old spacingEffectiveness)
-   spacing_ratio = (S_ref / S_eff_act) ^ spacing_exponent
-   NOT capped at 1 — benefit is limited by min effective actual spacing.
+   Track length estimation
    ================================================================ */
 
-export function spacingEffectiveness(S_ref, S_eff_act, k) {
-  if (!S_eff_act || S_eff_act <= 0) return 0;
-  return (S_ref / S_eff_act) ** k;
+export function estimateTrackLength({ area_m2, coverage_pct, critical_spacing_m, num_searchers }) {
+  const A = Number(area_m2 || 0);
+  const pct = Number(coverage_pct ?? 100);
+  const S = Number(critical_spacing_m || 1);
+  const N = Number(num_searchers || 1);
+
+  if (A <= 0 || S <= 0 || N <= 0) return { L_ind_est: 0, L_total_est: 0 };
+
+  const A_covered_m2 = A * (pct / 100);
+  const L_ind_est = A_covered_m2 / (S * N);
+  const L_total_est = L_ind_est * N;
+
+  return { L_ind_est, L_total_est };
 }
 
 /* ================================================================
-   Completion multiplier
-   M_comp = clamp(area_coverage_pct / 100, 0, 1)
-   ================================================================ */
+   Full per-target POD computation — Koopman Random Search Model
 
-export function completionMultiplier(segment) {
-  const pct = Number(segment?.area_coverage_pct ?? 100);
-  return clamp(pct / 100, 0, 1);
-}
-
-/* ================================================================
-   Full per-target POD computation — Exponential detection model
-
-   1) condition_multiplier = F_time * F_weather * F_visibility * F_veg * F_terrain * F_ext * F_burial
-   2) base_hazard_rate = -ln(1 - base_detectability)
-   3) reference_critical_spacing_m = base * condition_multiplier
-   4) effective_actual_critical_spacing_m = max(actual, min_effective)
-   5) spacing_ratio = (ref / eff_actual) ^ spacing_exponent
-   6) responsiveness_multiplier (only for enabled groups)
-   7) completion_multiplier = clamp(area_coverage_pct / 100, 0, 1)
-   8) POD = clamp((1 - exp(-k * hazard * ratio * resp)) * comp, 0, 0.99)
-
-   Calibration property: when k=1, ratio=1, resp=1, comp=1 → POD = base_detectability
+   1) C_t = product of all condition factors
+   2) W_eff = clamp(W0_m * C_t * M_resp, w_eff_min, w_eff_max)
+   3) Determine track length (measured or estimated)
+   4) coverage_C = (W_eff * L_total) / A_m2
+   5) POD_segment = clamp(1 - exp(-coverage_C), 0, 0.99)
    ================================================================ */
 
 export function computeForTarget({ config, searchLevel, segment, targetKey }) {
   if (!_configWarned) { warnMissingConfigKeys(config); _configWarned = true; }
 
   const target = targetDef(config, targetKey);
-  const bounds = spacingBounds(config, targetKey);
+  const bounds = wEffBounds(config);
 
-  // Per-target base values from config
-  const base_detectability = Number(target.base_detectability ?? 0.80);
-  const calibration_constant_k = Number(target.calibration_constant_k ?? 1.0);
-  const base_reference_critical_spacing_m = Number(target.base_reference_critical_spacing_m ?? 8.0);
-  const spacing_exponent = Number(target.spacing_exponent ?? 2.0);
+  const W0_m = Number(target.W0_m ?? 10);
 
-  // Per-target condition factors
+  // Condition factors
   const F_time = conditionFactor(config, 'time_of_day', segment?.time_of_day || 'day', targetKey);
   const F_weather = conditionFactor(config, 'weather', segment?.weather || 'clear', targetKey);
-
-  // Search-level visibility + per-segment condition factors
   const F_visibility = subjectVisibilityFactor(config, searchLevel?.subject_visibility || 'medium');
   const F_veg = conditionFactor(config, 'vegetation_density', segment?.vegetation_density ?? 3, targetKey);
   const F_terrain = conditionFactor(config, 'micro_terrain_complexity', segment?.micro_terrain_complexity ?? 3, targetKey);
   const F_extenuating = conditionFactor(config, 'extenuating_factors', segment?.extenuating_factors ?? 3, targetKey);
   const F_burial = conditionFactor(config, 'burial_or_cover', segment?.burial_or_cover ?? 3, targetKey);
 
-  // 1. condition_multiplier_for_target (includes new factors)
-  // Missing axes fall back to 1.0 via conditionFactor: active targets lack burial_or_cover,
-  // evidence targets lack extenuating_factors — so only the relevant factor has effect.
+  // 1. Condition multiplier
   const C_t = F_time * F_weather * F_visibility * F_veg * F_terrain * F_extenuating * F_burial;
 
-  // 2. base_hazard_rate_for_target = -ln(1 - base_detectability)
-  //    Guard against base_detectability >= 1 which would give Infinity
-  const base_hazard_rate = -Math.log(1 - Math.min(base_detectability, 0.9999));
-
-  // 3. reference_critical_spacing_m = base * condition_multiplier (NOT clamped)
-  const S_ref = base_reference_critical_spacing_m * C_t;
-
-  // 4. effective_actual_critical_spacing_m = max(actual, min_effective)
-  const actual_spacing = Number(segment?.critical_spacing_m ?? 15);
-  const min_effective = bounds.min_effective;
-  const S_eff_act = Math.max(actual_spacing, min_effective);
-
-  // 5. spacing_ratio = (S_ref / S_eff_act) ^ spacing_exponent (NOT capped at 1)
-  const spacing_ratio = spacingEffectiveness(S_ref, S_eff_act, spacing_exponent);
-
-  // 6. responsiveness_multiplier
+  // 2. Response multiplier
   const response = responseComponents(searchLevel || {}, config, targetKey);
   const M_resp = response.M_resp;
 
-  // 7. completion_multiplier = clamp(area_coverage_pct / 100, 0, 1)
-  const M_comp = completionMultiplier(segment || {});
+  // 3. Effective search width
+  const w_eff_min = bounds.min;
+  const w_eff_max = bounds.max;
+  const W_eff = clamp(W0_m * C_t * M_resp, w_eff_min, w_eff_max);
 
-  // 8. POD = clamp((1 - exp(-k * hazard * ratio * resp)) * comp, 0, 0.99)
-  const exponent_val = calibration_constant_k * base_hazard_rate * spacing_ratio * M_resp;
-  const POD_raw = 1 - Math.exp(-exponent_val);
-  const POD_final = clamp(POD_raw * M_comp, 0, 0.99);
+  // 4. Track length
+  const A_m2 = Number(segment?.area_m2 || 0);
+  const N = Math.max(Number(segment?.num_searchers || 1), 1);
+  const measured_track = Number(segment?.track_length_ind_m || 0);
+
+  let track_source, L_ind_m, L_total_m;
+  if (measured_track > 0) {
+    track_source = 'measured';
+    L_ind_m = measured_track;
+    L_total_m = measured_track * N;
+  } else {
+    track_source = 'estimated';
+    const est = estimateTrackLength({
+      area_m2: A_m2,
+      coverage_pct: segment?.area_coverage_pct ?? 100,
+      critical_spacing_m: segment?.critical_spacing_m ?? 15,
+      num_searchers: N
+    });
+    L_ind_m = est.L_ind_est;
+    L_total_m = est.L_total_est;
+  }
+
+  // 5. Koopman coverage and POD
+  let coverage_C = 0;
+  let POD_segment = 0;
+  if (A_m2 > 0) {
+    coverage_C = (W_eff * L_total_m) / A_m2;
+    POD_segment = clamp(1 - Math.exp(-coverage_C), 0, 0.99);
+  }
 
   return {
     target: targetKey,
-    // Per-target base values
-    base_detectability,
-    calibration_constant_k,
-    base_reference_critical_spacing_m,
-    spacing_exponent,
-    // Spacing bounds
-    min_effective,
-    max_effective: bounds.max_effective,
-    // Condition factors
-    F_time,
-    F_weather,
-    F_visibility,
-    F_veg,
-    F_terrain,
-    F_extenuating,
-    F_burial,
+    W0_m,
+    F_time, F_weather, F_visibility, F_veg, F_terrain, F_extenuating, F_burial,
     C_t,
-    // Hazard rate
-    base_hazard_rate,
-    // Reference critical spacing (adjusted by conditions, NOT clamped)
-    S_ref,
-    // Effective actual spacing (clamped to min)
-    S_eff_act,
-    // Spacing ratio (uncapped)
-    spacing_ratio,
-    // Response
     M_resp,
     auditory_bonus: response.auditory_bonus,
     visual_bonus: response.visual_bonus,
     response_cap: response.cap,
-    // Completion
-    M_comp,
-    // Final POD
-    POD_raw,
-    POD_final
+    W_eff, w_eff_min, w_eff_max,
+    track_source, L_ind_m, L_total_m,
+    A_m2,
+    coverage_C,
+    POD_segment
   };
 }
 
@@ -265,7 +229,6 @@ export function selectedTargets(searchLevel) {
 
 /* ================================================================
    QA warning flags
-   Reads whatever flags exist in config.qa_flags.
    ================================================================ */
 
 export function generateQaWarnings(segment, config) {
@@ -273,12 +236,20 @@ export function generateQaWarnings(segment, config) {
   const flags = config?.qa_flags || {};
   const spacing = Number(segment?.critical_spacing_m);
   const pct = Number(segment?.area_coverage_pct ?? 100);
+  const numSearchers = Number(segment?.num_searchers || 0);
+  const area = Number(segment?.area_m2 || 0);
 
   if (flags.warn_if_critical_spacing_m_gt && spacing > flags.warn_if_critical_spacing_m_gt) {
     warnings.push(`Critical spacing is very large (> ${flags.warn_if_critical_spacing_m_gt} m)`);
   }
   if (flags.warn_if_area_coverage_pct_lt && pct < flags.warn_if_area_coverage_pct_lt) {
     warnings.push(`Area coverage is low (< ${flags.warn_if_area_coverage_pct_lt}%)`);
+  }
+  if (!numSearchers || numSearchers <= 0) {
+    warnings.push('Number of searchers is missing or zero');
+  }
+  if (!area || area <= 0) {
+    warnings.push('Segment area is missing or zero');
   }
 
   return warnings;

@@ -3,8 +3,15 @@ import { computeForTarget, inferPrimaryTarget, selectedTargets, generateQaWarnin
 import { getValue, setValue, clearAll } from './storage/db.js';
 import {
   renderHome, renderSegment, renderReport,
-  buildReportText, podResultHtml, segmentListHtml, esc
+  buildReportText, podResultHtml, segmentListHtml, trackLengthOutputHtml, esc
 } from './ui/render.js';
+
+/* ================================================================
+   Constants
+   ================================================================ */
+
+const ACRES_TO_M2 = 4046.8564224;
+const HECTARES_TO_M2 = 10000;
 
 /* ================================================================
    Defaults
@@ -31,8 +38,13 @@ function newSegment() {
     micro_terrain_complexity: 3,
     extenuating_factors: 3,
     burial_or_cover: 3,
+    num_searchers: 1,
+    area_acres: '',
+    area_hectares: '',
+    area_m2: 0,
     critical_spacing_m: 15,
     area_coverage_pct: 100,
+    track_length_ind_m: '',
     notes: {},
     results: [],
     primaryTarget: null,
@@ -53,7 +65,7 @@ const state = {
 let config = null;
 let configValid = true;
 let configError = '';
-let appVersion = '2.2.0';
+let appVersion = '3.0.0';
 let appBuildDate = '';
 let saveTimer = null;
 let saveState = 'Saved';
@@ -74,15 +86,17 @@ async function init() {
     appVersion = pkgInfo.version;
     appBuildDate = pkgInfo.buildDate;
 
-    console.log(`[PSAR POD] v${pkgInfo.version} · built ${pkgInfo.buildDate}`);
+    console.log(`[PSAR POD] v${pkgInfo.version} \u00b7 built ${pkgInfo.buildDate}`);
 
     document.getElementById('app-version').textContent = pkgInfo.version;
     const stampEl = document.getElementById('build-stamp');
     if (stampEl) stampEl.textContent = `v${pkgInfo.version} \u00b7 ${pkgInfo.buildDate}`;
 
+    // Theme initialization
+    initTheme();
+
     await hydrate();
 
-    // Event delegation — set up once, never rebind
     const root = document.getElementById('view-root');
     root.addEventListener('input', onInput);
     root.addEventListener('change', onChange);
@@ -107,7 +121,43 @@ async function init() {
 }
 
 /* ================================================================
-   Routing (hash-based, like baseline)
+   Theme (light/dark)
+   ================================================================ */
+
+function initTheme() {
+  const saved = localStorage.getItem('psar-theme');
+  if (saved === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+  updateThemeButton();
+}
+
+function toggleTheme() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  if (isDark) {
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('psar-theme', 'light');
+  } else {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    localStorage.setItem('psar-theme', 'dark');
+  }
+  updateThemeButton();
+}
+
+function updateThemeButton() {
+  const btn = document.getElementById('theme-toggle-btn');
+  if (!btn) return;
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  btn.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+}
+
+// Global click handler for theme toggle (in header, outside #view-root)
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#theme-toggle-btn')) toggleTheme();
+});
+
+/* ================================================================
+   Routing (hash-based)
    ================================================================ */
 
 function route() {
@@ -125,6 +175,20 @@ function route() {
     renderReport(root, state, appVersion, formatReportDate(new Date()), configValid, configError, config);
   } else {
     renderHome(root, state, saveState, configValid, configError, config);
+  }
+}
+
+/* ================================================================
+   Area conversion helpers
+   ================================================================ */
+
+function syncAreaM2(seg) {
+  if (seg.area_acres > 0) {
+    seg.area_m2 = seg.area_acres * ACRES_TO_M2;
+  } else if (seg.area_hectares > 0) {
+    seg.area_m2 = seg.area_hectares * HECTARES_TO_M2;
+  } else {
+    seg.area_m2 = 0;
   }
 }
 
@@ -152,26 +216,26 @@ function onClick(e) {
 }
 
 /* ================================================================
-   Input handling (targeted updates, no full re-render)
+   Input handling
    ================================================================ */
 
 function handleInput(el) {
   const { name, value, type, checked } = el;
   const hash = location.hash || '#/';
 
-  // ---- Session fields ----
+  // Session fields
   if (['your_name', 'search_name', 'team_name'].includes(name)) {
     state.session[name] = value;
     debounceSave();
     return;
   }
 
-  // ---- Segment fields (segment edit page) ----
+  // Segment fields
   if (hash.startsWith('#/segment/')) {
     const segId = hash.slice('#/segment/'.length);
     const seg = state.segments.find((s) => s.id === segId);
     if (seg) {
-      // ---- Note fields (textarea) ----
+      // Note fields
       if (name.startsWith('note_')) {
         const noteField = name.slice(5);
         if (!seg.notes) seg.notes = {};
@@ -181,26 +245,53 @@ function handleInput(el) {
       }
 
       const segFields = [
-        'name', 'critical_spacing_m', 'area_coverage_pct',
+        'name', 'num_searchers', 'area_acres', 'area_hectares',
+        'critical_spacing_m', 'area_coverage_pct', 'track_length_ind_m',
         'time_of_day', 'weather',
         'vegetation_density', 'micro_terrain_complexity', 'extenuating_factors', 'burial_or_cover'
       ];
       if (segFields.includes(name)) {
-        if (type === 'number' || name === 'area_coverage_pct'
-            || name === 'vegetation_density'
-            || name === 'micro_terrain_complexity'
-            || name === 'extenuating_factors'
-            || name === 'burial_or_cover') {
-          seg[name] = Number(value);
+        const numericFields = [
+          'num_searchers', 'area_acres', 'area_hectares',
+          'critical_spacing_m', 'area_coverage_pct', 'track_length_ind_m',
+          'vegetation_density', 'micro_terrain_complexity', 'extenuating_factors', 'burial_or_cover'
+        ];
+        if (numericFields.includes(name)) {
+          seg[name] = value === '' ? '' : Number(value);
         } else {
           seg[name] = value;
         }
 
+        // Mutually exclusive area inputs
+        if (name === 'area_acres' && value !== '' && Number(value) > 0) {
+          seg.area_hectares = '';
+          const haInput = document.querySelector('input[name="area_hectares"]');
+          if (haInput) { haInput.value = ''; haInput.disabled = true; }
+        } else if (name === 'area_acres' && (value === '' || Number(value) <= 0)) {
+          const haInput = document.querySelector('input[name="area_hectares"]');
+          if (haInput) haInput.disabled = false;
+        }
+        if (name === 'area_hectares' && value !== '' && Number(value) > 0) {
+          seg.area_acres = '';
+          const acInput = document.querySelector('input[name="area_acres"]');
+          if (acInput) { acInput.value = ''; acInput.disabled = true; }
+        } else if (name === 'area_hectares' && (value === '' || Number(value) <= 0)) {
+          const acInput = document.querySelector('input[name="area_acres"]');
+          if (acInput) acInput.disabled = false;
+        }
+
+        syncAreaM2(seg);
         recomputeSegment(seg);
 
-        // Partial update: POD panel only
+        // Partial updates
         const podEl = document.getElementById('pod-result');
         if (podEl) podEl.innerHTML = podResultHtml(seg, { results: seg.results, primaryTarget: seg.primaryTarget, qaWarnings: seg.qaWarnings });
+
+        const trackEl = document.getElementById('track-length-display');
+        if (trackEl) {
+          const trackResult = seg.results?.[0];
+          trackEl.innerHTML = trackLengthOutputHtml(seg, trackResult);
+        }
 
         debounceSave();
         return;
@@ -208,11 +299,10 @@ function handleInput(el) {
     }
   }
 
-  // ---- Search-level radios ----
+  // Search-level radios
   if (['type_of_search', 'auditory', 'visual', 'subject_visibility', 'remains_state'].includes(name)) {
     state.searchLevel[name] = value;
 
-    // Toggle survey sections via data attribute
     if (name === 'type_of_search') {
       const survey = document.getElementById('search-survey');
       if (survey) survey.dataset.searchType = value;
@@ -225,26 +315,21 @@ function handleInput(el) {
     return;
   }
 
-  // ---- Search-level checkboxes ----
+  // Search-level checkboxes
   if (['active_targets', 'evidence_classes', 'evidence_categories'].includes(name) && type === 'checkbox') {
     const arr = state.searchLevel[name] || [];
     const next = checked
       ? [...new Set([...arr, value])]
       : arr.filter((x) => x !== value);
 
-    // Prevent deselecting the last active target
     if (name === 'active_targets' && next.length === 0) {
       el.checked = true;
       return;
     }
-
-    // Prevent deselecting both evidence categories
     if (name === 'evidence_categories' && next.length === 0) {
       el.checked = true;
       return;
     }
-
-    // Prevent deselecting all evidence classes when evidence category is active
     if (name === 'evidence_classes' && next.length === 0
         && (state.searchLevel.evidence_categories || []).includes('evidence')) {
       el.checked = true;
@@ -253,7 +338,6 @@ function handleInput(el) {
 
     state.searchLevel[name] = next;
 
-    // When evidence category is selected, ensure at least one evidence class is checked
     if (name === 'evidence_categories' && next.includes('evidence')) {
       if (!state.searchLevel.evidence_classes || state.searchLevel.evidence_classes.length === 0) {
         state.searchLevel.evidence_classes = ['large_evidence'];
@@ -262,7 +346,6 @@ function handleInput(el) {
       }
     }
 
-    // Update evidence category visibility
     if (name === 'evidence_categories') {
       const catsEl = document.getElementById('evidence-cats');
       if (catsEl) {
@@ -370,6 +453,7 @@ function recomputeAllSegments() {
 
 function recomputeSegment(seg) {
   const cfg = config || {};
+  syncAreaM2(seg);
   const targets = selectedTargets(state.searchLevel);
   seg.primaryTarget = inferPrimaryTarget(targets, cfg, state.searchLevel.type_of_search);
   seg.results = targets.map((t) =>
@@ -379,7 +463,7 @@ function recomputeSegment(seg) {
 }
 
 /* ================================================================
-   Persistence (IndexedDB with localStorage migration)
+   Persistence
    ================================================================ */
 
 function debounceSave() {
@@ -406,10 +490,8 @@ function debounceSave() {
 }
 
 async function hydrate() {
-  // Try IndexedDB first
   let raw = await getValue('session', null);
 
-  // Migrate from localStorage if IDB is empty
   if (!raw) {
     const lsRaw = localStorage.getItem('sar_v2_session');
     if (lsRaw) {
@@ -426,7 +508,6 @@ async function hydrate() {
   state.segments = migrated.segments;
   recomputeAllSegments();
 
-  // Persist migrated data to IDB
   await setValue('session', {
     session: state.session,
     searchLevel: state.searchLevel,
@@ -459,25 +540,29 @@ function migrateState(raw) {
     next.id = seg.id || uid();
     next.name = seg.name || '';
 
-    // Legacy field migration: actual_spacing_m -> critical_spacing_m
+    // V2 -> V3 migration
     if (next.critical_spacing_m == null && seg.actual_spacing_m != null) {
       next.critical_spacing_m = Number(seg.actual_spacing_m);
     }
-
-    // Legacy field migration: searched_fraction -> area_coverage_pct
     if (seg.area_coverage_pct == null && seg.searched_fraction != null) {
       next.area_coverage_pct = clampNum(Number(seg.searched_fraction) * 100, 0, 100, 100);
     }
+
+    // New V3 fields with defaults
+    next.num_searchers = clampNum(Number(next.num_searchers), 1, 999, 1);
+    next.area_acres = next.area_acres || '';
+    next.area_hectares = next.area_hectares || '';
+    next.track_length_ind_m = next.track_length_ind_m || '';
 
     // Remove legacy fields
     delete next.segment_start_time;
     delete next.segment_end_time;
     delete next.searched_fraction;
     delete next.inaccessible_fraction;
+    delete next.detectability_level;
 
     next.critical_spacing_m = clampNum(next.critical_spacing_m, 0.1, 10000, 15);
     next.area_coverage_pct = clampNum(next.area_coverage_pct, 0, 100, 100);
-    delete next.detectability_level;
     next.vegetation_density = clampNum(Number(next.vegetation_density), 1, 5, 3);
     next.micro_terrain_complexity = clampNum(Number(next.micro_terrain_complexity), 1, 5, 3);
     next.extenuating_factors = clampNum(Number(next.extenuating_factors), 1, 5, 3);
@@ -503,9 +588,9 @@ function uid() {
 async function fetchPackageInfo() {
   try {
     const pkg = await fetch('./package.json').then((r) => r.json());
-    return { version: pkg.version || '2.2.0', buildDate: pkg.buildDate || '' };
+    return { version: pkg.version || '3.0.0', buildDate: pkg.buildDate || '' };
   } catch {
-    return { version: '2.2.0', buildDate: '' };
+    return { version: '3.0.0', buildDate: '' };
   }
 }
 
@@ -524,7 +609,6 @@ function registerSW() {
   const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
 
   if (isDev) {
-    // In local dev, unregister any existing SW so edits take effect immediately
     navigator.serviceWorker.getRegistrations().then((regs) =>
       regs.forEach((r) => r.unregister())
     );
@@ -532,7 +616,6 @@ function registerSW() {
     return;
   }
 
-  // Production: register SW and auto-refresh once when a new version activates
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (reloading) return;
@@ -543,11 +626,7 @@ function registerSW() {
   navigator.serviceWorker.register('./service-worker.js')
     .then((reg) => {
       console.log('[PSAR POD] SW registered, scope:', reg.scope);
-
-      // Proactively check for SW updates (mobile browsers can be lazy)
       reg.update().catch(() => {});
-
-      // Re-check when the app returns from background on mobile
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
           reg.update().catch(() => {});
@@ -599,7 +678,6 @@ function clampNum(val, min, max, fallback) {
 }
 
 function stripComputed(seg) {
-  const { results, primaryTarget, qaWarnings, ...inputs } = seg;
+  const { results, primaryTarget, qaWarnings, area_m2, ...inputs } = seg;
   return inputs;
 }
-

@@ -1,0 +1,445 @@
+version: 3.0-koopman
+name: SAR_POD_V3_koopman
+description: >
+  Koopman random-search POD model. Per-target conditions scale an effective
+  search width (W_eff). Track length is either measured (CalTopo) or estimated
+  from area, spacing, and coverage. POD = 1 - exp(-(W_eff * L_total) / A).
+units:
+  distance: m
+  area: m2
+  probability: 0-1
+
+targets:
+  adult:
+    group: active_missing_person
+    W0_m: 21
+  child:
+    group: active_missing_person
+    W0_m: 16
+  large_clues:
+    group: active_missing_person
+    W0_m: 14
+  small_clues:
+    group: active_missing_person
+    W0_m: 8
+  intact_remains:
+    group: evidence_historical
+    W0_m: 20
+  partially_skeletonized:
+    group: evidence_historical
+    W0_m: 12
+  skeletal_remains:
+    group: evidence_historical
+    W0_m: 9
+  large_evidence:
+    group: evidence_historical
+    W0_m: 12
+  small_evidence:
+    group: evidence_historical
+    W0_m: 7
+
+w_eff_bounds_m:
+  min: 0.5
+  max: 100
+
+primary_target_hierarchy:
+  active_missing_person:
+    order:
+    - adult
+    - child
+    - large_clues
+    - small_clues
+  evidence_historical:
+    order:
+    - intact_remains
+    - partially_skeletonized
+    - skeletal_remains
+    - large_evidence
+    - small_evidence
+
+input_schema:
+  search_level:
+    type_of_search:
+    - active_missing_person
+    - evidence_historical
+    searching_for:
+      active_missing_person:
+      - adult
+      - child
+      - large_clues
+      - small_clues
+      evidence_historical:
+        remains_state:
+        - intact_remains
+        - partially_skeletonized
+        - skeletal_remains
+        evidence_classes:
+        - large_evidence
+        - small_evidence
+    subject_responsiveness:
+      auditory:
+      - not expected
+      - possible
+      - likely
+      visual:
+      - expected to evade
+      - not expected
+      - possible
+      - likely
+    subject_visibility:
+    - low
+    - medium
+    - high
+  segment_level:
+    conditions:
+      time_of_day:
+      - day
+      - dusk_dawn
+      - night
+      weather:
+      - clear
+      - rain
+      - snow
+      vegetation_density: 1..5
+      micro_terrain_complexity: 1..5
+      extenuating_factors: 1..5
+      burial_or_cover: 1..5
+    execution:
+      num_searchers: integer >= 1
+      area_acres: number >= 0
+      area_hectares: number >= 0
+      area_m2: number >= 0
+      critical_spacing_m: number > 0
+      area_coverage_pct: number 0..100
+      track_length_ind_m: number >= 0 (optional)
+
+response_model:
+  enabled_for_groups:
+  - active_missing_person
+  auditory_bonus:
+    none: 0.0
+    possible: 0.04
+    likely: 0.08
+  visual_bonus:
+    evade: -0.10
+    none: 0.0
+    possible: 0.015
+    likely: 0.05
+  max_total_multiplier: 1.25
+
+subject_visibility_factor:
+  low: 0.85
+  medium: 1.0
+  high: 1.15
+
+condition_factors:
+  adult:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.9
+      night: 0.56
+    weather:
+      clear: 1.0
+      rain: 0.96
+      snow: 0.88
+    vegetation_density:
+      '1': 1.8
+      '2': 1.45
+      '3': 1.0
+      '4': 0.65
+      '5': 0.45
+    micro_terrain_complexity:
+      '1': 1.30
+      '2': 1.15
+      '3': 1.0
+      '4': 0.85
+      '5': 0.70
+    extenuating_factors:
+      '1': 1.50
+      '2': 1.25
+      '3': 1.0
+      '4': 0.75
+      '5': 0.50
+  child:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.9
+      night: 0.50
+    weather:
+      clear: 1.0
+      rain: 0.93
+      snow: 0.78
+    vegetation_density:
+      '1': 1.8
+      '2': 1.45
+      '3': 1.0
+      '4': 0.65
+      '5': 0.45
+    micro_terrain_complexity:
+      '1': 1.40
+      '2': 1.25
+      '3': 1.0
+      '4': 0.65
+      '5': 0.50
+    extenuating_factors:
+      '1': 1.50
+      '2': 1.25
+      '3': 1.0
+      '4': 0.75
+      '5': 0.50
+  large_clues:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.9
+      night: 0.50
+    weather:
+      clear: 1.0
+      rain: 0.92
+      snow: 0.76
+    vegetation_density:
+      '1': 1.8
+      '2': 1.45
+      '3': 1.0
+      '4': 0.65
+      '5': 0.45
+    micro_terrain_complexity:
+      '1': 1.40
+      '2': 1.25
+      '3': 1.0
+      '4': 0.65
+      '5': 0.50
+    extenuating_factors:
+      '1': 1.50
+      '2': 1.25
+      '3': 1.0
+      '4': 0.75
+      '5': 0.50
+  small_clues:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.88
+      night: 0.40
+    weather:
+      clear: 1.0
+      rain: 0.90
+      snow: 0.40
+    vegetation_density:
+      '1': 1.75
+      '2': 1.40
+      '3': 1.0
+      '4': 0.60
+      '5': 0.40
+    micro_terrain_complexity:
+      '1': 1.40
+      '2': 1.25
+      '3': 1.0
+      '4': 0.55
+      '5': 0.40
+    extenuating_factors:
+      '1': 1.50
+      '2': 1.25
+      '3': 1.0
+      '4': 0.75
+      '5': 0.50
+  intact_remains:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.9
+      night: 0.56
+    weather:
+      clear: 1.0
+      rain: 0.96
+      snow: 0.80
+    vegetation_density:
+      '1': 1.8
+      '2': 1.45
+      '3': 1.0
+      '4': 0.65
+      '5': 0.45
+    micro_terrain_complexity:
+      '1': 1.30
+      '2': 1.15
+      '3': 1.0
+      '4': 0.85
+      '5': 0.70
+    burial_or_cover:
+      '1': 1.30
+      '2': 1.15
+      '3': 1.0
+      '4': 0.85
+      '5': 0.70
+  partially_skeletonized:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.9
+      night: 0.52
+    weather:
+      clear: 1.0
+      rain: 0.93
+      snow: 0.78
+    vegetation_density:
+      '1': 1.8
+      '2': 1.45
+      '3': 1.0
+      '4': 0.65
+      '5': 0.45
+    micro_terrain_complexity:
+      '1': 1.30
+      '2': 1.15
+      '3': 1.0
+      '4': 0.85
+      '5': 0.70
+    burial_or_cover:
+      '1': 1.40
+      '2': 1.20
+      '3': 1.0
+      '4': 0.75
+      '5': 0.60
+  skeletal_remains:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.88
+      night: 0.40
+    weather:
+      clear: 1.0
+      rain: 0.90
+      snow: 0.40
+    vegetation_density:
+      '1': 1.8
+      '2': 1.45
+      '3': 1.0
+      '4': 0.65
+      '5': 0.45
+    micro_terrain_complexity:
+      '1': 1.30
+      '2': 1.15
+      '3': 1.0
+      '4': 0.85
+      '5': 0.70
+    burial_or_cover:
+      '1': 1.40
+      '2': 1.30
+      '3': 1.0
+      '4': 0.65
+      '5': 0.35
+  large_evidence:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.9
+      night: 0.50
+    weather:
+      clear: 1.0
+      rain: 0.92
+      snow: 0.76
+    vegetation_density:
+      '1': 1.8
+      '2': 1.45
+      '3': 1.0
+      '4': 0.65
+      '5': 0.45
+    micro_terrain_complexity:
+      '1': 1.30
+      '2': 1.15
+      '3': 1.0
+      '4': 0.85
+      '5': 0.70
+    burial_or_cover:
+      '1': 1.40
+      '2': 1.20
+      '3': 1.0
+      '4': 0.75
+      '5': 0.60
+  small_evidence:
+    time_of_day:
+      day: 1.0
+      dusk_dawn: 0.88
+      night: 0.40
+    weather:
+      clear: 1.0
+      rain: 0.90
+      snow: 0.40
+    vegetation_density:
+      '1': 1.8
+      '2': 1.45
+      '3': 1.0
+      '4': 0.65
+      '5': 0.45
+    micro_terrain_complexity:
+      '1': 1.30
+      '2': 1.15
+      '3': 1.0
+      '4': 0.85
+      '5': 0.70
+    burial_or_cover:
+      '1': 1.40
+      '2': 1.30
+      '3': 1.0
+      '4': 0.65
+      '5': 0.35
+
+ui_tooltips:
+  subject_visibility: How visible is the subject expected to be? Camouflaged or buried, bright clothing or open terrain.
+  auditory: Subject likelihood to signal verbally.
+  visual: Subject likelihood to signal visually.
+  vegetation_density: Line-of-sight blockers such as tree and bush density, tall grass/brush, thick understory, canopy layering, slash/deadfall, and other vegetation that obscures the subject.
+  micro_terrain_complexity: Terrain features that create hiding spots or visual clutter, like rocks/boulder fields, gullies and cutbanks, root wads, deadfall piles, depressions, animal burrows, and uneven ground.
+  extenuating_factors: Catch-all for anything not already covered that makes detection easier or harder, such as heavy smoke/dust/fog, noise masking, altered landscape / disturbance, or searcher experience.
+  burial_or_cover: Degree of burial or concealment by debris, snow, duff, or other covering material.
+  track_length_ind: Use only if track length is determinable from CalTopo for this segment only. Tracks must be stopped at the start of the segment and stopped at the end of the segment (restart for each segment).
+  num_searchers: Number of searchers operating in this segment.
+  area: Total area of the search segment. Enter in acres OR hectares (not both).
+
+formulas:
+  condition_multiplier:
+    text: "C_t = F_time * F_weather * F_visibility * F_veg * F_terrain * F_ext_or_burial\n"
+  effective_search_width:
+    text: "W_eff = clamp(W0_m * C_t * M_resp, w_eff_min, w_eff_max)\n"
+  track_length_measured:
+    text: "L_total = track_length_ind_m * num_searchers\n"
+  track_length_estimated:
+    text: "A_covered = area_m2 * (coverage_pct / 100)\nL_ind_est = A_covered / (critical_spacing_m * num_searchers)\nL_total_est = L_ind_est * num_searchers  (= A_covered / critical_spacing_m)\n"
+  koopman_coverage:
+    text: "coverage_C = (W_eff * L_total) / area_m2\n"
+  final_pod:
+    text: "POD_segment = clamp(1 - exp(-coverage_C), 0, 0.99)\n"
+
+qa_flags:
+  warn_if_critical_spacing_m_gt: 50
+  warn_if_area_coverage_pct_lt: 50
+
+calibration:
+  notes:
+  - W0_m values calibrated to approximate V2 baseline POD under equivalent conditions.
+  - 'Calibration baseline: W0 = k * (-ln(1 - base_detectability)) * base_reference_spacing (from V2 config).'
+  - Condition factors are identical to V2; they now scale W_eff instead of reference critical spacing.
+  - Back-test on historical segments and adjust quarterly.
+  - 'Adjust in order: W0_m per target, then condition_factors.'
+  - Keep response bonuses small; they scale W_eff directly.
+  - Do not allow POD to reach 1.00 (model clamps at 0.99).
+  - 'Implementation note: numeric condition factor keys are strings ''1''..''5''; cast input to string for lookup.'
+  - 'Implementation note: apply response_model only when target.group is in response_model.enabled_for_groups; otherwise M_resp = 1.0.'
+  - 'Track length: if individual track length is provided (CalTopo), use L_total = L_ind * N. Otherwise estimate from area, spacing, coverage.'
+  - '1 acre = 4046.8564224 m2. 1 hectare = 10000 m2.'
+
+audit:
+  save_inputs: true
+  save_intermediate_values: true
+  save_per_target_outputs: true
+  fields_to_log:
+  - selected_targets
+  - primary_target_inferred
+  - time_of_day
+  - weather
+  - num_searchers
+  - area_m2
+  - critical_spacing_m
+  - area_coverage_pct
+  - track_length_ind_m
+  - track_source
+  - L_total_m
+  - W0_m
+  - C_t
+  - W_eff
+  - M_resp
+  - coverage_C
+  - POD_segment

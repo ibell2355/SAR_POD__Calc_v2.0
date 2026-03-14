@@ -1,14 +1,55 @@
-/* ===== SAR POD Calculator v2 — Baseline-matched styles ===== */
+/* ===== SAR POD Calculator v2 — PSAR Branded Styles ===== */
+
+/* ---- Light mode (default) ---- */
 
 :root {
-  --bg: #f4f8fb;
+  --bg: #f0ebe3;
   --surface: #ffffff;
-  --text: #1f2933;
-  --muted: #52606d;
-  --primary: #0f4c81;
-  --primary-soft: #dceaf7;
-  --danger: #9b1c1c;
-  --border: #d8e1e8;
+  --text: #183859;
+  --muted: #4e5d6c;
+  --primary: #f57c00;
+  --primary-soft: #fff3e0;
+  --primary-hover: #e06800;
+  --danger: #c62828;
+  --border: #c4bdb2;
+  --accent: #6e8f4e;
+  --surface-alt: #e8e1d6;
+  --input-bg: #ffffff;
+}
+
+/* ---- Dark mode ---- */
+
+[data-theme="dark"] {
+  --bg: #1a1e24;
+  --surface: #242a32;
+  --text: #e6e8ea;
+  --muted: #8a8f94;
+  --primary: #f57c00;
+  --primary-soft: #3d2e10;
+  --primary-hover: #ff9100;
+  --danger: #ef5350;
+  --border: #3a4450;
+  --accent: #6e8f4e;
+  --surface-alt: #2e343c;
+  --input-bg: #1a1e24;
+}
+
+/* ---- Smooth theme transition ---- */
+
+*, *::before, *::after {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+/* Exclude inputs and explicit animations from theme transition */
+input, select, textarea,
+.toast, .chip span,
+[class*="animate"], [class*="transition"] {
+  transition: none;
+}
+
+/* Re-apply only theme transitions on inputs (not user-typing related) */
+input, select, textarea {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 * { box-sizing: border-box; }
@@ -75,13 +116,38 @@ body {
   width: min(80vw, 80vh);
   height: auto;
   border-radius: 12px;
-  background: #fff;
+  background: var(--surface);
   padding: 16px;
 }
 
 .app-header h1 { font-size: 1.45rem; margin: 0; }
 
 .subtle { font-size: 0.9rem; color: var(--muted); margin: 2px 0 0; }
+
+/* ---- Theme toggle ---- */
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-alt);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1;
+}
+.theme-toggle:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
 
 /* ---- Connectivity pill ---- */
 
@@ -92,14 +158,14 @@ body {
   white-space: nowrap;
 }
 .connectivity-pill.online {
-  color: #1e6a2d;
-  background: #eef9ee;
-  border: 1px solid #b4e0bd;
+  color: var(--accent);
+  background: var(--surface);
+  border: 1px solid var(--accent);
 }
 .connectivity-pill.offline {
-  color: #8d2b0b;
-  background: #fff0eb;
-  border: 1px solid #f3b9a9;
+  color: var(--danger);
+  background: var(--surface);
+  border: 1px solid var(--danger);
 }
 
 /* ---- Panel (card) ---- */
@@ -140,12 +206,25 @@ input, select, textarea {
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: #fff;
+  background: var(--input-bg);
+  color: var(--text);
   font: inherit;
   min-height: 44px;
 }
 
 textarea { min-height: 90px; resize: vertical; }
+
+/* ---- Disabled / read-only inputs ---- */
+
+.input-disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--surface-alt);
+  color: var(--muted);
+}
 
 /* ---- Buttons ---- */
 
@@ -155,16 +234,34 @@ textarea { min-height: 90px; resize: vertical; }
   justify-content: center;
   min-height: 44px;
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--surface);
+  color: var(--text);
   border-radius: 10px;
   padding: 10px 14px;
   font: inherit;
   font-weight: 600;
   cursor: pointer;
 }
-.btn:hover { border-color: var(--primary); }
-.btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
-.btn-danger { color: var(--danger); border-color: #f5c2c7; background: #fff5f5; }
+.btn:hover { border-color: var(--primary); color: var(--primary); }
+.btn-primary {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+}
+.btn-primary:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+  color: #ffffff;
+}
+.btn-danger {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: var(--surface);
+}
+.btn-danger:hover {
+  background: var(--danger);
+  color: #ffffff;
+}
 
 /* ---- Layout utilities ---- */
 
@@ -185,6 +282,12 @@ textarea { min-height: 90px; resize: vertical; }
   gap: 10px;
 }
 
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
 /* ---- Segment list & card ---- */
 
 .segment-list { display: grid; gap: 10px; }
@@ -196,11 +299,12 @@ textarea { min-height: 90px; resize: vertical; }
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 10px;
-  background: #fcfdff;
+  background: var(--surface);
   cursor: pointer;
   width: 100%;
   text-align: left;
   font: inherit;
+  color: var(--text);
 }
 .segment-card:hover { border-color: var(--primary); }
 
@@ -233,7 +337,9 @@ textarea { min-height: 90px; resize: vertical; }
   border-radius: 999px;
   padding: 6px 12px;
   font-size: 0.88rem;
-  transition: background 0.15s, border-color 0.15s;
+  color: var(--text);
+  background: var(--surface);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 .chip input:checked + span {
   background: var(--primary-soft);
@@ -291,6 +397,11 @@ textarea { min-height: 90px; resize: vertical; }
   border-radius: 14px;
   padding: 14px;
   margin-top: 12px;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .sticky-result {
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .pod-large {
@@ -340,19 +451,20 @@ textarea { min-height: 90px; resize: vertical; }
 
 .report-detail pre {
   white-space: pre-wrap;
-  background: #f8fafc;
+  background: var(--surface-alt);
   border: 1px solid var(--border);
   padding: 10px;
   border-radius: 8px;
   font-size: 0.82rem;
   line-height: 1.5;
+  color: var(--text);
 }
 
 /* ---- Config error (concise inline) ---- */
 
 .config-error {
-  background: #fff5f5;
-  border: 1px solid #f5c2c7;
+  background: var(--surface);
+  border: 1px solid var(--danger);
   border-radius: 10px;
   padding: 10px 14px;
   margin-bottom: 12px;
@@ -368,7 +480,7 @@ textarea { min-height: 90px; resize: vertical; }
   left: 50%;
   transform: translateX(-50%) translateY(12px);
   background: var(--text);
-  color: #fff;
+  color: var(--bg);
   padding: 10px 20px;
   border-radius: 10px;
   font-size: 0.9rem;
@@ -380,6 +492,47 @@ textarea { min-height: 90px; resize: vertical; }
 .toast.visible {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
+}
+
+/* ---- Computed output / track length ---- */
+
+.computed-output {
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 10px;
+  margin-top: 4px;
+}
+
+.track-length-output {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-top: 6px;
+}
+
+/* ---- Tooltip prominent ---- */
+
+.tooltip-prominent {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--primary);
+  background: var(--primary-soft);
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-top: 4px;
+  line-height: 1.4;
 }
 
 /* ---- Utility ---- */
@@ -399,6 +552,7 @@ textarea { min-height: 90px; resize: vertical; }
 @media (max-width: 640px) {
   .action-grid { grid-template-columns: 1fr; }
   .grid-2 { grid-template-columns: 1fr; }
+  .grid-3 { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 480px) {
@@ -408,7 +562,7 @@ textarea { min-height: 90px; resize: vertical; }
 }
 
 @media print {
-  .app-header, .btn, .action-grid, .toast, .sticky-result { display: none; }
+  .app-header, .btn, .action-grid, .toast, .sticky-result, .theme-toggle { display: none; }
   .panel { border: none; box-shadow: none; }
   .app-shell { width: 100%; padding: 0; }
 }

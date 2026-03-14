@@ -8,7 +8,11 @@
       "Bash(node --test:*)",
       "Bash(node tests/podEngine.test.js:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(cd:*)",
+      "WebFetch(domain:127.0.0.1)",
+      "Bash(curl:*)",
+      "Bash(taskkill:*)"
     ]
   }
 }

@@ -1,20 +1,13 @@
 /*
- * Service Worker — PSAR POD Calculator
+ * Service Worker — PSAR POD Calculator V3
  *
  * Strategy:
  *   HTML navigation    → network-first (fall back to cached index.html for SPA)
  *   Same-origin assets → network-first (fall back to cache when offline)
  *   Cross-origin       → network only
- *
- * All same-origin requests try the network first so that new deployments are
- * picked up immediately when the device is online. The cache (populated on
- * install) provides full offline support as a fallback.
- *
- * Bump CACHE_NAME when you add/remove files from APP_SHELL or want to
- * force-purge the entire cache.
  */
 
-const CACHE_NAME = 'psar-pod-v13';
+const CACHE_NAME = 'psar-pod-v14';
 
 const APP_SHELL = [
   './',
@@ -27,7 +20,7 @@ const APP_SHELL = [
   './src/utils/math.js',
   './src/utils/simpleYaml.js',
   './src/storage/db.js',
-  './config/SAR_POD_V2_config.yaml',
+  './config/SAR_POD_V3_config.yaml',
   './package.json',
   './manifest.webmanifest',
   './assets/psar_logo.svg',
@@ -65,7 +58,6 @@ self.addEventListener('fetch', (event) => {
   const isNav = event.request.mode === 'navigate' || event.request.destination === 'document';
   const isSameOrigin = url.origin === self.location.origin;
 
-  // HTML navigation: network-first, cache fallback
   if (isNav) {
     event.respondWith(
       fetch(event.request)
@@ -78,8 +70,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Same-origin static assets: network-first, cache fallback
-  // Strip query params so ?v= busters share the same cache entry as bare URLs
   if (isSameOrigin) {
     const cacheKey = new Request(url.pathname);
     event.respondWith(
@@ -95,6 +85,5 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cross-origin: network only
   event.respondWith(fetch(event.request));
 });

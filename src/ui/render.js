@@ -99,7 +99,7 @@ export function segmentListHtml(segments) {
   return segments.map((seg, i) => {
     const primary = seg.primaryTarget;
     const result = (seg.results || []).find((r) => r.target === primary);
-    const pod = result ? `${(result.POD_final * 100).toFixed(0)}%` : '\u2014';
+    const pod = result ? `${(result.POD_segment * 100).toFixed(0)}%` : '\u2014';
     return `
       <button class="segment-card" data-action="edit-segment" data-id="${esc(seg.id)}">
         <div>
@@ -115,6 +115,9 @@ export function segmentListHtml(segments) {
    ================================================================ */
 
 export function renderSegment(root, segment, computed, savedLabel, configValid, configError, config, searchType) {
+  const trackResult = computed.results?.[0];
+  const trackHtml = trackLengthOutputHtml(segment, trackResult);
+
   root.innerHTML = `
     ${configNotice(configValid, configError)}
 
@@ -126,9 +129,25 @@ export function renderSegment(root, segment, computed, savedLabel, configValid, 
     <section class="panel">
       <h2>Edit Segment</h2>
       ${textField('Segment Name', 'name', segment.name)}
+
+      <h3>Searchers & Area</h3>
+      ${numField('Number of Searchers', 'num_searchers', segment.num_searchers, '1', tooltip(config, 'num_searchers'), 1, 999)}
+      <div class="grid-2">
+        ${numField('Area (Acres)', 'area_acres', segment.area_acres, '0.1', 'Enter acres OR hectares', 0, '', segment.area_hectares > 0)}
+        ${numField('Area (Hectares)', 'area_hectares', segment.area_hectares, '0.01', '', 0, '', segment.area_acres > 0)}
+      </div>
+
       <div class="grid-2">
         ${numField('Critical Spacing (m)', 'critical_spacing_m', segment.critical_spacing_m, '0.1', 'Distance between searchers', 1, 100)}
-        ${numField('Area Coverage (%)', 'area_coverage_pct', segment.area_coverage_pct, '1', 'Account for incomplete segments or unsearchable area.', 0, 100)}
+        ${numField('Segment Coverage (%)', 'area_coverage_pct', segment.area_coverage_pct, '1', 'Portion of segment actually swept', 0, 100)}
+      </div>
+
+      <h3>Track Length (CalTopo)</h3>
+      <span class="tooltip-prominent">${esc(config?.ui_tooltips?.track_length_ind || 'Use only if track length is determinable from CalTopo for this segment only. Tracks must be stopped at the start and end of each segment.')}</span>
+      ${numField('Individual Track Length (m)', 'track_length_ind_m', segment.track_length_ind_m, '1', 'Leave blank to auto-estimate from spacing + coverage', 0)}
+
+      <div id="track-length-display">
+        ${trackHtml}
       </div>
 
       <h3>Time of Day</h3>
@@ -164,6 +183,21 @@ export function renderSegment(root, segment, computed, savedLabel, configValid, 
 }
 
 /* ================================================================
+   Track length output (partial update)
+   ================================================================ */
+
+export function trackLengthOutputHtml(segment, result) {
+  if (!result) return '';
+  const src = result.track_source;
+  const indLabel = src === 'measured' ? 'Measured individual' : 'Estimated individual';
+  return `<div class="track-length-output">
+    ${indLabel}: ${fmtNum(result.L_ind_m)} m &middot;
+    Total (${result.A_m2 > 0 ? Math.max(Number(segment?.num_searchers || 1), 1) : 0} searchers): ${fmtNum(result.L_total_m)} m
+    ${src === 'estimated' ? '<br><span class="hint" style="color:inherit;font-weight:400">Estimated from spacing + coverage</span>' : ''}
+  </div>`;
+}
+
+/* ================================================================
    POD result panel (also used for partial updates)
    ================================================================ */
 
@@ -171,12 +205,11 @@ export function podResultHtml(segment, computed) {
   const results = computed.results || [];
   const primary = computed.primaryTarget;
   const primaryResult = results.find((r) => r.target === primary);
-  const podPct = primaryResult ? `${(primaryResult.POD_final * 100).toFixed(1)}%` : '\u2014';
+  const podPct = primaryResult ? `${(primaryResult.POD_segment * 100).toFixed(1)}%` : '\u2014';
 
-  // Average POD = mean of all targets
   let avgPct = '\u2014';
   if (results.length > 0) {
-    const avg = results.reduce((sum, r) => sum + r.POD_final, 0) / results.length;
+    const avg = results.reduce((sum, r) => sum + r.POD_segment, 0) / results.length;
     avgPct = `${(avg * 100).toFixed(1)}%`;
   }
 
@@ -186,7 +219,7 @@ export function podResultHtml(segment, computed) {
   if (results.length > 1) {
     html += '<div style="margin-top:6px">' +
       results.map((r) =>
-        `<span style="margin-right:12px">${esc(prettyTarget(r.target))}: ${(r.POD_final * 100).toFixed(1)}%</span>`
+        `<span style="margin-right:12px">${esc(prettyTarget(r.target))}: ${(r.POD_segment * 100).toFixed(1)}%</span>`
       ).join('') + '</div>';
   }
 
@@ -211,7 +244,7 @@ export function renderReport(root, state, version, generatedAt, configValid, con
     <section class="panel report-panel">
       <article>
         <h2>SAR POD Calculator \u2014 Report</h2>
-        <p class="subtle">App version: ${esc(version)}</p>
+        <p class="subtle">App version: ${esc(version)} (Koopman V3)</p>
         <p class="subtle">Generated: ${esc(generatedAt)}</p>
 
         <h3>Search Information</h3>
@@ -238,7 +271,7 @@ export function renderReport(root, state, version, generatedAt, configValid, con
 export function buildReportText(state, version, generatedAt) {
   const lines = [
     'SAR POD Calculator \u2014 Report',
-    `App version: ${version}`,
+    `App version: ${version} (Koopman V3)`,
     `Generated: ${generatedAt}`,
     '',
     'Search Information',
@@ -256,9 +289,12 @@ export function buildReportText(state, version, generatedAt) {
     lines.push(`--- ${seg.name || 'Unnamed'} ---`);
 
     const notes = seg.notes || {};
+    const areaStr = seg.area_acres > 0 ? `${seg.area_acres} acres` : seg.area_hectares > 0 ? `${seg.area_hectares} ha` : '\u2014';
     const inputs = [
+      `Searchers: ${seg.num_searchers || 1}`,
+      `Area: ${areaStr}`,
       `Critical Spacing: ${seg.critical_spacing_m} m`,
-      `Area Coverage: ${seg.area_coverage_pct}%`,
+      `Coverage: ${seg.area_coverage_pct}%`,
       `Time of Day: ${LABELS.time_of_day[seg.time_of_day] || seg.time_of_day}`,
       `Weather: ${LABELS.weather[seg.weather] || seg.weather}`,
       `Vegetation Density: ${seg.vegetation_density || 3}`,
@@ -266,6 +302,10 @@ export function buildReportText(state, version, generatedAt) {
       isEvidence ? `Burial / Cover: ${seg.burial_or_cover || 3}` : `Extenuating Factors: ${seg.extenuating_factors || 3}`
     ];
     lines.push(`Inputs: ${inputs.join(' | ')}`);
+
+    if (seg.track_length_ind_m > 0) {
+      lines.push(`  Individual Track Length (measured): ${seg.track_length_ind_m} m`);
+    }
 
     const noteFields = [
       ['vegetation_density', 'Vegetation Density'],
@@ -279,21 +319,19 @@ export function buildReportText(state, version, generatedAt) {
       }
     });
 
-    // Primary POD
     const results = seg.results || [];
     const primaryResult = results.find((r) => r.target === seg.primaryTarget);
     if (primaryResult) {
-      lines.push(`Primary POD: ${(primaryResult.POD_final * 100).toFixed(1)}%`);
+      lines.push(`Primary POD: ${(primaryResult.POD_segment * 100).toFixed(1)}%`);
     }
 
-    // Average POD
     if (results.length > 0) {
-      const avg = results.reduce((sum, r) => sum + r.POD_final, 0) / results.length;
+      const avg = results.reduce((sum, r) => sum + r.POD_segment, 0) / results.length;
       lines.push(`Average POD: ${(avg * 100).toFixed(1)}%`);
     }
 
     results.forEach((r) => {
-      lines.push(`  ${prettyTarget(r.target)}: ${(r.POD_final * 100).toFixed(1)}%`);
+      lines.push(`  ${prettyTarget(r.target)}: ${(r.POD_segment * 100).toFixed(1)}%`);
       lines.push(reportDetailText(seg, r));
     });
     lines.push('');
@@ -414,9 +452,13 @@ function reportSegmentHtml(segment, searchType) {
   const primaryResult = results.find((r) => r.target === segment.primaryTarget);
   const isEvidence = searchType === 'evidence_historical';
   const notes = segment.notes || {};
+  const areaStr = segment.area_acres > 0 ? `${segment.area_acres} acres` : segment.area_hectares > 0 ? `${segment.area_hectares} ha` : '\u2014';
   const inputItems = [
+    reportInputLi(`Searchers: ${segment.num_searchers || 1}`),
+    reportInputLi(`Area: ${areaStr}`),
     reportInputLi(`Critical Spacing: ${segment.critical_spacing_m} m`),
-    reportInputLi(`Area Coverage: ${segment.area_coverage_pct}%`),
+    reportInputLi(`Coverage: ${segment.area_coverage_pct}%`),
+    segment.track_length_ind_m > 0 ? reportInputLi(`Individual Track Length (measured): ${segment.track_length_ind_m} m`) : '',
     reportInputLi(`Time of Day: ${LABELS.time_of_day[segment.time_of_day] || segment.time_of_day}`),
     reportInputLi(`Weather: ${LABELS.weather[segment.weather] || segment.weather}`),
     reportInputLi(`Vegetation Density: ${segment.vegetation_density || 3}`, notes.vegetation_density),
@@ -424,15 +466,13 @@ function reportSegmentHtml(segment, searchType) {
     isEvidence
       ? reportInputLi(`Burial / Cover: ${segment.burial_or_cover || 3}`, notes.burial_or_cover)
       : reportInputLi(`Extenuating Factors: ${segment.extenuating_factors || 3}`, notes.extenuating_factors)
-  ];
+  ].filter(Boolean);
 
-  // Primary POD
-  const primaryPod = primaryResult ? `${(primaryResult.POD_final * 100).toFixed(1)}%` : '\u2014';
+  const primaryPod = primaryResult ? `${(primaryResult.POD_segment * 100).toFixed(1)}%` : '\u2014';
 
-  // Average POD
   let avgPod = '\u2014';
   if (results.length > 0) {
-    const avg = results.reduce((sum, r) => sum + r.POD_final, 0) / results.length;
+    const avg = results.reduce((sum, r) => sum + r.POD_segment, 0) / results.length;
     avgPod = `${(avg * 100).toFixed(1)}%`;
   }
 
@@ -442,14 +482,13 @@ function reportSegmentHtml(segment, searchType) {
       <p class="pod-large" style="font-size:1.4rem">Primary POD: ${primaryPod}</p>
       <p class="report-avg-pod">Average POD: ${avgPod}</p>
       ${results.length
-        ? `<p>${results.map((r) => `<strong>${esc(prettyTarget(r.target))}:</strong> ${(r.POD_final * 100).toFixed(1)}%`).join(' &middot; ')}</p>`
+        ? `<p>${results.map((r) => `<strong>${esc(prettyTarget(r.target))}:</strong> ${(r.POD_segment * 100).toFixed(1)}%`).join(' &middot; ')}</p>`
         : '<p class="subtle">No targets selected.</p>'}
       ${(segment.qaWarnings || []).length
         ? `<div style="margin-top:6px;font-size:0.85rem;color:var(--danger)">${segment.qaWarnings.map((w) => `<p style="margin:2px 0">\u26a0 ${esc(w)}</p>`).join('')}</div>`
         : ''}
       <h4 style="margin-bottom:2px">Inputs</h4>
       <ul class="report-list">${inputItems.join('')}</ul>
-      <p class="hint" style="margin-top:12px;font-style:italic">For development only</p>
       ${results.map((r) => reportDetailHtml(segment, r)).join('')}
     </div>`;
 }
@@ -459,61 +498,46 @@ function reportDetailHtml(segment, r) {
   const vis = r.visual_bonus ?? 0;
   return `
     <details class="report-detail">
-      <summary>Detailed Calculation \u2014 ${esc(prettyTarget(r.target))}</summary>
-      <pre>Base values (per-target):
-  base_detectability = ${n(r.base_detectability)}
-  calibration_constant_k = ${n(r.calibration_constant_k)}
-  base_reference_critical_spacing_m = ${n(r.base_reference_critical_spacing_m)}
-  spacing_exponent = ${n(r.spacing_exponent)}
-  min_effective_actual_spacing = ${n(r.min_effective)}
+      <summary>Koopman Calculation \u2014 ${esc(prettyTarget(r.target))}</summary>
+      <pre>Baseline effective search width:
+  W0_m = ${n(r.W0_m)}
 
-1. Condition multiplier (per-target):
+1. Condition multiplier:
   F_time = ${n(r.F_time)},  F_weather = ${n(r.F_weather)}
-  F_visibility = ${n(r.F_visibility)},  F_veg = ${n(r.F_veg)},  F_terrain = ${n(r.F_terrain)},  F_ext = ${n(r.F_extenuating)},  F_burial = ${n(r.F_burial)}
-  condition_multiplier = ${n(r.C_t)}
+  F_visibility = ${n(r.F_visibility)},  F_veg = ${n(r.F_veg)},  F_terrain = ${n(r.F_terrain)}
+  F_ext = ${n(r.F_extenuating)},  F_burial = ${n(r.F_burial)}
+  C_t = ${n(r.C_t)}
 
-2. Base hazard rate:
-  base_hazard_rate = \u2212ln(1 \u2212 base_detectability)
-                   = \u2212ln(1 \u2212 ${n(r.base_detectability)}) = ${n(r.base_hazard_rate)}
-
-3. Reference critical spacing:
-  S_ref = base_reference_critical_spacing_m \u00d7 condition_multiplier
-        = ${n(r.base_reference_critical_spacing_m)} \u00d7 ${n(r.C_t)} = ${n(r.S_ref)}
-
-4. Effective actual critical spacing:
-  S_eff_act = max(actual_spacing, min_effective)
-            = max(${n(segment.critical_spacing_m)}, ${n(r.min_effective)}) = ${n(r.S_eff_act)}
-
-5. Spacing ratio:
-  spacing_ratio = (S_ref / S_eff_act) ^ spacing_exponent
-                = (${n(r.S_ref)} / ${n(r.S_eff_act)}) ^ ${n(r.spacing_exponent)}
-                = ${n(r.spacing_ratio)}
-
-6. Response multiplier:
+2. Response multiplier:
   auditory_bonus = ${n(aud)},  visual_bonus = ${n(vis)},  cap = ${n(r.response_cap)}
-  M_resp = min(cap, 1 + aud + vis) = ${n(r.M_resp)}
+  M_resp = ${n(r.M_resp)}
 
-7. Completion multiplier:
-  M_comp = clamp(area_coverage_pct / 100, 0, 1)
-         = clamp(${n(segment.area_coverage_pct)} / 100, 0, 1)
-         = ${n(r.M_comp)}
+3. Effective search width:
+  W_eff = clamp(W0_m \u00d7 C_t \u00d7 M_resp, ${n(r.w_eff_min)}, ${n(r.w_eff_max)})
+        = clamp(${n(r.W0_m)} \u00d7 ${n(r.C_t)} \u00d7 ${n(r.M_resp)}, ...)
+        = ${n(r.W_eff)} m
 
-8. Probability of detection (exponential model):
-  exponent = k \u00d7 base_hazard_rate \u00d7 spacing_ratio \u00d7 M_resp
-           = ${n(r.calibration_constant_k)} \u00d7 ${n(r.base_hazard_rate)} \u00d7 ${n(r.spacing_ratio)} \u00d7 ${n(r.M_resp)}
-  POD_raw  = 1 \u2212 exp(\u2212exponent) = ${n(r.POD_raw)}
-  POD_final = clamp(POD_raw \u00d7 M_comp, 0, 0.99)
-            = clamp(${n(r.POD_raw)} \u00d7 ${n(r.M_comp)}, 0, 0.99)
-            = ${n(r.POD_final)}</pre>
+4. Track length (${r.track_source}):
+  L_ind = ${n(r.L_ind_m)} m
+  L_total = ${n(r.L_total_m)} m
+
+5. Koopman coverage:
+  coverage_C = (W_eff \u00d7 L_total) / A
+             = (${n(r.W_eff)} \u00d7 ${n(r.L_total_m)}) / ${n(r.A_m2)}
+             = ${n(r.coverage_C)}
+
+6. POD (Koopman random search):
+  POD = clamp(1 \u2212 exp(\u2212coverage_C), 0, 0.99)
+      = clamp(1 \u2212 exp(\u2212${n(r.coverage_C)}), 0, 0.99)
+      = ${n(r.POD_segment)}</pre>
     </details>`;
 }
 
 function reportDetailText(segment, r) {
   return [
-    `    C_t=${n(r.C_t)}  F_vis=${n(r.F_visibility)}  F_veg=${n(r.F_veg)}  F_terrain=${n(r.F_terrain)}  F_ext=${n(r.F_extenuating)}  F_burial=${n(r.F_burial)}`,
-    `    hazard=${n(r.base_hazard_rate)}  S_ref=${n(r.S_ref)}  S_eff_act=${n(r.S_eff_act)}`,
-    `    spacing_ratio=${n(r.spacing_ratio)}  M_resp=${n(r.M_resp)}  M_comp=${n(r.M_comp)}`,
-    `    POD_raw=${n(r.POD_raw)}  POD_final=${n(r.POD_final)}`
+    `    C_t=${n(r.C_t)}  W_eff=${n(r.W_eff)}  L_total=${n(r.L_total_m)}  A=${n(r.A_m2)}`,
+    `    coverage_C=${n(r.coverage_C)}  M_resp=${n(r.M_resp)}`,
+    `    track_source=${r.track_source}  POD=${n(r.POD_segment)}`
   ].join('\n');
 }
 
@@ -556,10 +580,11 @@ function textField(label, name, value, hint = '') {
   return `<label>${esc(label)}${hint ? `<span class="hint">${hint}</span>` : ''}<input name="${name}" value="${esc(value || '')}"/></label>`;
 }
 
-function numField(label, name, value, step, hint = '', min = '', max = '') {
+function numField(label, name, value, step, hint = '', min = '', max = '', disabled = false) {
   const minAttr = min !== '' ? ` min="${min}"` : '';
   const maxAttr = max !== '' ? ` max="${max}"` : '';
-  return `<label>${esc(label)}${hint ? `<span class="hint">${hint}</span>` : ''}<input type="number" step="${step}"${minAttr}${maxAttr} name="${name}" value="${esc(value ?? '')}"/></label>`;
+  const disAttr = disabled ? ' disabled' : '';
+  return `<label>${esc(label)}${hint ? `<span class="hint">${hint}</span>` : ''}<input type="number" step="${step}"${minAttr}${maxAttr} name="${name}" value="${esc(value ?? '')}"${disAttr}/></label>`;
 }
 
 /* ---- Formatting ---- */
@@ -569,6 +594,11 @@ function prettyTarget(key) {
 }
 
 function n(v) { return Number(v ?? 0).toFixed(4); }
+
+function fmtNum(v) {
+  const num = Number(v || 0);
+  return num >= 1000 ? num.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : num.toFixed(1);
+}
 
 export function esc(str) {
   return String(str || '')

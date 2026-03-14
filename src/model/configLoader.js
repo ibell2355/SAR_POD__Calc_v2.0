@@ -1,6 +1,8 @@
 import { parseSimpleYaml } from '../utils/simpleYaml.js';
 
 const CONFIG_CANDIDATES = [
+  '/config/SAR_POD_V3_config.yaml',
+  './config/SAR_POD_V3_config.yaml',
   '/config/SAR_POD_V2_config.yaml',
   './config/SAR_POD_V2_config.yaml'
 ];
@@ -39,7 +41,7 @@ export async function loadConfig() {
     }
 
     if (!loaded) {
-      const detail = structuredErrors.map((e) => `${e.code}: ${e.message}${e.cause ? ' — ' + e.cause : ''}`).join('; ');
+      const detail = structuredErrors.map((e) => `${e.code}: ${e.message}${e.cause ? ' \u2014 ' + e.cause : ''}`).join('; ');
       console.error('[configLoader] All config candidates failed:', structuredErrors);
       return {
         config: null,
@@ -50,13 +52,9 @@ export async function loadConfig() {
       };
     }
 
-    // Basic sanity check: ensure required top-level keys exist
+    // Basic sanity check
     const required = ['targets', 'condition_factors', 'response_model'];
     const missing = required.filter((k) => !config[k]);
-    // Accept either new spacing_bounds_m or legacy reference_spacing_bounds_m
-    if (!config.spacing_bounds_m && !config.reference_spacing_bounds_m) {
-      missing.push('spacing_bounds_m');
-    }
     if (missing.length) {
       return {
         config: null,
