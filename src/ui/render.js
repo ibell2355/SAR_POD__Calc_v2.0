@@ -132,8 +132,9 @@ export function renderSegment(root, segment, computed, savedLabel, configValid, 
 
       <h3>Searchers & Area</h3>
       ${numField('Number of Searchers', 'num_searchers', segment.num_searchers, '1', tooltip(config, 'num_searchers'), 1, 999)}
+      <span class="hint">Enter area in acres OR hectares (not both)</span>
       <div class="grid-2">
-        ${numField('Area (Acres)', 'area_acres', segment.area_acres, '0.1', 'Enter acres OR hectares', 0, '', segment.area_hectares > 0)}
+        ${numField('Area (Acres)', 'area_acres', segment.area_acres, '0.1', '', 0, '', segment.area_hectares > 0)}
         ${numField('Area (Hectares)', 'area_hectares', segment.area_hectares, '0.01', '', 0, '', segment.area_acres > 0)}
       </div>
 
@@ -534,10 +535,19 @@ function reportDetailHtml(segment, r) {
 }
 
 function reportDetailText(segment, r) {
+  const aud = r.auditory_bonus ?? 0;
+  const vis = r.visual_bonus ?? 0;
   return [
-    `    C_t=${n(r.C_t)}  W_eff=${n(r.W_eff)}  L_total=${n(r.L_total_m)}  A=${n(r.A_m2)}`,
-    `    coverage_C=${n(r.coverage_C)}  M_resp=${n(r.M_resp)}`,
-    `    track_source=${r.track_source}  POD=${n(r.POD_segment)}`
+    `    --- Koopman Calculation ---`,
+    `    W0_m = ${n(r.W0_m)}`,
+    `    Condition: F_time=${n(r.F_time)} F_weather=${n(r.F_weather)} F_vis=${n(r.F_visibility)} F_veg=${n(r.F_veg)} F_terrain=${n(r.F_terrain)} F_ext=${n(r.F_extenuating)} F_burial=${n(r.F_burial)}`,
+    `    C_t = ${n(r.C_t)}`,
+    `    Response: aud=${n(aud)} vis=${n(vis)} M_resp=${n(r.M_resp)}`,
+    `    W_eff = clamp(${n(r.W0_m)} * ${n(r.C_t)} * ${n(r.M_resp)}, ${n(r.w_eff_min)}, ${n(r.w_eff_max)}) = ${n(r.W_eff)} m`,
+    `    Track (${r.track_source}): L_ind=${n(r.L_ind_m)} m  L_total=${n(r.L_total_m)} m`,
+    `    Area = ${n(r.A_m2)} m2`,
+    `    coverage_C = (${n(r.W_eff)} * ${n(r.L_total_m)}) / ${n(r.A_m2)} = ${n(r.coverage_C)}`,
+    `    POD = clamp(1 - exp(-${n(r.coverage_C)}), 0, 0.99) = ${n(r.POD_segment)}`
   ].join('\n');
 }
 

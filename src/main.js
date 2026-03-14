@@ -407,6 +407,8 @@ function handleAction(action, id, btn) {
   }
 
   if (action === 'print') {
+    // Expand all calculation details before printing
+    document.querySelectorAll('.report-detail').forEach((d) => d.setAttribute('open', ''));
     window.print();
     return;
   }

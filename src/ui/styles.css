@@ -15,6 +15,8 @@
   --accent: #6e8f4e;
   --surface-alt: #e8e1d6;
   --input-bg: #ffffff;
+  --selected: #183859;
+  --selected-soft: #dce6f0;
 }
 
 /* ---- Dark mode ---- */
@@ -32,6 +34,8 @@
   --accent: #6e8f4e;
   --surface-alt: #2e343c;
   --input-bg: #1a1e24;
+  --selected: #6fb2cf;
+  --selected-soft: #1a2a38;
 }
 
 /* ---- Smooth theme transition ---- */
@@ -280,6 +284,7 @@ textarea:disabled {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+  align-items: end;
 }
 
 .grid-3 {
@@ -342,9 +347,9 @@ textarea:disabled {
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 .chip input:checked + span {
-  background: var(--primary-soft);
-  border-color: var(--primary);
-  color: var(--primary);
+  background: var(--selected-soft);
+  border-color: var(--selected);
+  color: var(--selected);
 }
 
 /* ---- Segment note toggle ---- */
@@ -526,9 +531,9 @@ textarea:disabled {
   display: block;
   font-size: 0.82rem;
   font-weight: 500;
-  color: var(--primary);
-  background: var(--primary-soft);
-  border: 1px solid var(--primary);
+  color: var(--selected);
+  background: var(--selected-soft);
+  border: 1px solid var(--selected);
   border-radius: 8px;
   padding: 6px 10px;
   margin-top: 4px;
@@ -565,4 +570,8 @@ textarea:disabled {
   .app-header, .btn, .action-grid, .toast, .sticky-result, .theme-toggle { display: none; }
   .panel { border: none; box-shadow: none; }
   .app-shell { width: 100%; padding: 0; }
+  /* Auto-expand all calculation details for print */
+  .report-detail { display: block; }
+  .report-detail > summary { display: none; }
+  .report-detail > pre { display: block; }
 }
