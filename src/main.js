@@ -31,6 +31,7 @@ function newSegment() {
   return {
     id: uid(),
     report_id: 'rpt-' + uid(),
+    created_at: new Date().toISOString(),
     name: '',
     time_of_day: 'day',
     weather: 'clear',
@@ -166,7 +167,7 @@ function route() {
     const id = hash.slice('#/report/'.length);
     const seg = state.segments.find((s) => s.id === id);
     if (!seg) { location.hash = '#/reports'; return; }
-    const data = buildSegmentReportData(state, seg, formatReportDate(new Date()));
+    const data = buildSegmentReportData(state, seg, formatReportDate(new Date(seg.created_at)));
     renderSegmentReport(root, data);
   } else if (hash === '#/reports') {
     renderReportList(root, state.segments);
@@ -392,12 +393,12 @@ function handleAction(action, id, btn) {
    ================================================================ */
 
 function getSegmentReportText(seg) {
-  const data = buildSegmentReportData(state, seg, formatReportDate(new Date()));
+  const data = buildSegmentReportData(state, seg, formatReportDate(new Date(seg.created_at)));
   return segmentReportText(data);
 }
 
 async function uploadSegment(seg, btn) {
-  const data = buildSegmentReportData(state, seg, formatReportDate(new Date()));
+  const data = buildSegmentReportData(state, seg, formatReportDate(new Date(seg.created_at)));
   const text = segmentReportText(data);
   const payload = segmentUploadPayload(data, text, seg.report_id);
 
@@ -545,6 +546,7 @@ function migrateState(raw) {
     const next = { ...newSegment(), ...seg };
     next.id = seg.id || uid();
     next.report_id = seg.report_id || 'rpt-' + uid();
+    next.created_at = seg.created_at || new Date().toISOString();
     next.name = seg.name || '';
 
     if (next.actual_spacing_m == null || next.actual_spacing_m === '') {

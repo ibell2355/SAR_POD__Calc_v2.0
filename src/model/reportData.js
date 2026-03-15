@@ -9,7 +9,7 @@ import { clamp } from '../utils/math.js';
 
 /* ---- Label maps (display names for report output) ---- */
 
-const SEARCH_FOR = { missing_person: 'Missing Person', historical_article: 'Historical Article', evidence: 'Evidence' };
+const SEARCH_FOR = { missing_person: 'Missing Person', historical_article: 'Historical', evidence: 'Article/Evidence' };
 const VISIBILITY = { low: 'Low', medium: 'Medium', high: 'High' };
 const AUDITORY = { none: 'Not Expected', possible: 'Possible', likely: 'Likely' };
 const VISUAL = { evade: 'Expected to Evade', none: 'Not Expected', possible: 'Possible', likely: 'Likely' };

@@ -3,8 +3,8 @@ export const LABELS = {
   weather: { clear: 'Clear', rain: 'Raining', snow: 'Snowing' },
   search_for: {
     missing_person: 'Missing Person',
-    historical_article: 'Historical Article',
-    evidence: 'Evidence'
+    historical_article: 'Historical',
+    evidence: 'Article/Evidence'
   },
   auditory_responsiveness: { none: 'Not Expected', possible: 'Possible', likely: 'Likely' },
   visual_responsiveness: { evade: 'Expected to Evade', none: 'Not Expected', possible: 'Possible', likely: 'Likely' },
