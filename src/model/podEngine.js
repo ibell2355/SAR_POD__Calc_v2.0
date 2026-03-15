@@ -35,8 +35,8 @@ function responseModel(config) {
   const rm = config?.response_model || {};
   return {
     enabled_for: rm.enabled_for || ['missing_person'],
-    auditory_bonus: rm.auditory_bonus || { none: 0, possible: 0.04, likely: 0.08 },
-    visual_bonus: rm.visual_bonus || { none: 0, possible: 0.015, likely: 0.05 },
+    auditory_bonus: rm.auditory_bonus || { none: 0, possible: 0, likely: 0 },
+    visual_bonus: rm.visual_bonus || { evade: 0, none: 0, possible: 0, likely: 0 },
     max_total_multiplier: Number(rm.max_total_multiplier ?? 1.25)
   };
 }

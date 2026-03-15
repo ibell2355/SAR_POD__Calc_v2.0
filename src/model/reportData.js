@@ -105,8 +105,9 @@ function computeCoefficientImpacts(r, isMissing) {
     factors.push({ name: 'Burial / Cover', value: r.K_burial });
   }
 
-  if (r.M_resp != null && r.M_resp !== 1) {
-    factors.push({ name: 'Subject Response', value: r.M_resp, isResponse: true });
+  if (isMissing) {
+    factors.push({ name: 'Auditory Responsiveness', value: 1 + (r.auditory_bonus || 0), isResponse: true });
+    factors.push({ name: 'Visual Responsiveness', value: 1 + (r.visual_bonus || 0), isResponse: true });
   }
 
   const actualPOD = r.POD;
@@ -157,15 +158,12 @@ export function segmentReportText(d) {
   lines.push(`  Visibility: ${d.search.visibility}${fmtImpact(visImpact)}`);
 
   if (d.search.auditory != null) {
-    lines.push(`  Auditory Responsiveness: ${d.search.auditory}`);
+    const audImpact = findImpact(d.segment.coefficient_impacts, 'Auditory Responsiveness');
+    lines.push(`  Auditory Responsiveness: ${d.search.auditory}${fmtImpact(audImpact)}`);
   }
   if (d.search.visual != null) {
-    lines.push(`  Visual Responsiveness: ${d.search.visual}`);
-  }
-
-  const respImpact = findImpact(d.segment.coefficient_impacts, 'Subject Response');
-  if (respImpact) {
-    lines.push(`  Subject Response${fmtImpact(respImpact)}`);
+    const visImpact = findImpact(d.segment.coefficient_impacts, 'Visual Responsiveness');
+    lines.push(`  Visual Responsiveness: ${d.search.visual}${fmtImpact(visImpact)}`);
   }
 
   lines.push('');
@@ -230,9 +228,12 @@ export function segmentUploadPayload(d, reportText, persistentReportId) {
   const impacts = d.segment.coefficient_impacts || [];
 
   // Build template-ready per-row impact arrays from the same computed impacts
-  const searchInputDetails = buildInputDetails(impacts, [
+  const searchInputRows = [
     ['Visibility', d.search.visibility],
-  ]);
+  ];
+  if (d.search.auditory != null) searchInputRows.push(['Auditory Responsiveness', d.search.auditory]);
+  if (d.search.visual != null) searchInputRows.push(['Visual Responsiveness', d.search.visual]);
+  const searchInputDetails = buildInputDetails(impacts, searchInputRows);
 
   const segInputRows = [
     ['Time of Day', d.segment.time_of_day],

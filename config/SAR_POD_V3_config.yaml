@@ -27,13 +27,13 @@ response_model:
   - missing_person
   auditory_bonus:
     none: 0.0
-    possible: 0.04
-    likely: 0.08
+    possible: 0.0
+    likely: 0.0
   visual_bonus:
-    evade: -0.10
+    evade: 0.0
     none: 0.0
-    possible: 0.015
-    likely: 0.05
+    possible: 0.0
+    likely: 0.0
   max_total_multiplier: 1.25
 
 condition_factors:

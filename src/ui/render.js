@@ -232,14 +232,10 @@ export function renderSegmentReport(root, reportData) {
     <li><strong>Visibility:</strong> ${esc(d.search.visibility)}${impactBadge(seg.coefficient_impacts, 'Visibility')}</li>`;
 
   if (d.search.auditory != null) {
-    searchInfoHtml += `<li><strong>Auditory Responsiveness:</strong> ${esc(d.search.auditory)}</li>`;
+    searchInfoHtml += `<li><strong>Auditory Responsiveness:</strong> ${esc(d.search.auditory)}${impactBadge(seg.coefficient_impacts, 'Auditory Responsiveness')}</li>`;
   }
   if (d.search.visual != null) {
-    searchInfoHtml += `<li><strong>Visual Responsiveness:</strong> ${esc(d.search.visual)}</li>`;
-  }
-  const respImpact = (seg.coefficient_impacts || []).find((i) => i.name === 'Subject Response');
-  if (respImpact && respImpact.impact_percent !== 0) {
-    searchInfoHtml += `<li><strong>Subject Response</strong>${impactBadgeFromImpact(respImpact)}</li>`;
+    searchInfoHtml += `<li><strong>Visual Responsiveness:</strong> ${esc(d.search.visual)}${impactBadge(seg.coefficient_impacts, 'Visual Responsiveness')}</li>`;
   }
 
   const segFactors = [
