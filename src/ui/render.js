@@ -251,28 +251,26 @@ export function renderSegmentReport(root, reportData) {
   if (seg.extenuating_factors != null) segFactors.push(['Extenuating Factors', seg.extenuating_factors]);
   if (seg.burial_or_cover != null) segFactors.push(['Burial / Cover', seg.burial_or_cover]);
 
+  const NOTE_KEY_MAP = {
+    'Vegetation Density': 'vegetation_density',
+    'Micro-terrain Complexity': 'micro_terrain_complexity',
+    'Extenuating Factors': 'extenuating_factors',
+    'Burial / Cover': 'burial_or_cover',
+  };
+
   const segInputHtml = [
     `<li><strong>Searchers:</strong> ${seg.num_searchers}</li>`,
     `<li><strong>Actual Spacing:</strong> ${seg.actual_spacing_m} m</li>`,
-    ...segFactors.map(([label, value]) =>
-      `<li><strong>${esc(label)}:</strong> ${esc(value)}${impactBadge(seg.coefficient_impacts, label)}</li>`
-    ),
+    ...segFactors.flatMap(([label, value]) => {
+      const items = [`<li><strong>${esc(label)}:</strong> ${esc(value)}${impactBadge(seg.coefficient_impacts, label)}</li>`];
+      const noteKey = NOTE_KEY_MAP[label];
+      const note = noteKey && seg.notes[noteKey];
+      if (note && note.trim()) {
+        items.push(`<li style="list-style:none;padding-left:1.5em" class="subtle"><em>${esc(label)} Note:</em> ${esc(note.trim())}</li>`);
+      }
+      return items;
+    }),
   ].join('');
-
-  // Notes
-  let notesHtml = '';
-  const noteFields = [
-    ['vegetation_density', 'Vegetation Density'],
-    ['micro_terrain_complexity', 'Micro-terrain Complexity'],
-    seg.extenuating_factors != null ? ['extenuating_factors', 'Extenuating Factors'] : null,
-    seg.burial_or_cover != null ? ['burial_or_cover', 'Burial / Cover'] : null,
-  ].filter(Boolean);
-  for (const [key, label] of noteFields) {
-    const note = seg.notes[key];
-    if (note && note.trim()) {
-      notesHtml += `<li class="subtle"><em>${esc(label)} Note:</em> ${esc(note.trim())}</li>`;
-    }
-  }
 
   root.innerHTML = `
     <div class="row between align-center" style="margin-bottom:12px">
@@ -290,7 +288,7 @@ export function renderSegmentReport(root, reportData) {
 
         <h3>Segment: ${esc(seg.name)}</h3>
         ${seg.segment_note ? `<p class="subtle" style="margin:4px 0 8px"><strong>Segment Note:</strong> ${esc(seg.segment_note)}</p>` : ''}
-        <ul class="report-list">${segInputHtml}${notesHtml}</ul>
+        <ul class="report-list">${segInputHtml}</ul>
 
         ${seg.effective_sweep_width_m != null ? `
         <div style="margin-top:12px">

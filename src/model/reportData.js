@@ -189,19 +189,18 @@ export function segmentReportText(d) {
     segFactors.push(['Burial / Cover', d.segment.burial_or_cover]);
   }
 
+  const NOTE_KEY_MAP = {
+    'Vegetation Density': 'vegetation_density',
+    'Micro-terrain Complexity': 'micro_terrain_complexity',
+    'Extenuating Factors': 'extenuating_factors',
+    'Burial / Cover': 'burial_or_cover',
+  };
+
   for (const [label, value] of segFactors) {
     const imp = findImpact(d.segment.coefficient_impacts, label);
     lines.push(`  ${label}: ${value}${fmtImpact(imp)}`);
-  }
-
-  const noteFields = [
-    ['vegetation_density', 'Vegetation Density'],
-    ['micro_terrain_complexity', 'Micro-terrain Complexity'],
-  ];
-  if (d.segment.extenuating_factors != null) noteFields.push(['extenuating_factors', 'Extenuating Factors']);
-  if (d.segment.burial_or_cover != null) noteFields.push(['burial_or_cover', 'Burial / Cover']);
-  for (const [key, label] of noteFields) {
-    const note = d.segment.notes[key];
+    const noteKey = NOTE_KEY_MAP[label];
+    const note = noteKey && d.segment.notes[noteKey];
     if (note && note.trim()) lines.push(`    ${label} Note: ${note.trim()}`);
   }
 
@@ -243,7 +242,7 @@ export function segmentUploadPayload(d, reportText, persistentReportId) {
   ];
   if (d.segment.extenuating_factors != null) segInputRows.push(['Extenuating Factors', d.segment.extenuating_factors]);
   if (d.segment.burial_or_cover != null) segInputRows.push(['Burial / Cover', d.segment.burial_or_cover]);
-  const segmentInputDetails = buildInputDetails(impacts, segInputRows);
+  const segmentInputDetails = buildInputDetails(impacts, segInputRows, d.segment.notes);
 
   return {
     report_id: persistentReportId,
@@ -275,6 +274,7 @@ export function segmentUploadPayload(d, reportText, persistentReportId) {
         ...(d.segment.burial_or_cover != null ? { burial_or_cover: d.segment.burial_or_cover } : {}),
       },
       segment_input_details: segmentInputDetails,
+      notes: d.segment.notes || {},
       effective_sweep_width_m: d.segment.effective_sweep_width_m,
       coverage_factor: d.segment.coverage_factor,
       coefficient_impacts: d.segment.coefficient_impacts,
@@ -286,17 +286,27 @@ export function segmentUploadPayload(d, reportText, persistentReportId) {
 
 /* ---- Build template-ready input detail rows from coefficient impacts ---- */
 
-function buildInputDetails(impacts, rows) {
+function buildInputDetails(impacts, rows, notes) {
+  const NOTE_KEY_MAP = {
+    'Vegetation Density': 'vegetation_density',
+    'Micro-terrain Complexity': 'micro_terrain_complexity',
+    'Extenuating Factors': 'extenuating_factors',
+    'Burial / Cover': 'burial_or_cover',
+  };
   return rows.map(([label, value]) => {
     const imp = (impacts || []).find((i) => i.name === label);
     const pct = imp ? imp.impact_percent : 0;
     const sign = pct >= 0 ? '+' : '';
-    return {
+    const detail = {
       label,
       value,
       impact_on_pod_pct: `${sign}${pct.toFixed(1)}%`,
       impact_on_pod_raw: pct,
     };
+    const noteKey = NOTE_KEY_MAP[label];
+    const note = noteKey && notes && notes[noteKey];
+    if (note && note.trim()) detail.note = note.trim();
+    return detail;
   });
 }
 
