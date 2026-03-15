@@ -161,7 +161,7 @@ export function renderSegment(root, segment, computed, savedLabel, configValid, 
 
 export function podResultHtml(segment, computed) {
   const result = computed.result;
-  const podPct = result ? `${(result.POD * 100).toFixed(1)}%` : '\u2014';
+  const podPct = result ? `${(result.POD * 100).toFixed(0)}%` : '\u2014';
 
   let html = `<p class="pod-large">POD: ${podPct}</p>`;
 

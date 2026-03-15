@@ -58,7 +58,7 @@ export function buildSegmentReportData(state, segment, generatedAt) {
       effective_sweep_width_m: r.W_eff ?? null,
       coverage_factor: r.coverage_factor ?? null,
       final_pod: r.POD ?? null,
-      final_pod_pct: r.POD != null ? `${(r.POD * 100).toFixed(1)}%` : '\u2014',
+      final_pod_pct: r.POD != null ? `${(r.POD * 100).toFixed(0)}%` : '\u2014',
       qa_warnings: segment.qaWarnings || [],
       coefficient_impacts: impacts,
     },
