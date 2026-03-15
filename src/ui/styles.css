@@ -128,6 +128,15 @@ body {
 
 .subtle { font-size: 0.9rem; color: var(--muted); margin: 2px 0 0; }
 
+/* ---- Header controls group ---- */
+
+.header-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
 /* ---- Theme toggle ---- */
 
 .theme-toggle {
@@ -585,9 +594,15 @@ textarea:disabled {
 }
 
 @media (max-width: 480px) {
-  .app-header { grid-template-columns: auto 1fr; }
-  .connectivity-pill { grid-column: 1 / -1; }
-  .app-header h1 { font-size: 1.2rem; }
+  .app-header { grid-template-columns: auto 1fr; gap: 8px; }
+  .app-header h1 { font-size: 1.15rem; }
+  .logo { width: 44px; height: 44px; }
+  .header-controls {
+    flex-direction: row;
+    align-items: center;
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
 }
 
 @media print {

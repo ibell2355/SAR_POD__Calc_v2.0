@@ -10,13 +10,13 @@ units:
 search_types:
   missing_person:
     label: Missing Person
-    base_sweep_width_m: 10
+    base_sweep_width_m: 6
   historical_article:
     label: Historical Article
-    base_sweep_width_m: 10
+    base_sweep_width_m: 6
   evidence:
     label: Evidence
-    base_sweep_width_m: 10
+    base_sweep_width_m: 6
 
 w_eff_bounds_m:
   min: 0.0
