@@ -558,6 +558,12 @@ textarea:disabled {
   color: var(--danger);
 }
 
+.impact-neutral {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
 /* ---- Utility ---- */
 
 .hidden { display: none; }

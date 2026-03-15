@@ -268,7 +268,7 @@ function findImpact(impacts, name) {
 }
 
 function fmtImpact(imp) {
-  if (!imp || imp.impact_percent === 0) return '';
+  if (!imp) return '';
   const sign = imp.impact_percent > 0 ? '+' : '';
   return ` (${sign}${imp.impact_percent.toFixed(1)}% POD)`;
 }

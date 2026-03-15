@@ -168,13 +168,6 @@ export function podResultHtml(segment, computed) {
 
   let html = `<p class="pod-large">POD: ${podPct}</p>`;
 
-  if (result && result.actual_spacing_m > 0) {
-    html += `<div class="pod-detail-list">
-      <dt>Effective Sweep Width</dt><dd>${fmtNum(result.W_eff)} m</dd>
-      <dt>Coverage Factor</dt><dd>${n(result.coverage_factor)}</dd>
-    </div>`;
-  }
-
   if (computed.qaWarnings && computed.qaWarnings.length) {
     html += `<div style="margin-top:6px;font-size:0.85rem;color:var(--danger)">${computed.qaWarnings.map((w) => `<p style="margin:2px 0">\u26a0 ${esc(w)}</p>`).join('')}</div>`;
   }
@@ -323,9 +316,9 @@ function impactBadge(impacts, name) {
 }
 
 function impactBadgeFromImpact(imp) {
-  if (!imp || imp.impact_percent === 0) return '';
+  if (!imp) return '';
   const sign = imp.impact_percent > 0 ? '+' : '';
-  const cls = imp.impact_percent > 0 ? 'impact-positive' : 'impact-negative';
+  const cls = imp.impact_percent > 0 ? 'impact-positive' : imp.impact_percent < 0 ? 'impact-negative' : 'impact-neutral';
   return ` <span class="${cls}">${sign}${imp.impact_percent.toFixed(1)}% POD</span>`;
 }
 
