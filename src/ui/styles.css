@@ -297,6 +297,20 @@ textarea:disabled {
 
 .segment-list { display: grid; gap: 10px; }
 
+.segment-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.segment-row .segment-card { flex: 1; min-width: 0; }
+.segment-delete {
+  flex-shrink: 0;
+  width: 36px;
+  padding: 0;
+  font-size: 1.1rem;
+  border-radius: 10px;
+}
+
 .segment-card {
   display: flex;
   align-items: center;

@@ -302,6 +302,18 @@ function handleAction(action, id, btn) {
     return;
   }
 
+  if (action === 'delete-segment') {
+    const seg = state.segments.find((s) => s.id === id);
+    if (!seg) return;
+    if (!confirm(`Delete segment "${seg.name || 'Unnamed'}"?`)) return;
+    state.segments = state.segments.filter((s) => s.id !== id);
+    debounceSave();
+    const atHome = !location.hash || location.hash === '#/' || location.hash === '#';
+    location.hash = '#/';
+    if (atHome) route();
+    return;
+  }
+
   if (action === 'go-home') {
     location.hash = '#/';
     return;

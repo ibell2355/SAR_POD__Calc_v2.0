@@ -91,12 +91,15 @@ export function segmentListHtml(segments) {
     const result = seg.result;
     const pod = result ? `${(result.POD * 100).toFixed(0)}%` : '\u2014';
     return `
-      <button class="segment-card" data-action="edit-segment" data-id="${esc(seg.id)}">
-        <div>
-          <strong>${esc(seg.name || `Segment ${i + 1}`)}</strong>
-        </div>
-        <span class="pod-badge">${pod}</span>
-      </button>`;
+      <div class="segment-row">
+        <button class="segment-card" data-action="edit-segment" data-id="${esc(seg.id)}">
+          <div>
+            <strong>${esc(seg.name || `Segment ${i + 1}`)}</strong>
+          </div>
+          <span class="pod-badge">${pod}</span>
+        </button>
+        <button class="btn btn-danger btn-sm segment-delete" data-action="delete-segment" data-id="${esc(seg.id)}" title="Delete segment">\u00d7</button>
+      </div>`;
   }).join('');
 }
 
