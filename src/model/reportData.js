@@ -38,37 +38,37 @@ export function segmentKey(name) {
 /* ================================================================
    Report ID — deterministic fingerprint of one exact report
 
-   Built from a hash of all material inputs and outputs (everything
-   that would change the report content). The same unchanged report
-   always produces the same report_id. Any material change produces
-   a new one.
+   Hashes only the fields that define the SEARCH RESULT identity:
+   search configuration + segment inputs. Excludes:
+   - session metadata (your_name, search_name, team_name)
+   - generated_at / timestamps
+   - computed outputs (POD, W_eff — deterministic from inputs)
+   - display labels (uses raw values for stability)
 
    - Same segment_key + same report_id  = duplicate re-upload
    - Same segment_key + different report_id = new search of same segment
    ================================================================ */
 
-export function reportId(d) {
-  // Canonical fingerprint: all material fields that define this report
+export function reportId(searchLevel, segment) {
+  const s = searchLevel;
   const fp = JSON.stringify([
-    d.search.your_name,
-    d.search.search_name,
-    d.search.team_name,
-    d.search.search_for,
-    d.search.visibility,
-    d.search.auditory,
-    d.search.visual,
-    d.segment.name,
-    d.segment.num_searchers,
-    d.segment.actual_spacing_m,
-    d.segment.time_of_day,
-    d.segment.weather,
-    d.segment.vegetation_density,
-    d.segment.micro_terrain_complexity,
-    d.segment.extenuating_factors,
-    d.segment.burial_or_cover,
-    d.segment.effective_sweep_width_m,
-    d.segment.coverage_factor,
-    d.segment.final_pod,
+    // Segment instance identity (UUID distinguishes same-name segments)
+    segment.id,
+    // Search-level settings that affect the calculation
+    s.search_for,
+    s.visibility,
+    s.auditory || null,
+    s.visual || null,
+    // Segment inputs (raw values, not display labels)
+    segment.name || 'Unnamed',
+    segment.num_searchers || 1,
+    segment.actual_spacing_m,
+    segment.time_of_day,
+    segment.weather,
+    segment.vegetation_density,
+    segment.micro_terrain_complexity,
+    segment.extenuating_factors,
+    segment.burial_or_cover,
   ]);
   return 'rpt-' + hash64(fp);
 }
@@ -260,9 +260,9 @@ export function segmentReportText(d) {
    - Same segment_key + different report_id → new report for same segment
    ================================================================ */
 
-export function segmentUploadPayload(d, reportText) {
+export function segmentUploadPayload(d, reportText, searchLevel, segment) {
   const sKey = segmentKey(d.segment.name);
-  const rId = reportId(d);
+  const rId = reportId(searchLevel, segment);
 
   return {
     report_id: rId,

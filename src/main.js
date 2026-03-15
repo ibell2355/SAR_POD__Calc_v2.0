@@ -386,7 +386,14 @@ function getSegmentReportText(seg) {
 async function uploadSegment(seg, btn) {
   const data = buildSegmentReportData(state, seg, formatReportDate(new Date()));
   const text = segmentReportText(data);
-  const payload = segmentUploadPayload(data, text);
+  const payload = segmentUploadPayload(data, text, state.searchLevel, seg);
+
+  console.log('[PSAR POD] Upload: 1 report', {
+    internal_id: seg.id,
+    segment_name: seg.name,
+    segment_key: payload.segment_key,
+    report_id: payload.report_id,
+  });
 
   const origText = btn.textContent;
   btn.textContent = 'Uploading\u2026';
