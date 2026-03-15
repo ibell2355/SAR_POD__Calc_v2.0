@@ -21,6 +21,59 @@ const EXT = { '1': '1 - Strongly Favorable', '2': '2 - Somewhat Favorable', '3':
 const BURIAL = { '1': '1 - Fully Exposed', '2': '2 - Light Cover', '3': '3 - Moderate Cover', '4': '4 - Heavy Cover', '5': '5 - Completely Buried' };
 
 /* ================================================================
+   Segment key — stable identity for a named segment
+
+   Normalizes the segment name so that "Segment 1", " segment  1 ",
+   and "SEGMENT 1" all map to the same key: "segment-1".
+   ================================================================ */
+
+export function segmentKey(name) {
+  return (name || 'unnamed')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '') || 'unnamed';
+}
+
+/* ================================================================
+   Report ID — deterministic fingerprint of one exact report
+
+   Built from a hash of all material inputs and outputs (everything
+   that would change the report content). The same unchanged report
+   always produces the same report_id. Any material change produces
+   a new one.
+
+   - Same segment_key + same report_id  = duplicate re-upload
+   - Same segment_key + different report_id = new search of same segment
+   ================================================================ */
+
+export function reportId(d) {
+  // Canonical fingerprint: all material fields that define this report
+  const fp = JSON.stringify([
+    d.search.your_name,
+    d.search.search_name,
+    d.search.team_name,
+    d.search.search_for,
+    d.search.visibility,
+    d.search.auditory,
+    d.search.visual,
+    d.segment.name,
+    d.segment.num_searchers,
+    d.segment.actual_spacing_m,
+    d.segment.time_of_day,
+    d.segment.weather,
+    d.segment.vegetation_density,
+    d.segment.micro_terrain_complexity,
+    d.segment.extenuating_factors,
+    d.segment.burial_or_cover,
+    d.segment.effective_sweep_width_m,
+    d.segment.coverage_factor,
+    d.segment.final_pod,
+  ]);
+  return 'rpt-' + hash64(fp);
+}
+
+/* ================================================================
    Build structured report data for one segment
    ================================================================ */
 
@@ -100,7 +153,6 @@ function computeCoefficientImpacts(r, isMissing) {
   const bMax = r.w_eff_max;
 
   return factors.map((f) => {
-    // Compute POD as if this one factor were neutral (1.0)
     let C_t_adj, M_resp_adj;
     if (f.isResponse) {
       C_t_adj = r.C_t;
@@ -158,7 +210,6 @@ export function segmentReportText(d) {
   lines.push(`  Searchers: ${d.segment.num_searchers}`);
   lines.push(`  Actual Spacing: ${d.segment.actual_spacing_m} m`);
 
-  // Segment-level factors with inline impact
   const segFactors = [
     ['Time of Day', d.segment.time_of_day],
     ['Weather', d.segment.weather],
@@ -177,7 +228,6 @@ export function segmentReportText(d) {
     lines.push(`  ${label}: ${value}${fmtImpact(imp)}`);
   }
 
-  // Notes
   const noteFields = [
     ['vegetation_density', 'Vegetation Density'],
     ['micro_terrain_complexity', 'Micro-terrain Complexity'],
@@ -204,10 +254,19 @@ export function segmentReportText(d) {
 
 /* ================================================================
    Upload payload for one segment
+
+   Includes report_id and segment_key for dedup/identity:
+   - Same segment_key + same report_id  → duplicate re-upload
+   - Same segment_key + different report_id → new report for same segment
    ================================================================ */
 
 export function segmentUploadPayload(d, reportText) {
+  const sKey = segmentKey(d.segment.name);
+  const rId = reportId(d);
+
   return {
+    report_id: rId,
+    segment_key: sKey,
     generated_at: d.generated_at,
     search: {
       your_name: d.search.your_name,
@@ -256,4 +315,18 @@ function fmtImpact(imp) {
 function fmtNum(v) {
   const num = Number(v || 0);
   return num >= 1000 ? num.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : num.toFixed(1);
+}
+
+/* ---- Deterministic 64-bit hash (dual djb2) ---- */
+
+function hash64(str) {
+  let h1 = 5381;
+  let h2 = 52711;
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    h1 = ((h1 << 5) + h1 + c) & 0xffffffff;
+    h2 = ((h2 << 5) + h2 + c) & 0xffffffff;
+  }
+  return (h1 >>> 0).toString(16).padStart(8, '0') +
+         (h2 >>> 0).toString(16).padStart(8, '0');
 }
