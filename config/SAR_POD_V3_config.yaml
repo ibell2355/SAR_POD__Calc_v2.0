@@ -19,7 +19,7 @@ search_types:
     base_sweep_width_m: 10
 
 w_eff_bounds_m:
-  min: 0.5
+  min: 0.0
   max: 100
 
 response_model:
