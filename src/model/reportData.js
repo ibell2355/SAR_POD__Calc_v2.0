@@ -36,44 +36,6 @@ export function segmentKey(name) {
 }
 
 /* ================================================================
-   Report ID — deterministic fingerprint of one exact report
-
-   Hashes only the fields that define the SEARCH RESULT identity:
-   search configuration + segment inputs. Excludes:
-   - session metadata (your_name, search_name, team_name)
-   - generated_at / timestamps
-   - computed outputs (POD, W_eff — deterministic from inputs)
-   - display labels (uses raw values for stability)
-
-   - Same segment_key + same report_id  = duplicate re-upload
-   - Same segment_key + different report_id = new search of same segment
-   ================================================================ */
-
-export function reportId(searchLevel, segment) {
-  const s = searchLevel;
-  const fp = JSON.stringify([
-    // Segment instance identity (UUID distinguishes same-name segments)
-    segment.id,
-    // Search-level settings that affect the calculation
-    s.search_for,
-    s.visibility,
-    s.auditory || null,
-    s.visual || null,
-    // Segment inputs (raw values, not display labels)
-    segment.name || 'Unnamed',
-    segment.num_searchers || 1,
-    segment.actual_spacing_m,
-    segment.time_of_day,
-    segment.weather,
-    segment.vegetation_density,
-    segment.micro_terrain_complexity,
-    segment.extenuating_factors,
-    segment.burial_or_cover,
-  ]);
-  return 'rpt-' + hash64(fp);
-}
-
-/* ================================================================
    Build structured report data for one segment
    ================================================================ */
 
@@ -260,12 +222,11 @@ export function segmentReportText(d) {
    - Same segment_key + different report_id → new report for same segment
    ================================================================ */
 
-export function segmentUploadPayload(d, reportText, searchLevel, segment) {
+export function segmentUploadPayload(d, reportText, persistentReportId) {
   const sKey = segmentKey(d.segment.name);
-  const rId = reportId(searchLevel, segment);
 
   return {
-    report_id: rId,
+    report_id: persistentReportId,
     segment_key: sKey,
     generated_at: d.generated_at,
     search: {
@@ -317,16 +278,3 @@ function fmtNum(v) {
   return num >= 1000 ? num.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : num.toFixed(1);
 }
 
-/* ---- Deterministic 64-bit hash (dual djb2) ---- */
-
-function hash64(str) {
-  let h1 = 5381;
-  let h2 = 52711;
-  for (let i = 0; i < str.length; i++) {
-    const c = str.charCodeAt(i);
-    h1 = ((h1 << 5) + h1 + c) & 0xffffffff;
-    h2 = ((h2 << 5) + h2 + c) & 0xffffffff;
-  }
-  return (h1 >>> 0).toString(16).padStart(8, '0') +
-         (h2 >>> 0).toString(16).padStart(8, '0');
-}

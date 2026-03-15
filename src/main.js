@@ -1,6 +1,6 @@
 import { loadConfig } from './model/configLoader.js';
 import { computePOD, generateQaWarnings } from './model/podEngine.js';
-import { buildSegmentReportData, segmentReportText, segmentUploadPayload } from './model/reportData.js';
+import { buildSegmentReportData, segmentReportText, segmentUploadPayload, segmentKey } from './model/reportData.js';
 import { getValue, setValue, clearAll } from './storage/db.js';
 import {
   renderHome, renderSegment, renderReportList, renderSegmentReport,
@@ -30,6 +30,7 @@ const defaultSearch = {
 function newSegment() {
   return {
     id: uid(),
+    report_id: 'rpt-' + uid(),
     name: '',
     time_of_day: 'day',
     weather: 'clear',
@@ -398,13 +399,13 @@ function getSegmentReportText(seg) {
 async function uploadSegment(seg, btn) {
   const data = buildSegmentReportData(state, seg, formatReportDate(new Date()));
   const text = segmentReportText(data);
-  const payload = segmentUploadPayload(data, text, state.searchLevel, seg);
+  const payload = segmentUploadPayload(data, text, seg.report_id);
 
   console.log('[PSAR POD] Upload: 1 report', {
     internal_id: seg.id,
+    report_id: seg.report_id,
     segment_name: seg.name,
     segment_key: payload.segment_key,
-    report_id: payload.report_id,
   });
 
   const origText = btn.textContent;
@@ -543,6 +544,7 @@ function migrateState(raw) {
   const segments = (raw.segments || []).map((seg) => {
     const next = { ...newSegment(), ...seg };
     next.id = seg.id || uid();
+    next.report_id = seg.report_id || 'rpt-' + uid();
     next.name = seg.name || '';
 
     if (next.actual_spacing_m == null || next.actual_spacing_m === '') {
@@ -664,7 +666,9 @@ function fallbackCopy(text) {
 }
 
 function formatReportDate(date) {
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const datePart = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const timePart = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${datePart} ${timePart}`;
 }
 
 function clampNum(val, min, max, fallback) {
