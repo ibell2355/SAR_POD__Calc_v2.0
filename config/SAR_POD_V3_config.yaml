@@ -140,7 +140,7 @@ ui_tooltips:
   extenuating_factors: Catch-all for anything not already covered that makes detection easier or harder, such as heavy smoke/dust/fog, noise masking, altered landscape, or searcher experience.
   burial_or_cover: Degree of burial or concealment by debris, snow, duff, or other covering material.
   num_searchers: Number of searchers operating in this segment.
-  actual_spacing: The actual spacing in meters between searchers as used in the field. This is the key input that determines coverage relative to effective sweep width.
+  actual_spacing: The actual spacing in meters between searchers as used in the field.
 
 formulas:
   effective_sweep_width:

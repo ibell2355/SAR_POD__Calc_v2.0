@@ -41,6 +41,7 @@ function newSegment() {
     burial_or_cover: 3,
     num_searchers: 1,
     actual_spacing_m: 10,
+    segment_note: '',
     notes: {},
     result: null,
     qaWarnings: []
@@ -217,6 +218,12 @@ function handleInput(el) {
     const segId = hash.slice('#/segment/'.length);
     const seg = state.segments.find((s) => s.id === segId);
     if (seg) {
+      if (name === 'segment_note') {
+        seg.segment_note = value;
+        debounceSave();
+        return;
+      }
+
       if (name.startsWith('note_')) {
         const noteField = name.slice(5);
         if (!seg.notes) seg.notes = {};

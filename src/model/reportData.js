@@ -60,6 +60,7 @@ export function buildSegmentReportData(state, segment, generatedAt) {
     },
     segment: {
       name: segment.name || 'Unnamed',
+      segment_note: segment.segment_note || '',
       num_searchers: segment.num_searchers || 1,
       actual_spacing_m: segment.actual_spacing_m,
       time_of_day: TIME_OF_DAY[segment.time_of_day] || segment.time_of_day,
@@ -169,6 +170,9 @@ export function segmentReportText(d) {
 
   lines.push('');
   lines.push(`Segment: ${d.segment.name}`);
+  if (d.segment.segment_note) {
+    lines.push(`  Segment Note: ${d.segment.segment_note}`);
+  }
   lines.push(`  Searchers: ${d.segment.num_searchers}`);
   lines.push(`  Actual Spacing: ${d.segment.actual_spacing_m} m`);
 
@@ -259,6 +263,7 @@ export function segmentUploadPayload(d, reportText, persistentReportId) {
     },
     segment: {
       segment_name: d.segment.name,
+      segment_note: d.segment.segment_note || '',
       segment_inputs: {
         num_searchers: d.segment.num_searchers,
         actual_spacing_m: d.segment.actual_spacing_m,

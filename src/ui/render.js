@@ -119,6 +119,7 @@ export function renderSegment(root, segment, computed, savedLabel, configValid, 
     <section class="panel">
       <h2>Edit Segment</h2>
       ${textField('Segment Name', 'name', segment.name)}
+      ${segmentNoteSection(segment)}
 
       <h3>Searchers</h3>
       ${numField('Number of Searchers', 'num_searchers', segment.num_searchers, '1', tooltip(config, 'num_searchers'), 1, 999)}
@@ -288,6 +289,7 @@ export function renderSegmentReport(root, reportData) {
         <ul class="report-list">${searchInfoHtml}</ul>
 
         <h3>Segment: ${esc(seg.name)}</h3>
+        ${seg.segment_note ? `<p class="subtle" style="margin:4px 0 8px"><strong>Segment Note:</strong> ${esc(seg.segment_note)}</p>` : ''}
         <ul class="report-list">${segInputHtml}${notesHtml}</ul>
 
         ${seg.effective_sweep_width_m != null ? `
@@ -357,6 +359,18 @@ function tooltip(config, key) {
 }
 
 /* ---- Note toggle + textarea ---- */
+
+function segmentNoteSection(segment) {
+  const note = segment.segment_note || '';
+  const open = note.length > 0;
+  return `<div class="note-section">
+      <button class="btn btn-note-toggle" data-action="toggle-note" data-field="segment_note">${open ? 'Hide Segment Note' : 'Add Segment-Wide Note'}</button>
+      <span class="hint">Segment level notes (for example, any unsearched areas and/or challenges in the segment). Should be POD related notes only, not to replace proper documentation or CalTopo marking of hazards, etc.</span>
+      <div class="note-input" id="note-wrap-segment_note" style="${open ? '' : 'display:none'}">
+        <textarea name="segment_note" placeholder="Add a segment-wide note\u2026">${esc(note)}</textarea>
+      </div>
+    </div>`;
+}
 
 function noteSection(fieldName, segment) {
   const note = (segment.notes && segment.notes[fieldName]) || '';
