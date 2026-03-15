@@ -17,7 +17,7 @@
       <div class="header-title">
         <div>
           <h1>PSAR POD Calculator</h1>
-          <p class="subtle">Koopman Random Search &middot; (v<span id="app-version">&hellip;</span>)</p>
+          <p class="subtle">Random Search Model &middot; (v<span id="app-version">&hellip;</span>)</p>
         </div>
         <img class="header-qr" id="header-qr" src="./assets/qrcode.png" alt="QR Code" role="button" tabindex="0">
       </div>
@@ -29,6 +29,29 @@
     <main id="view-root"></main>
     <footer class="build-stamp" id="build-stamp"></footer>
   </div>
+  <script>
+    /* Clear stale service worker caches from previous versions */
+    if (window.caches) {
+      caches.keys().then(function (names) {
+        names.forEach(function (n) {
+          if (n !== 'psar-pod-v16') caches.delete(n);
+        });
+      });
+    }
+    /* Detect silent module load failure (stale cache) and prompt refresh */
+    window.__psarLoaded = false;
+    setTimeout(function () {
+      if (!window.__psarLoaded) {
+        var root = document.getElementById('view-root');
+        if (root && !root.innerHTML.trim()) {
+          root.innerHTML = '<div style="padding:24px;text-align:center">' +
+            '<p style="font-size:1.1rem;font-weight:700;color:#183859">App update requires a fresh reload</p>' +
+            '<p style="color:#4e5d6c">Press <strong>Ctrl+Shift+R</strong> (Windows) or <strong>Cmd+Shift+R</strong> (Mac)</p>' +
+            '<button onclick="location.reload(true)" style="margin-top:12px;padding:10px 20px;border:1px solid #f57c00;background:#f57c00;color:#fff;border-radius:10px;font:inherit;font-weight:600;cursor:pointer">Reload Now</button></div>';
+        }
+      }
+    }, 3000);
+  </script>
   <script type="module" src="./src/main.js"></script>
   <script>
     /* QR code tap-to-enlarge (self-contained, no app dependency) */

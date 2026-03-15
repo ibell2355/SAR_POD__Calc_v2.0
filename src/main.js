@@ -1,31 +1,30 @@
 import { loadConfig } from './model/configLoader.js';
-import { computeForTarget, inferPrimaryTarget, selectedTargets, generateQaWarnings } from './model/podEngine.js';
+import { computePOD, generateQaWarnings } from './model/podEngine.js';
+import { buildSegmentReportData, segmentReportText, segmentUploadPayload } from './model/reportData.js';
 import { getValue, setValue, clearAll } from './storage/db.js';
 import {
-  renderHome, renderSegment, renderReport,
-  buildReportText, podResultHtml, segmentListHtml, trackLengthOutputHtml, esc
+  renderHome, renderSegment, renderReportList, renderSegmentReport,
+  podResultHtml, segmentListHtml, esc
 } from './ui/render.js';
+
+/* Signal that all module imports resolved successfully */
+window.__psarLoaded = true;
 
 /* ================================================================
    Constants
    ================================================================ */
 
-const ACRES_TO_M2 = 4046.8564224;
-const HECTARES_TO_M2 = 10000;
+const UPLOAD_ENDPOINT = 'https://little-river-e034.ian-bell-personal.workers.dev';
 
 /* ================================================================
    Defaults
    ================================================================ */
 
 const defaultSearch = {
-  type_of_search: 'active_missing_person',
-  active_targets: ['adult'],
+  search_for: 'missing_person',
   auditory: 'none',
   visual: 'none',
-  subject_visibility: 'medium',
-  remains_state: 'intact_remains',
-  evidence_classes: ['large_evidence'],
-  evidence_categories: ['remains']
+  visibility: 'medium'
 };
 
 function newSegment() {
@@ -39,15 +38,9 @@ function newSegment() {
     extenuating_factors: 3,
     burial_or_cover: 3,
     num_searchers: 1,
-    area_acres: '',
-    area_hectares: '',
-    area_m2: 0,
-    critical_spacing_m: 15,
-    area_coverage_pct: 100,
-    track_length_ind_m: '',
+    actual_spacing_m: 10,
     notes: {},
-    results: [],
-    primaryTarget: null,
+    result: null,
     qaWarnings: []
   };
 }
@@ -92,9 +85,7 @@ async function init() {
     const stampEl = document.getElementById('build-stamp');
     if (stampEl) stampEl.textContent = `v${pkgInfo.version} \u00b7 ${pkgInfo.buildDate}`;
 
-    // Theme initialization
     initTheme();
-
     await hydrate();
 
     const root = document.getElementById('view-root');
@@ -151,7 +142,6 @@ function updateThemeButton() {
   btn.textContent = isDark ? 'Light Mode' : 'Dark Mode';
 }
 
-// Global click handler for theme toggle (in header, outside #view-root)
 document.addEventListener('click', (e) => {
   if (e.target.closest('#theme-toggle-btn')) toggleTheme();
 });
@@ -169,26 +159,18 @@ function route() {
     const seg = state.segments.find((s) => s.id === id);
     if (!seg) { location.hash = '#/'; return; }
     renderSegment(root, seg,
-      { results: seg.results, primaryTarget: seg.primaryTarget, qaWarnings: seg.qaWarnings },
-      saveState, configValid, configError, config, state.searchLevel.type_of_search);
-  } else if (hash === '#/report') {
-    renderReport(root, state, appVersion, formatReportDate(new Date()), configValid, configError, config);
+      { result: seg.result, qaWarnings: seg.qaWarnings },
+      saveState, configValid, configError, config, state.searchLevel.search_for);
+  } else if (hash.startsWith('#/report/')) {
+    const id = hash.slice('#/report/'.length);
+    const seg = state.segments.find((s) => s.id === id);
+    if (!seg) { location.hash = '#/reports'; return; }
+    const data = buildSegmentReportData(state, seg, formatReportDate(new Date()));
+    renderSegmentReport(root, data);
+  } else if (hash === '#/reports') {
+    renderReportList(root, state.segments);
   } else {
     renderHome(root, state, saveState, configValid, configError, config);
-  }
-}
-
-/* ================================================================
-   Area conversion helpers
-   ================================================================ */
-
-function syncAreaM2(seg) {
-  if (seg.area_acres > 0) {
-    seg.area_m2 = seg.area_acres * ACRES_TO_M2;
-  } else if (seg.area_hectares > 0) {
-    seg.area_m2 = seg.area_hectares * HECTARES_TO_M2;
-  } else {
-    seg.area_m2 = 0;
   }
 }
 
@@ -220,22 +202,19 @@ function onClick(e) {
    ================================================================ */
 
 function handleInput(el) {
-  const { name, value, type, checked } = el;
+  const { name, value } = el;
   const hash = location.hash || '#/';
 
-  // Session fields
   if (['your_name', 'search_name', 'team_name'].includes(name)) {
     state.session[name] = value;
     debounceSave();
     return;
   }
 
-  // Segment fields
   if (hash.startsWith('#/segment/')) {
     const segId = hash.slice('#/segment/'.length);
     const seg = state.segments.find((s) => s.id === segId);
     if (seg) {
-      // Note fields
       if (name.startsWith('note_')) {
         const noteField = name.slice(5);
         if (!seg.notes) seg.notes = {};
@@ -245,15 +224,15 @@ function handleInput(el) {
       }
 
       const segFields = [
-        'name', 'num_searchers', 'area_acres', 'area_hectares',
-        'critical_spacing_m', 'area_coverage_pct', 'track_length_ind_m',
+        'name', 'num_searchers',
+        'actual_spacing_m',
         'time_of_day', 'weather',
         'vegetation_density', 'micro_terrain_complexity', 'extenuating_factors', 'burial_or_cover'
       ];
       if (segFields.includes(name)) {
         const numericFields = [
-          'num_searchers', 'area_acres', 'area_hectares',
-          'critical_spacing_m', 'area_coverage_pct', 'track_length_ind_m',
+          'num_searchers',
+          'actual_spacing_m',
           'vegetation_density', 'micro_terrain_complexity', 'extenuating_factors', 'burial_or_cover'
         ];
         if (numericFields.includes(name)) {
@@ -262,36 +241,10 @@ function handleInput(el) {
           seg[name] = value;
         }
 
-        // Mutually exclusive area inputs
-        if (name === 'area_acres' && value !== '' && Number(value) > 0) {
-          seg.area_hectares = '';
-          const haInput = document.querySelector('input[name="area_hectares"]');
-          if (haInput) { haInput.value = ''; haInput.disabled = true; }
-        } else if (name === 'area_acres' && (value === '' || Number(value) <= 0)) {
-          const haInput = document.querySelector('input[name="area_hectares"]');
-          if (haInput) haInput.disabled = false;
-        }
-        if (name === 'area_hectares' && value !== '' && Number(value) > 0) {
-          seg.area_acres = '';
-          const acInput = document.querySelector('input[name="area_acres"]');
-          if (acInput) { acInput.value = ''; acInput.disabled = true; }
-        } else if (name === 'area_hectares' && (value === '' || Number(value) <= 0)) {
-          const acInput = document.querySelector('input[name="area_acres"]');
-          if (acInput) acInput.disabled = false;
-        }
-
-        syncAreaM2(seg);
         recomputeSegment(seg);
 
-        // Partial updates
         const podEl = document.getElementById('pod-result');
-        if (podEl) podEl.innerHTML = podResultHtml(seg, { results: seg.results, primaryTarget: seg.primaryTarget, qaWarnings: seg.qaWarnings });
-
-        const trackEl = document.getElementById('track-length-display');
-        if (trackEl) {
-          const trackResult = seg.results?.[0];
-          trackEl.innerHTML = trackLengthOutputHtml(seg, trackResult);
-        }
+        if (podEl) podEl.innerHTML = podResultHtml(seg, { result: seg.result, qaWarnings: seg.qaWarnings });
 
         debounceSave();
         return;
@@ -299,59 +252,12 @@ function handleInput(el) {
     }
   }
 
-  // Search-level radios
-  if (['type_of_search', 'auditory', 'visual', 'subject_visibility', 'remains_state'].includes(name)) {
+  if (['search_for', 'auditory', 'visual', 'visibility'].includes(name)) {
     state.searchLevel[name] = value;
 
-    if (name === 'type_of_search') {
+    if (name === 'search_for') {
       const survey = document.getElementById('search-survey');
       if (survey) survey.dataset.searchType = value;
-    }
-
-    recomputeAllSegments();
-    const listEl = document.getElementById('segment-list');
-    if (listEl) listEl.innerHTML = segmentListHtml(state.segments);
-    debounceSave();
-    return;
-  }
-
-  // Search-level checkboxes
-  if (['active_targets', 'evidence_classes', 'evidence_categories'].includes(name) && type === 'checkbox') {
-    const arr = state.searchLevel[name] || [];
-    const next = checked
-      ? [...new Set([...arr, value])]
-      : arr.filter((x) => x !== value);
-
-    if (name === 'active_targets' && next.length === 0) {
-      el.checked = true;
-      return;
-    }
-    if (name === 'evidence_categories' && next.length === 0) {
-      el.checked = true;
-      return;
-    }
-    if (name === 'evidence_classes' && next.length === 0
-        && (state.searchLevel.evidence_categories || []).includes('evidence')) {
-      el.checked = true;
-      return;
-    }
-
-    state.searchLevel[name] = next;
-
-    if (name === 'evidence_categories' && next.includes('evidence')) {
-      if (!state.searchLevel.evidence_classes || state.searchLevel.evidence_classes.length === 0) {
-        state.searchLevel.evidence_classes = ['large_evidence'];
-        const checkbox = document.querySelector('input[name="evidence_classes"][value="large_evidence"]');
-        if (checkbox) checkbox.checked = true;
-      }
-    }
-
-    if (name === 'evidence_categories') {
-      const catsEl = document.getElementById('evidence-cats');
-      if (catsEl) {
-        catsEl.dataset.hasRemains = next.includes('remains');
-        catsEl.dataset.hasEvidence = next.includes('evidence');
-      }
     }
 
     recomputeAllSegments();
@@ -402,28 +308,43 @@ function handleAction(action, id, btn) {
   }
 
   if (action === 'view-report') {
-    location.hash = '#/report';
+    location.hash = '#/reports';
+    return;
+  }
+
+  if (action === 'back-to-reports') {
+    location.hash = '#/reports';
+    return;
+  }
+
+  if (action === 'view-segment-report') {
+    location.hash = `#/report/${id}`;
     return;
   }
 
   if (action === 'print') {
-    // Expand all calculation details before printing
     document.querySelectorAll('.report-detail').forEach((d) => d.setAttribute('open', ''));
     window.print();
     return;
   }
 
-  if (action === 'copy-report') {
-    const text = buildReportText(state, appVersion, formatReportDate(new Date()));
+  // Per-segment copy
+  if (action === 'copy-segment-report') {
+    const seg = state.segments.find((s) => s.id === id);
+    if (!seg) return;
+    const text = getSegmentReportText(seg);
     copyToClipboard(text);
     showToast('Report copied to clipboard');
     return;
   }
 
-  if (action === 'share') {
-    const text = buildReportText(state, appVersion, formatReportDate(new Date()));
+  // Per-segment share
+  if (action === 'share-segment-report') {
+    const seg = state.segments.find((s) => s.id === id);
+    if (!seg) return;
+    const text = getSegmentReportText(seg);
     if (navigator.share) {
-      navigator.share({ title: 'SAR POD Calculator Report', text }).catch(() => {});
+      navigator.share({ title: `SAR POD \u2014 ${seg.name || 'Segment Report'}`, text }).catch(() => {});
     } else {
       copyToClipboard(text);
       showToast('Report copied to clipboard');
@@ -431,8 +352,16 @@ function handleAction(action, id, btn) {
     return;
   }
 
+  // Per-segment upload
+  if (action === 'upload-segment') {
+    const seg = state.segments.find((s) => s.id === id);
+    if (!seg) return;
+    uploadSegment(seg, btn);
+    return;
+  }
+
   if (action === 'new-session') {
-    if (!confirm('Clear all data and start a new session?')) return;
+    if (!confirm('Clear all data and start a new session? This cannot be undone.')) return;
     state.session = { your_name: '', search_name: '', team_name: '' };
     state.searchLevel = structuredClone(defaultSearch);
     state.segments = [];
@@ -446,6 +375,44 @@ function handleAction(action, id, btn) {
 }
 
 /* ================================================================
+   Report helpers — derive text & payload from same data source
+   ================================================================ */
+
+function getSegmentReportText(seg) {
+  const data = buildSegmentReportData(state, seg, formatReportDate(new Date()));
+  return segmentReportText(data);
+}
+
+async function uploadSegment(seg, btn) {
+  const data = buildSegmentReportData(state, seg, formatReportDate(new Date()));
+  const text = segmentReportText(data);
+  const payload = segmentUploadPayload(data, text);
+
+  const origText = btn.textContent;
+  btn.textContent = 'Uploading\u2026';
+  btn.disabled = true;
+
+  try {
+    const resp = await fetch(UPLOAD_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (resp.ok) {
+      showToast('Upload successful');
+    } else {
+      showToast(`Upload failed (${resp.status})`);
+    }
+  } catch (err) {
+    console.error('[PSAR POD] Upload failed:', err);
+    showToast('Upload failed \u2014 check connection');
+  } finally {
+    btn.textContent = origText;
+    btn.disabled = false;
+  }
+}
+
+/* ================================================================
    Computation
    ================================================================ */
 
@@ -455,12 +422,7 @@ function recomputeAllSegments() {
 
 function recomputeSegment(seg) {
   const cfg = config || {};
-  syncAreaM2(seg);
-  const targets = selectedTargets(state.searchLevel);
-  seg.primaryTarget = inferPrimaryTarget(targets, cfg, state.searchLevel.type_of_search);
-  seg.results = targets.map((t) =>
-    computeForTarget({ config: cfg, searchLevel: state.searchLevel, segment: seg, targetKey: t })
-  );
+  seg.result = computePOD({ config: cfg, searchLevel: state.searchLevel, segment: seg });
   seg.qaWarnings = generateQaWarnings(seg, cfg);
 }
 
@@ -526,52 +488,65 @@ function migrateState(raw) {
   };
 
   const searchLevel = { ...structuredClone(defaultSearch), ...(raw.searchLevel || {}) };
-  if (!searchLevel.subject_visibility) searchLevel.subject_visibility = 'medium';
-  searchLevel.active_targets = Array.isArray(searchLevel.active_targets)
-    ? searchLevel.active_targets
-    : [...defaultSearch.active_targets];
-  searchLevel.evidence_classes = Array.isArray(searchLevel.evidence_classes) && searchLevel.evidence_classes.length > 0
-    ? searchLevel.evidence_classes
-    : ['large_evidence'];
-  searchLevel.evidence_categories = Array.isArray(searchLevel.evidence_categories)
-    ? searchLevel.evidence_categories
-    : ['remains'];
+
+  if (!searchLevel.search_for && searchLevel.type_of_search) {
+    if (searchLevel.type_of_search === 'active_missing_person') {
+      searchLevel.search_for = 'missing_person';
+    } else if (searchLevel.type_of_search === 'evidence_historical') {
+      searchLevel.search_for = 'evidence';
+    }
+  }
+  if (!['missing_person', 'historical_article', 'evidence'].includes(searchLevel.search_for)) {
+    searchLevel.search_for = 'missing_person';
+  }
+
+  if (!searchLevel.visibility && searchLevel.subject_visibility) {
+    searchLevel.visibility = searchLevel.subject_visibility;
+  }
+  if (!['low', 'medium', 'high'].includes(searchLevel.visibility)) {
+    searchLevel.visibility = 'medium';
+  }
+
+  delete searchLevel.type_of_search;
+  delete searchLevel.subject_visibility;
+  delete searchLevel.active_targets;
+  delete searchLevel.evidence_classes;
+  delete searchLevel.evidence_categories;
+  delete searchLevel.remains_state;
 
   const segments = (raw.segments || []).map((seg) => {
     const next = { ...newSegment(), ...seg };
     next.id = seg.id || uid();
     next.name = seg.name || '';
 
-    // V2 -> V3 migration
-    if (next.critical_spacing_m == null && seg.actual_spacing_m != null) {
-      next.critical_spacing_m = Number(seg.actual_spacing_m);
-    }
-    if (seg.area_coverage_pct == null && seg.searched_fraction != null) {
-      next.area_coverage_pct = clampNum(Number(seg.searched_fraction) * 100, 0, 100, 100);
+    if (next.actual_spacing_m == null || next.actual_spacing_m === '') {
+      if (seg.critical_spacing_m != null) {
+        next.actual_spacing_m = Number(seg.critical_spacing_m);
+      } else if (seg.actual_spacing_m != null) {
+        next.actual_spacing_m = Number(seg.actual_spacing_m);
+      }
     }
 
-    // New V3 fields with defaults
     next.num_searchers = clampNum(Number(next.num_searchers), 1, 999, 1);
-    next.area_acres = next.area_acres || '';
-    next.area_hectares = next.area_hectares || '';
-    next.track_length_ind_m = next.track_length_ind_m || '';
-
-    // Remove legacy fields
-    delete next.segment_start_time;
-    delete next.segment_end_time;
-    delete next.searched_fraction;
-    delete next.inaccessible_fraction;
-    delete next.detectability_level;
-
-    next.critical_spacing_m = clampNum(next.critical_spacing_m, 0.1, 10000, 15);
-    next.area_coverage_pct = clampNum(next.area_coverage_pct, 0, 100, 100);
+    next.actual_spacing_m = clampNum(next.actual_spacing_m, 0.1, 10000, 10);
     next.vegetation_density = clampNum(Number(next.vegetation_density), 1, 5, 3);
     next.micro_terrain_complexity = clampNum(Number(next.micro_terrain_complexity), 1, 5, 3);
     next.extenuating_factors = clampNum(Number(next.extenuating_factors), 1, 5, 3);
     next.burial_or_cover = clampNum(Number(next.burial_or_cover), 1, 5, 3);
     if (!next.notes || typeof next.notes !== 'object') next.notes = {};
-    next.results = [];
-    next.primaryTarget = null;
+
+    delete next.critical_spacing_m;
+    delete next.area_coverage_pct;
+    delete next.track_length_ind_m;
+    delete next.segment_start_time;
+    delete next.segment_end_time;
+    delete next.searched_fraction;
+    delete next.inaccessible_fraction;
+    delete next.detectability_level;
+    delete next.results;
+    delete next.primaryTarget;
+
+    next.result = null;
     return next;
   });
 
@@ -607,32 +582,24 @@ function updateConnectivity() {
 
 function registerSW() {
   if (!('serviceWorker' in navigator)) return;
-
   const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-
   if (isDev) {
-    navigator.serviceWorker.getRegistrations().then((regs) =>
-      regs.forEach((r) => r.unregister())
-    );
+    navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister()));
     caches.keys().then((names) => names.forEach((n) => caches.delete(n)));
     return;
   }
-
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (reloading) return;
     reloading = true;
     location.reload();
   });
-
   navigator.serviceWorker.register('./service-worker.js')
     .then((reg) => {
       console.log('[PSAR POD] SW registered, scope:', reg.scope);
       reg.update().catch(() => {});
       document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-          reg.update().catch(() => {});
-        }
+        if (document.visibilityState === 'visible') reg.update().catch(() => {});
       });
     })
     .catch(() => {});
@@ -680,6 +647,6 @@ function clampNum(val, min, max, fallback) {
 }
 
 function stripComputed(seg) {
-  const { results, primaryTarget, qaWarnings, area_m2, ...inputs } = seg;
+  const { result, qaWarnings, ...inputs } = seg;
   return inputs;
 }

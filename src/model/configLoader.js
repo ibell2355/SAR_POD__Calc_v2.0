@@ -53,7 +53,7 @@ export async function loadConfig() {
     }
 
     // Basic sanity check
-    const required = ['targets', 'condition_factors', 'response_model'];
+    const required = ['search_types', 'condition_factors', 'response_model'];
     const missing = required.filter((k) => !config[k]);
     if (missing.length) {
       return {

@@ -1,10 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-// Since we're a pure ES module browser app, we import the engine directly.
-// The clamp helper is tiny; inline it for the test context.
-// We mock the import by providing the module inline.
-
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
 /* ================================================================
@@ -35,95 +31,75 @@ describe('Unit conversions', () => {
 });
 
 /* ================================================================
-   Track length estimation tests
+   Spacing-based POD formula tests
    ================================================================ */
 
-describe('Track length estimation', () => {
-  function estimateTrackLength({ area_m2, coverage_pct, critical_spacing_m, num_searchers }) {
-    const A = Number(area_m2 || 0);
-    const pct = Number(coverage_pct ?? 100);
-    const S = Number(critical_spacing_m || 0);
-    const N = Number(num_searchers || 0);
-    if (A <= 0 || S <= 0 || N <= 0) return { L_ind_est: 0, L_total_est: 0 };
-    const A_covered_m2 = A * (pct / 100);
-    const L_ind_est = A_covered_m2 / (S * N);
-    const L_total_est = L_ind_est * N;
-    return { L_ind_est, L_total_est };
+describe('Spacing-based POD formula', () => {
+  function spacingPOD(W_eff, actual_spacing_m) {
+    if (actual_spacing_m <= 0) return 0;
+    const coverage_factor = W_eff / actual_spacing_m;
+    return clamp(1 - Math.exp(-coverage_factor), 0, 0.99);
   }
 
-  it('basic track length: 10000 m2, 100% coverage, 10m spacing, 2 searchers', () => {
-    const r = estimateTrackLength({ area_m2: 10000, coverage_pct: 100, critical_spacing_m: 10, num_searchers: 2 });
-    assert.strictEqual(r.L_ind_est, 500);    // 10000 / (10 * 2)
-    assert.strictEqual(r.L_total_est, 1000);  // 10000 / 10
+  it('W_eff = spacing => coverage_factor = 1 => POD ~ 0.632', () => {
+    const pod = spacingPOD(10, 10);
+    assert.ok(Math.abs(pod - 0.6321) < 0.01, `Expected ~0.632, got ${pod}`);
   });
 
-  it('50% coverage halves track length', () => {
-    const r = estimateTrackLength({ area_m2: 10000, coverage_pct: 50, critical_spacing_m: 10, num_searchers: 2 });
-    assert.strictEqual(r.L_ind_est, 250);
-    assert.strictEqual(r.L_total_est, 500);
+  it('W_eff much less than spacing => low POD', () => {
+    // coverage_factor = 1/100 = 0.01
+    const pod = spacingPOD(1, 100);
+    const expected = 1 - Math.exp(-0.01);
+    assert.ok(Math.abs(pod - expected) < 0.001, `Expected ~${expected}, got ${pod}`);
   });
 
-  it('zero area returns zero', () => {
-    const r = estimateTrackLength({ area_m2: 0, coverage_pct: 100, critical_spacing_m: 10, num_searchers: 2 });
-    assert.strictEqual(r.L_ind_est, 0);
-    assert.strictEqual(r.L_total_est, 0);
+  it('W_eff much greater than spacing => POD clamps at 0.99', () => {
+    const pod = spacingPOD(100, 1);
+    assert.strictEqual(pod, 0.99);
   });
 
-  it('zero spacing returns zero (guard)', () => {
-    const r = estimateTrackLength({ area_m2: 10000, coverage_pct: 100, critical_spacing_m: 0, num_searchers: 2 });
-    // S=0 triggers the guard: S <= 0 returns zeros
-    assert.strictEqual(r.L_ind_est, 0);
-    assert.strictEqual(r.L_total_est, 0);
+  it('zero spacing returns 0', () => {
+    assert.strictEqual(spacingPOD(10, 0), 0);
   });
 
-  it('single searcher: L_ind = L_total', () => {
-    const r = estimateTrackLength({ area_m2: 10000, coverage_pct: 100, critical_spacing_m: 10, num_searchers: 1 });
-    assert.strictEqual(r.L_ind_est, 1000);
-    assert.strictEqual(r.L_total_est, 1000);
+  it('zero W_eff returns 0', () => {
+    const pod = spacingPOD(0, 10);
+    assert.strictEqual(pod, 0);
+  });
+
+  it('coverage_factor = 2 => POD ~ 0.865', () => {
+    const pod = spacingPOD(20, 10);
+    const expected = 1 - Math.exp(-2);
+    assert.ok(Math.abs(pod - expected) < 0.01, `Expected ~${expected.toFixed(3)}, got ${pod}`);
+  });
+
+  it('coverage_factor = 0.5 => POD ~ 0.393', () => {
+    const pod = spacingPOD(5, 10);
+    const expected = 1 - Math.exp(-0.5);
+    assert.ok(Math.abs(pod - expected) < 0.01, `Expected ~${expected.toFixed(3)}, got ${pod}`);
   });
 });
 
 /* ================================================================
-   Koopman POD output tests
+   Coverage factor tests
    ================================================================ */
 
-describe('Koopman POD formula', () => {
-  function koopmanPOD(W_eff, L_total, A_m2) {
-    if (A_m2 <= 0) return 0;
-    const coverage_C = (W_eff * L_total) / A_m2;
-    return clamp(1 - Math.exp(-coverage_C), 0, 0.99);
-  }
-
-  it('coverage_C = 1 => POD ~ 0.632', () => {
-    // W_eff * L_total / A = 1
-    const pod = koopmanPOD(10, 100, 1000);
-    assert.ok(Math.abs(pod - 0.6321) < 0.01, `Expected ~0.632, got ${pod}`);
+describe('Coverage factor', () => {
+  it('coverage_factor = W_eff / actual_spacing', () => {
+    const W_eff = 16;
+    const spacing = 8;
+    const cf = W_eff / spacing;
+    assert.strictEqual(cf, 2);
   });
 
-  it('small coverage_C ~ coverage_C itself (linear approximation)', () => {
-    // For small x: 1 - exp(-x) ~ x
-    const pod = koopmanPOD(1, 10, 10000); // coverage = 0.001
-    const coverage = (1 * 10) / 10000;
-    assert.ok(Math.abs(pod - coverage) < 0.001, `Expected ~${coverage}, got ${pod}`);
+  it('small spacing gives high coverage', () => {
+    const cf = 10 / 2;
+    assert.strictEqual(cf, 5);
   });
 
-  it('very large coverage_C clamps at 0.99', () => {
-    const pod = koopmanPOD(50, 10000, 100);
-    assert.strictEqual(pod, 0.99);
-  });
-
-  it('zero area returns 0', () => {
-    assert.strictEqual(koopmanPOD(10, 100, 0), 0);
-  });
-
-  it('zero W_eff returns 0', () => {
-    const pod = koopmanPOD(0, 100, 1000);
-    assert.strictEqual(pod, 0);
-  });
-
-  it('zero track length returns 0', () => {
-    const pod = koopmanPOD(10, 0, 1000);
-    assert.strictEqual(pod, 0);
+  it('large spacing gives low coverage', () => {
+    const cf = 10 / 100;
+    assert.strictEqual(cf, 0.1);
   });
 });
 
@@ -144,51 +120,45 @@ describe('Input guardrails', () => {
     assert.strictEqual(clamp(50, 0, 100), 50);
   });
 
-  it('N=0 should produce zero track length', () => {
-    // N=0 or negative should not cause divide-by-zero
-    const A = 10000, pct = 100, S = 10, N = 0;
-    if (N <= 0) {
-      assert.ok(true, 'Guard triggered for N=0');
+  it('spacing <= 0 should produce zero POD', () => {
+    const spacing = 0;
+    if (spacing <= 0) {
+      assert.ok(true, 'Guard triggered for spacing=0');
     }
   });
 
-  it('S=0 should produce zero track length', () => {
-    const A = 10000, pct = 100, S = 0, N = 2;
-    if (S <= 0) {
-      assert.ok(true, 'Guard triggered for S=0');
+  it('negative spacing should produce zero POD', () => {
+    const spacing = -5;
+    if (spacing <= 0) {
+      assert.ok(true, 'Guard triggered for negative spacing');
     }
-  });
-
-  it('coverage_pct out of range is handled', () => {
-    const pct = clamp(120, 0, 100);
-    assert.strictEqual(pct, 100);
-    const pct2 = clamp(-10, 0, 100);
-    assert.strictEqual(pct2, 0);
   });
 });
 
 /* ================================================================
-   W_eff computation test
+   W_eff computation tests
    ================================================================ */
 
 describe('W_eff computation', () => {
-  it('W_eff = W0 * C_t * M_resp, clamped', () => {
-    const W0 = 21;
-    const C_t = 1.0;
+  it('W_eff = base * C_t * M_resp, clamped', () => {
+    const base = 10;
+    const C_t = 1.6; // medium visibility
     const M_resp = 1.0;
     const w_min = 0.5;
     const w_max = 100;
-    const W_eff = clamp(W0 * C_t * M_resp, w_min, w_max);
-    assert.strictEqual(W_eff, 21);
+    const W_eff = clamp(base * C_t * M_resp, w_min, w_max);
+    assert.strictEqual(W_eff, 16);
   });
 
-  it('adverse conditions reduce W_eff', () => {
-    const W0 = 21;
-    const C_t = 0.5 * 0.88 * 0.45; // night * snow * heavy veg
-    const M_resp = 1.0;
-    const W_eff = clamp(W0 * C_t * M_resp, 0.5, 100);
-    assert.ok(W_eff < 21, `Expected W_eff < 21, got ${W_eff}`);
-    assert.ok(W_eff > 0.5, `Expected W_eff > 0.5, got ${W_eff}`);
+  it('visibility coefficient scales W_eff', () => {
+    const base = 10;
+    const K_vis_high = 1.8;
+    const K_vis_low = 1.1;
+    const W_high = base * K_vis_high;
+    const W_low = base * K_vis_low;
+    assert.strictEqual(W_high, 18);
+    assert.strictEqual(W_low, 11);
+    assert.ok(W_high > W_low, 'High visibility should give higher W_eff');
   });
 
   it('W_eff clamps to min', () => {
@@ -199,5 +169,60 @@ describe('W_eff computation', () => {
   it('W_eff clamps to max', () => {
     const W_eff = clamp(200, 0.5, 100);
     assert.strictEqual(W_eff, 100);
+  });
+
+  it('multiple coefficients multiply together', () => {
+    const base = 10;
+    const K_vis = 1.6;
+    const K_time = 1.0;
+    const K_weather = 1.0;
+    const K_veg = 1.0;
+    const K_terrain = 1.0;
+    const K_ext = 1.0;
+    const C_t = K_vis * K_time * K_weather * K_veg * K_terrain * K_ext;
+    assert.strictEqual(C_t, 1.6);
+    assert.strictEqual(base * C_t, 16);
+  });
+});
+
+/* ================================================================
+   End-to-end POD calculation test
+   ================================================================ */
+
+describe('End-to-end POD', () => {
+  it('base=10, vis=medium(1.6), spacing=10 => coverage=1.6 => POD~0.798', () => {
+    const base = 10;
+    const C_t = 1.6;
+    const M_resp = 1.0;
+    const W_eff = clamp(base * C_t * M_resp, 0.5, 100);
+    const spacing = 10;
+    const cf = W_eff / spacing;
+    const pod = clamp(1 - Math.exp(-cf), 0, 0.99);
+    assert.ok(Math.abs(cf - 1.6) < 0.001, `Expected coverage_factor=1.6, got ${cf}`);
+    assert.ok(Math.abs(pod - 0.7981) < 0.01, `Expected POD~0.798, got ${pod}`);
+  });
+
+  it('base=10, vis=high(1.8), spacing=5 => coverage=3.6 => POD~0.973', () => {
+    const base = 10;
+    const C_t = 1.8;
+    const M_resp = 1.0;
+    const W_eff = clamp(base * C_t * M_resp, 0.5, 100);
+    const spacing = 5;
+    const cf = W_eff / spacing;
+    const pod = clamp(1 - Math.exp(-cf), 0, 0.99);
+    assert.ok(Math.abs(cf - 3.6) < 0.001, `Expected coverage_factor=3.6, got ${cf}`);
+    assert.ok(Math.abs(pod - 0.9727) < 0.01, `Expected POD~0.973, got ${pod}`);
+  });
+
+  it('base=10, vis=low(1.1), spacing=20 => coverage=0.55 => POD~0.423', () => {
+    const base = 10;
+    const C_t = 1.1;
+    const M_resp = 1.0;
+    const W_eff = clamp(base * C_t * M_resp, 0.5, 100);
+    const spacing = 20;
+    const cf = W_eff / spacing;
+    const pod = clamp(1 - Math.exp(-cf), 0, 0.99);
+    assert.ok(Math.abs(cf - 0.55) < 0.001, `Expected coverage_factor=0.55, got ${cf}`);
+    assert.ok(Math.abs(pod - 0.4231) < 0.01, `Expected POD~0.423, got ${pod}`);
   });
 });

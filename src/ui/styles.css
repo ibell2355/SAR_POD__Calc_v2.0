@@ -384,13 +384,8 @@ textarea:disabled {
   padding-top: 10px;
 }
 
-#search-survey[data-search-type="active_missing_person"] .evidence-only { display: none; }
-#search-survey[data-search-type="evidence_historical"] .active-only { display: none; }
-
-/* ---- Evidence category sub-option show/hide ---- */
-
-#evidence-cats[data-has-remains="false"] .remains-options { display: none; }
-#evidence-cats[data-has-evidence="false"] .evidence-options { display: none; }
+/* Hide auditory/visual response section for non-missing-person search types */
+#search-survey:not([data-search-type="missing_person"]) .missing-person-only { display: none; }
 
 /* ---- Sticky POD result ---- */
 
@@ -499,7 +494,7 @@ textarea:disabled {
   transform: translateX(-50%) translateY(0);
 }
 
-/* ---- Computed output / track length ---- */
+/* ---- Computed output ---- */
 
 .computed-output {
   display: inline-block;
@@ -513,31 +508,40 @@ textarea:disabled {
   margin-top: 4px;
 }
 
-.track-length-output {
-  display: block;
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--accent);
-  background: var(--surface-alt);
+/* ---- Report segment cards ---- */
+
+.report-seg-card {
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 8px 12px;
-  margin-top: 6px;
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--surface);
 }
 
-/* ---- Tooltip prominent ---- */
+.report-seg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
 
-.tooltip-prominent {
-  display: block;
+.btn-sm {
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+
+/* ---- Coefficient impact badges ---- */
+
+.impact-positive {
   font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--selected);
-  background: var(--selected-soft);
-  border: 1px solid var(--selected);
-  border-radius: 8px;
-  padding: 6px 10px;
-  margin-top: 4px;
-  line-height: 1.4;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.impact-negative {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--danger);
 }
 
 /* ---- Utility ---- */

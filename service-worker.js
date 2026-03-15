@@ -7,7 +7,7 @@
  *   Cross-origin       → network only
  */
 
-const CACHE_NAME = 'psar-pod-v14';
+const CACHE_NAME = 'psar-pod-v16';
 
 const APP_SHELL = [
   './',
@@ -16,6 +16,7 @@ const APP_SHELL = [
   './src/ui/render.js',
   './src/ui/styles.css',
   './src/model/podEngine.js',
+  './src/model/reportData.js',
   './src/model/configLoader.js',
   './src/utils/math.js',
   './src/utils/simpleYaml.js',
