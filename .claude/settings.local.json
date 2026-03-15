@@ -1,18 +1,33 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
-      "Bash(node --test)",
-      "Bash(node -e:*)",
+      "Bash(cd:*)",
+      "Bash(dir:*)",
+      "Bash(ls:*)",
+      "Bash(pwd:*)",
+      "Bash(cat:*)",
+      "Bash(type:*)",
       "Bash(grep:*)",
-      "Bash(npx vitest run)",
+      "Bash(find:*)",
+      "Bash(rg:*)",
+      "Bash(curl:*)",
+      "Bash(python:*)",
+      "Bash(py:*)",
+      "Bash(pip:*)",
+      "Bash(pip install:*)",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(node:*)",
       "Bash(node --test:*)",
-      "Bash(node tests/podEngine.test.js:*)",
+      "Bash(npx vitest run:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(cd:*)",
+      "Bash(taskkill:*)",
       "WebFetch(domain:127.0.0.1)",
-      "Bash(curl:*)",
-      "Bash(taskkill:*)"
+      "WebFetch(domain:localhost)"
     ]
   }
 }

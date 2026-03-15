@@ -14,7 +14,7 @@ window.__psarLoaded = true;
    Constants
    ================================================================ */
 
-const UPLOAD_ENDPOINT = 'https://little-river-e034.ian-bell-personal.workers.dev';
+const UPLOAD_ENDPOINT = 'https://little-river-e034.ian-bell-personal.workers.dev/api/reports';
 
 /* ================================================================
    Defaults
@@ -401,11 +401,18 @@ async function uploadSegment(seg, btn) {
     if (resp.ok) {
       showToast('Upload successful');
     } else {
-      showToast(`Upload failed (${resp.status})`);
+      let detail = '';
+      try { const body = await resp.json(); detail = body.error || ''; } catch { /* ignore */ }
+      console.error(`[PSAR POD] Upload failed: ${resp.status}`, detail);
+      showToast(`Upload failed (${resp.status}${detail ? ': ' + detail : ''})`);
     }
   } catch (err) {
     console.error('[PSAR POD] Upload failed:', err);
-    showToast('Upload failed \u2014 check connection');
+    if (err instanceof TypeError) {
+      showToast('Upload failed \u2014 server unreachable or CORS blocked');
+    } else {
+      showToast('Upload failed \u2014 check connection');
+    }
   } finally {
     btn.textContent = origText;
     btn.disabled = false;
