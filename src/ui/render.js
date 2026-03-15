@@ -317,7 +317,7 @@ function impactBadge(impacts, name) {
 
 function impactBadgeFromImpact(imp) {
   if (!imp) return '';
-  const sign = imp.impact_percent > 0 ? '+' : '';
+  const sign = imp.impact_percent >= 0 ? '+' : '';
   const cls = imp.impact_percent > 0 ? 'impact-positive' : imp.impact_percent < 0 ? 'impact-negative' : 'impact-neutral';
   return ` <span class="${cls}">${sign}${imp.impact_percent.toFixed(1)}% POD</span>`;
 }

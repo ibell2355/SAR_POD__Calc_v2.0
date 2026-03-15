@@ -224,6 +224,22 @@ export function segmentReportText(d) {
 
 export function segmentUploadPayload(d, reportText, persistentReportId) {
   const sKey = segmentKey(d.segment.name);
+  const impacts = d.segment.coefficient_impacts || [];
+
+  // Build template-ready per-row impact arrays from the same computed impacts
+  const searchInputDetails = buildInputDetails(impacts, [
+    ['Visibility', d.search.visibility],
+  ]);
+
+  const segInputRows = [
+    ['Time of Day', d.segment.time_of_day],
+    ['Weather', d.segment.weather],
+    ['Vegetation Density', d.segment.vegetation_density],
+    ['Micro-terrain Complexity', d.segment.micro_terrain_complexity],
+  ];
+  if (d.segment.extenuating_factors != null) segInputRows.push(['Extenuating Factors', d.segment.extenuating_factors]);
+  if (d.segment.burial_or_cover != null) segInputRows.push(['Burial / Cover', d.segment.burial_or_cover]);
+  const segmentInputDetails = buildInputDetails(impacts, segInputRows);
 
   return {
     report_id: persistentReportId,
@@ -239,6 +255,7 @@ export function segmentUploadPayload(d, reportText, persistentReportId) {
         ...(d.search.auditory != null ? { auditory_responsiveness: d.search.auditory } : {}),
         ...(d.search.visual != null ? { visual_responsiveness: d.search.visual } : {}),
       },
+      search_input_details: searchInputDetails,
     },
     segment: {
       segment_name: d.segment.name,
@@ -252,6 +269,7 @@ export function segmentUploadPayload(d, reportText, persistentReportId) {
         ...(d.segment.extenuating_factors != null ? { extenuating_factors: d.segment.extenuating_factors } : {}),
         ...(d.segment.burial_or_cover != null ? { burial_or_cover: d.segment.burial_or_cover } : {}),
       },
+      segment_input_details: segmentInputDetails,
       effective_sweep_width_m: d.segment.effective_sweep_width_m,
       coverage_factor: d.segment.coverage_factor,
       coefficient_impacts: d.segment.coefficient_impacts,
@@ -259,6 +277,22 @@ export function segmentUploadPayload(d, reportText, persistentReportId) {
     },
     report_text: reportText,
   };
+}
+
+/* ---- Build template-ready input detail rows from coefficient impacts ---- */
+
+function buildInputDetails(impacts, rows) {
+  return rows.map(([label, value]) => {
+    const imp = (impacts || []).find((i) => i.name === label);
+    const pct = imp ? imp.impact_percent : 0;
+    const sign = pct >= 0 ? '+' : '';
+    return {
+      label,
+      value,
+      impact_on_pod_pct: `${sign}${pct.toFixed(1)}%`,
+      impact_on_pod_raw: pct,
+    };
+  });
 }
 
 /* ---- Helpers ---- */
@@ -269,7 +303,7 @@ function findImpact(impacts, name) {
 
 function fmtImpact(imp) {
   if (!imp) return '';
-  const sign = imp.impact_percent > 0 ? '+' : '';
+  const sign = imp.impact_percent >= 0 ? '+' : '';
   return ` (${sign}${imp.impact_percent.toFixed(1)}% POD)`;
 }
 
