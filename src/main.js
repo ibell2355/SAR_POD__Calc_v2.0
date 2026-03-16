@@ -287,7 +287,7 @@ function handleInput(el) {
 
 function handleAction(action, id, btn) {
   if (action === 'view-ref-images') {
-    openImageViewer(btn.dataset.category);
+    openImageViewer(btn.dataset.category, btn.dataset.level);
     return;
   }
 

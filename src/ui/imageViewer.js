@@ -2,28 +2,49 @@
    Reference Image Viewer
 
    Displays a scrollable full-screen gallery of reference images
-   for a given category. Add new categories to IMAGE_SETS below.
+   for a given category and level.
+
+   To add images for a new category/level:
+   1. Place images in assets/<Category name>/
+   2. Add an entry to IMAGE_SETS below under category → level
+   3. Pass refCategory to the radioChips call in render.js
+   4. Add the image paths to the SW pre-cache list
    ================================================================ */
 
 const IMAGE_SETS = {
   vegetation_density: {
-    title: 'Vegetation Density \u2014 Reference Images',
-    images: [
-      { src: './assets/Vegetation density/low_vegetation_density_1.jpg', caption: 'Low Vegetation Density (1)' },
-      { src: './assets/Vegetation density/low_vegetation_density_2.jpg', caption: 'Low Vegetation Density (2)' },
-      { src: './assets/Vegetation density/low_vegetation_density_3.jpg', caption: 'Low Vegetation Density (3)' },
-      { src: './assets/Vegetation density/low_vegetation_density_4.jpg', caption: 'Low Vegetation Density (4)' },
-    ]
+    '1': {
+      title: 'Low Vegetation Density',
+      images: [
+        { src: './assets/Vegetation density/low_vegetation_density_1.jpg', caption: 'Low Vegetation Density (1)' },
+        { src: './assets/Vegetation density/low_vegetation_density_2.jpg', caption: 'Low Vegetation Density (2)' },
+        { src: './assets/Vegetation density/low_vegetation_density_3.jpg', caption: 'Low Vegetation Density (3)' },
+        { src: './assets/Vegetation density/low_vegetation_density_4.jpg', caption: 'Low Vegetation Density (4)' },
+      ]
+    },
+    // '2': { title: 'Low/Moderate Vegetation Density', images: [] },
+    // '3': { title: 'Moderate Vegetation Density', images: [] },
+    // '4': { title: 'Moderate/High Vegetation Density', images: [] },
+    // '5': { title: 'High Vegetation Density', images: [] },
   },
-  // Future categories:
-  // micro_terrain_complexity: { title: '...', images: [...] },
+  micro_terrain_complexity: {
+    // '1': { title: 'Minimal Micro-terrain', images: [] },
+    // '2': { title: 'Minimal/Moderate Micro-terrain', images: [] },
+    // ...
+  },
 };
 
-/** Open the reference image viewer for a given category key. */
-export function openImageViewer(category) {
+/** Check whether reference images exist for a category + level. */
+export function hasRefImages(category, level) {
+  const set = IMAGE_SETS[category]?.[String(level)];
+  return !!(set && set.images.length);
+}
+
+/** Open the reference image viewer for a given category and level. */
+export function openImageViewer(category, level) {
   if (document.getElementById('ref-image-viewer')) return;
 
-  const set = IMAGE_SETS[category];
+  const set = IMAGE_SETS[category]?.[String(level)];
   if (!set || !set.images.length) return;
 
   const overlay = document.createElement('div');
@@ -46,15 +67,12 @@ export function openImageViewer(category) {
 
   document.body.appendChild(overlay);
 
-  // Close on button click
   document.getElementById('ref-image-close').addEventListener('click', closeImageViewer);
 
-  // Close on background click (not on images/header)
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) closeImageViewer();
   });
 
-  // Close on Escape key
   overlay._onKey = (e) => { if (e.key === 'Escape') closeImageViewer(); };
   document.addEventListener('keydown', overlay._onKey);
 }

@@ -1,4 +1,5 @@
 import { spacingForTargetPOD } from '../model/podEngine.js';
+import { hasRefImages } from './imageViewer.js';
 
 export const LABELS = {
   time_of_day: { day: 'Day', dusk_dawn: 'Dusk/Dawn', night: 'Night' },
@@ -138,16 +139,13 @@ export function renderSegment(root, segment, computed, savedLabel, configValid, 
       <h3>Weather</h3>
       ${radioChips('weather', LABELS.weather, segment.weather)}
 
-      <div class="row align-center gap-sm">
-        <h3 style="margin:10px 0 6px">Vegetation Density</h3>
-        ${refImageButton('vegetation_density')}
-      </div>
+      <h3>Vegetation Density</h3>
       ${tooltip(config, 'vegetation_density')}
-      ${radioChips('vegetation_density', VEGETATION_DENSITY_LABELS, String(segment.vegetation_density || 3), 'tight')}
+      ${radioChips('vegetation_density', VEGETATION_DENSITY_LABELS, String(segment.vegetation_density || 3), 'tight', 'vegetation_density')}
       ${noteSection('vegetation_density', segment)}
       <h3>Micro-terrain Complexity</h3>
       ${tooltip(config, 'micro_terrain_complexity')}
-      ${radioChips('micro_terrain_complexity', MICRO_TERRAIN_LABELS, String(segment.micro_terrain_complexity || 3), 'tight')}
+      ${radioChips('micro_terrain_complexity', MICRO_TERRAIN_LABELS, String(segment.micro_terrain_complexity || 3), 'tight', 'micro_terrain_complexity')}
       ${noteSection('micro_terrain_complexity', segment)}
       ${searchType !== 'missing_person' ? `
       <h3>Burial / Cover</h3>
@@ -403,19 +401,24 @@ function noteSection(fieldName, segment) {
 
 /* ---- Reference image button ---- */
 
-function refImageButton(category) {
-  return `<button class="btn-ref-images" data-action="view-ref-images" data-category="${category}" title="View reference images">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+function refImageButton(category, level) {
+  return `<button class="btn-ref-images" data-action="view-ref-images" data-category="${category}" data-level="${level}" title="View reference images">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
   </button>`;
 }
 
 /* ---- Form field generators ---- */
 
-function radioChips(name, options, current, vertical = false) {
+function radioChips(name, options, current, vertical = false, refCategory = null) {
   const cls = vertical === 'tight' ? 'chip-col-tight' : vertical ? 'chip-col' : 'chip-row';
-  return `<div class="${cls}">${Object.entries(options).map(([val, label]) =>
-    `<label class="chip"><input type="radio" name="${name}" value="${val}"${String(current) === String(val) ? ' checked' : ''}><span>${label}</span></label>`
-  ).join('')}</div>`;
+  const chips = Object.entries(options).map(([val, label]) => {
+    const chipHtml = `<label class="chip"><input type="radio" name="${name}" value="${val}"${String(current) === String(val) ? ' checked' : ''}><span>${label}</span></label>`;
+    if (refCategory && hasRefImages(refCategory, val)) {
+      return `<div class="chip-with-ref">${refImageButton(refCategory, val)}${chipHtml}</div>`;
+    }
+    return chipHtml;
+  }).join('');
+  return `<div class="${cls}">${chips}</div>`;
 }
 
 function textField(label, name, value, hint = '') {
