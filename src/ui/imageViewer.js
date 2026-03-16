@@ -22,10 +22,42 @@ const IMAGE_SETS = {
         { src: './assets/Vegetation density/low_vegetation_density_4.jpg', caption: 'Low Vegetation Density (4)' },
       ]
     },
-    // '2': { title: 'Low/Moderate Vegetation Density', images: [] },
-    // '3': { title: 'Moderate Vegetation Density', images: [] },
-    // '4': { title: 'Moderate/High Vegetation Density', images: [] },
-    // '5': { title: 'High Vegetation Density', images: [] },
+    '2': {
+      title: 'Low/Moderate Vegetation Density',
+      images: [
+        { src: './assets/Vegetation density/low-moderate_vegetation_density_1.jpg', caption: 'Low/Moderate Vegetation Density (1)' },
+        { src: './assets/Vegetation density/low-moderate_vegetation_density_2.jpg', caption: 'Low/Moderate Vegetation Density (2)' },
+        { src: './assets/Vegetation density/low-moderate_vegetation_density_3.JPG', caption: 'Low/Moderate Vegetation Density (3)' },
+        { src: './assets/Vegetation density/low-moderate_vegetation_density_4.jpg', caption: 'Low/Moderate Vegetation Density (4)' },
+      ]
+    },
+    '3': {
+      title: 'Moderate Vegetation Density',
+      images: [
+        { src: './assets/Vegetation density/moderate_vegetation_density _1.jpg', caption: 'Moderate Vegetation Density (1)' },
+        { src: './assets/Vegetation density/moderate_vegetation_density _2.jpg', caption: 'Moderate Vegetation Density (2)' },
+        { src: './assets/Vegetation density/moderate_vegetation_density _3.jpg', caption: 'Moderate Vegetation Density (3)' },
+        { src: './assets/Vegetation density/moderate_vegetation_density _4.jpg', caption: 'Moderate Vegetation Density (4)' },
+      ]
+    },
+    '4': {
+      title: 'Moderate/High Vegetation Density',
+      images: [
+        { src: './assets/Vegetation density/moderate_high_vegetation_density _1.jpg', caption: 'Moderate/High Vegetation Density (1)' },
+        { src: './assets/Vegetation density/moderate_high_vegetation_density _2.jpg', caption: 'Moderate/High Vegetation Density (2)' },
+        { src: './assets/Vegetation density/moderate_high_vegetation_density_3.jpg', caption: 'Moderate/High Vegetation Density (3)' },
+        { src: './assets/Vegetation density/moderate_high_vegetation_density _4.png', caption: 'Moderate/High Vegetation Density (4)' },
+      ]
+    },
+    '5': {
+      title: 'High Vegetation Density',
+      images: [
+        { src: './assets/Vegetation density/high_vegetation_density _1.jpg', caption: 'High Vegetation Density (1)' },
+        { src: './assets/Vegetation density/high_vegetation_density _2.jpg', caption: 'High Vegetation Density (2)' },
+        { src: './assets/Vegetation density/high_vegetation_density _3.JPG', caption: 'High Vegetation Density (3)' },
+        { src: './assets/Vegetation density/high_vegetation_density _4.png', caption: 'High Vegetation Density (4)' },
+      ]
+    },
   },
   micro_terrain_complexity: {
     // '1': { title: 'Minimal Micro-terrain', images: [] },

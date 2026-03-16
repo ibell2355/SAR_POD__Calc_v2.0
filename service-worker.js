@@ -7,7 +7,7 @@
  *   Cross-origin       → network only
  */
 
-const CACHE_NAME = 'psar-pod-v17';
+const CACHE_NAME = 'psar-pod-v18';
 
 const APP_SHELL = [
   './',
@@ -32,7 +32,23 @@ const APP_SHELL = [
   './assets/Vegetation%20density/low_vegetation_density_1.jpg',
   './assets/Vegetation%20density/low_vegetation_density_2.jpg',
   './assets/Vegetation%20density/low_vegetation_density_3.jpg',
-  './assets/Vegetation%20density/low_vegetation_density_4.jpg'
+  './assets/Vegetation%20density/low_vegetation_density_4.jpg',
+  './assets/Vegetation%20density/low-moderate_vegetation_density_1.jpg',
+  './assets/Vegetation%20density/low-moderate_vegetation_density_2.jpg',
+  './assets/Vegetation%20density/low-moderate_vegetation_density_3.JPG',
+  './assets/Vegetation%20density/low-moderate_vegetation_density_4.jpg',
+  './assets/Vegetation%20density/moderate_vegetation_density%20_1.jpg',
+  './assets/Vegetation%20density/moderate_vegetation_density%20_2.jpg',
+  './assets/Vegetation%20density/moderate_vegetation_density%20_3.jpg',
+  './assets/Vegetation%20density/moderate_vegetation_density%20_4.jpg',
+  './assets/Vegetation%20density/moderate_high_vegetation_density%20_1.jpg',
+  './assets/Vegetation%20density/moderate_high_vegetation_density%20_2.jpg',
+  './assets/Vegetation%20density/moderate_high_vegetation_density_3.jpg',
+  './assets/Vegetation%20density/moderate_high_vegetation_density%20_4.png',
+  './assets/Vegetation%20density/high_vegetation_density%20_1.jpg',
+  './assets/Vegetation%20density/high_vegetation_density%20_2.jpg',
+  './assets/Vegetation%20density/high_vegetation_density%20_3.JPG',
+  './assets/Vegetation%20density/high_vegetation_density%20_4.png'
 ];
 
 /* ---- Install: pre-cache app shell ---- */
