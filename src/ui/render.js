@@ -197,8 +197,8 @@ export function spacingHelpersHtml(result) {
   }
   const s63 = spacingForTargetPOD(result.W_eff, 0.63);
   const s83 = spacingForTargetPOD(result.W_eff, 0.83);
-  const fmt63 = s63 != null ? `${Math.round(s63)} m` : '\u2014';
-  const fmt83 = s83 != null ? `${Math.round(s83)} m` : '\u2014';
+  const fmt63 = s63 != null ? `${s63.toFixed(1)} m` : '\u2014';
+  const fmt83 = s83 != null ? `${s83.toFixed(1)} m` : '\u2014';
   return `<div class="computed-output">63% POD: ${fmt63}</div><div class="computed-output">83% POD: ${fmt83}</div>`;
 }
 

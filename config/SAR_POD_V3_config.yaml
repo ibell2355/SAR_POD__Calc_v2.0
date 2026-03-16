@@ -10,7 +10,7 @@ units:
 search_types:
   missing_person:
     label: Missing Person
-    base_sweep_width_m: 6
+    base_sweep_width_m: 10
   historical:
     label: Historical
     base_sweep_width_m: 1
@@ -25,52 +25,57 @@ w_eff_bounds_m:
 spacing_limits:
   missing_person:
     vegetation_1:
-      lower_spacing_limit: 9
+      lower_spacing_limit: 10
       upper_spacing_limit: 40
     vegetation_2:
-      lower_spacing_limit: 8
+      lower_spacing_limit: 9
       upper_spacing_limit: 40
     vegetation_3:
-      lower_spacing_limit: 7
+      lower_spacing_limit: 8
       upper_spacing_limit: 40
     vegetation_4:
-      lower_spacing_limit: 6
+      lower_spacing_limit: 7
       upper_spacing_limit: 40
     vegetation_5:
-      lower_spacing_limit: 5
+      lower_spacing_limit: 6
       upper_spacing_limit: 40
   historical:
     vegetation_1:
       lower_spacing_limit: 10
       upper_spacing_limit: 40
     vegetation_2:
-      lower_spacing_limit: 8
+      lower_spacing_limit: 9
       upper_spacing_limit: 40
     vegetation_3:
-      lower_spacing_limit: 6
+      lower_spacing_limit: 8
       upper_spacing_limit: 40
     vegetation_4:
-      lower_spacing_limit: 4
+      lower_spacing_limit: 7
       upper_spacing_limit: 40
     vegetation_5:
-      lower_spacing_limit: 2
+      lower_spacing_limit: 6
       upper_spacing_limit: 40
   article_evidence:
     vegetation_1:
       lower_spacing_limit: 10
       upper_spacing_limit: 40
     vegetation_2:
-      lower_spacing_limit: 8
+      lower_spacing_limit: 9
       upper_spacing_limit: 40
     vegetation_3:
-      lower_spacing_limit: 6
+      lower_spacing_limit: 8
       upper_spacing_limit: 40
     vegetation_4:
-      lower_spacing_limit: 4
+      lower_spacing_limit: 7
       upper_spacing_limit: 40
     vegetation_5:
-      lower_spacing_limit: 2
+      lower_spacing_limit: 6
       upper_spacing_limit: 40
+
+visibility_lower_limit_adjustment:
+  low: 4
+  medium: 2
+  high: 0
 
 response_model:
   enabled_for:
@@ -89,9 +94,9 @@ response_model:
 condition_factors:
   missing_person:
     visibility:
-      low: 1.1
-      medium: 1.6
-      high: 1.8
+      low: 0.8
+      medium: 1.0
+      high: 1.2
     time_of_day:
       day: 1.0
       dusk_dawn: 0.8
@@ -120,9 +125,10 @@ condition_factors:
       '5': 0.9
   historical:
     visibility:
-      low: 1.1
-      medium: 1.6
-      high: 1.8
+    visibility:
+      low: 0.8
+      medium: 1.0
+      high: 1.2
     time_of_day:
       day: 1.0
       dusk_dawn: 0.8
@@ -151,9 +157,10 @@ condition_factors:
       '5': 0.9
   article_evidence:
     visibility:
-      low: 1.1
-      medium: 1.6
-      high: 1.8
+    visibility:
+      low: 0.8
+      medium: 1.0
+      high: 1.2
     time_of_day:
       day: 1.0
       dusk_dawn: 0.8

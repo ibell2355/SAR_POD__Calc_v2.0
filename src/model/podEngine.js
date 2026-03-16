@@ -40,6 +40,10 @@ function spacingLimits(config, searchType, vegDensity) {
   };
 }
 
+function visibilityLowerLimitAdjustment(config, visibility) {
+  return Number(config?.visibility_lower_limit_adjustment?.[String(visibility)] ?? 0);
+}
+
 function responseModel(config) {
   const rm = config?.response_model || {};
   return {
@@ -119,7 +123,8 @@ export function computePOD({ config, searchLevel, segment }) {
   // 4. Spacing limits (per search type + vegetation density)
   const vegLevel = segment?.vegetation_density ?? 3;
   const sLimits = spacingLimits(config, searchType, vegLevel);
-  const spacing_lower_limit = sLimits.lower;
+  const visAdj = visibilityLowerLimitAdjustment(config, searchLevel?.visibility || 'medium');
+  const spacing_lower_limit = Math.max(0, sLimits.lower - visAdj);
   const spacing_upper_limit = sLimits.upper;
 
   // 5. Coverage factor and POD
