@@ -51,23 +51,23 @@ condition_factors:
       rain: 0.9
       snow: 0.80
     vegetation_density:
-      '1': 1.4
-      '2': 1.2
+      '1': 1.20
+      '2': 1.10
       '3': 1.0
-      '4': 0.8
-      '5': 0.6
+      '4': 0.85
+      '5': 0.7
     micro_terrain_complexity:
-      '1': 1.4
-      '2': 1.2
+      '1': 1.20
+      '2': 1.10
       '3': 1.0
-      '4': 0.8
-      '5': 0.6
+      '4': 0.85
+      '5': 0.7
     extenuating_factors:
-      '1': 1.4
-      '2': 1.2
+      '1': 1.20
+      '2': 1.10
       '3': 1.0
-      '4': 0.8
-      '5': 0.6
+      '4': 0.85
+      '5': 0.7
   historical_article:
     visibility:
       low: 1.1
@@ -82,23 +82,23 @@ condition_factors:
       rain: 0.9
       snow: 0.80
     vegetation_density:
-      '1': 1.4
-      '2': 1.2
+      '1': 1.20
+      '2': 1.10
       '3': 1.0
-      '4': 0.8
-      '5': 0.6
+      '4': 0.85
+      '5': 0.7
     micro_terrain_complexity:
-      '1': 1.4
-      '2': 1.2
+      '1': 1.20
+      '2': 1.10
       '3': 1.0
-      '4': 0.8
-      '5': 0.6
+      '4': 0.85
+      '5': 0.7
     extenuating_factors:
-      '1': 1.4
-      '2': 1.2
+      '1': 1.20
+      '2': 1.10
       '3': 1.0
-      '4': 0.8
-      '5': 0.6
+      '4': 0.85
+      '5': 0.7
   evidence:
     visibility:
       low: 1.1
@@ -113,23 +113,23 @@ condition_factors:
       rain: 0.9
       snow: 0.80
     vegetation_density:
-      '1': 1.4
-      '2': 1.2
+      '1': 1.20
+      '2': 1.10
       '3': 1.0
-      '4': 0.8
-      '5': 0.6
+      '4': 0.85
+      '5': 0.7
     micro_terrain_complexity:
-      '1': 1.4
-      '2': 1.2
+      '1': 1.20
+      '2': 1.10
       '3': 1.0
-      '4': 0.8
-      '5': 0.6
+      '4': 0.85
+      '5': 0.7
     extenuating_factors:
-      '1': 1.4
-      '2': 1.2
+      '1': 1.20
+      '2': 1.10
       '3': 1.0
-      '4': 0.8
-      '5': 0.6
+      '4': 0.85
+      '5': 0.7
 
 ui_tooltips:
   visibility: How visible is the search target expected to be? Consider clothing color, camouflage, exposure vs concealment, and environmental contrast.
