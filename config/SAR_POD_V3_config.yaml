@@ -25,51 +25,51 @@ w_eff_bounds_m:
 spacing_limits:
   missing_person:
     vegetation_1:
-      lower_spacing_limit: 3
+      lower_spacing_limit: 9
       upper_spacing_limit: 40
     vegetation_2:
-      lower_spacing_limit: 3
+      lower_spacing_limit: 8
       upper_spacing_limit: 40
     vegetation_3:
-      lower_spacing_limit: 3
+      lower_spacing_limit: 7
       upper_spacing_limit: 40
     vegetation_4:
-      lower_spacing_limit: 3
+      lower_spacing_limit: 6
       upper_spacing_limit: 40
     vegetation_5:
-      lower_spacing_limit: 3
+      lower_spacing_limit: 5
       upper_spacing_limit: 40
   historical:
     vegetation_1:
-      lower_spacing_limit: 3
+      lower_spacing_limit: 10
       upper_spacing_limit: 40
     vegetation_2:
-      lower_spacing_limit: 3
+      lower_spacing_limit: 8
       upper_spacing_limit: 40
     vegetation_3:
-      lower_spacing_limit: 3
+      lower_spacing_limit: 6
       upper_spacing_limit: 40
     vegetation_4:
-      lower_spacing_limit: 3
+      lower_spacing_limit: 4
       upper_spacing_limit: 40
     vegetation_5:
-      lower_spacing_limit: 3
+      lower_spacing_limit: 2
       upper_spacing_limit: 40
   article_evidence:
     vegetation_1:
-      lower_spacing_limit: 3
+      lower_spacing_limit: 10
       upper_spacing_limit: 40
     vegetation_2:
-      lower_spacing_limit: 3
+      lower_spacing_limit: 8
       upper_spacing_limit: 40
     vegetation_3:
-      lower_spacing_limit: 3
+      lower_spacing_limit: 6
       upper_spacing_limit: 40
     vegetation_4:
-      lower_spacing_limit: 3
+      lower_spacing_limit: 4
       upper_spacing_limit: 40
     vegetation_5:
-      lower_spacing_limit: 3
+      lower_spacing_limit: 2
       upper_spacing_limit: 40
 
 response_model:
@@ -101,11 +101,11 @@ condition_factors:
       rain: 0.9
       snow: 0.80
     vegetation_density:
-      '1': 1.40
-      '2': 1.20
+      '1': 1.50
+      '2': 1.25
       '3': 1.0
-      '4': 0.8
-      '5': 0.6
+      '4': 0.75
+      '5': 0.5
     micro_terrain_complexity:
       '1': 1.10
       '2': 1.05
@@ -131,12 +131,12 @@ condition_factors:
       clear: 1.0
       rain: 0.9
       snow: 0.80
-   vegetation_density:
-      '1': 1.40
-      '2': 1.20
+    vegetation_density:
+      '1': 1.50
+      '2': 1.25
       '3': 1.0
-      '4': 0.8
-      '5': 0.6
+      '4': 0.75
+      '5': 0.5
     micro_terrain_complexity:
       '1': 1.10
       '2': 1.05
@@ -162,12 +162,12 @@ condition_factors:
       clear: 1.0
       rain: 0.9
       snow: 0.80
-   vegetation_density:
-      '1': 1.40
-      '2': 1.20
+    vegetation_density:
+      '1': 1.50
+      '2': 1.25
       '3': 1.0
-      '4': 0.8
-      '5': 0.6
+      '4': 0.75
+      '5': 0.5
     micro_terrain_complexity:
       '1': 1.10
       '2': 1.05
