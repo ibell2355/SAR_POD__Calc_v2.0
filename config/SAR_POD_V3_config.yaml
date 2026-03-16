@@ -113,11 +113,11 @@ condition_factors:
       '4': 0.90
       '5': 0.80
     extenuating_factors:
-      '1': 1.10
-      '2': 1.05
+      '1': 1.06
+      '2': 1.03
       '3': 1.0
-      '4': 0.9
-      '5': 0.8
+      '4': 0.95
+      '5': 0.9
   historical:
     visibility:
       low: 1.1
@@ -144,11 +144,11 @@ condition_factors:
       '4': 0.90
       '5': 0.80
     extenuating_factors:
-      '1': 1.10
-      '2': 1.05
+      '1': 1.06
+      '2': 1.03
       '3': 1.0
-      '4': 0.9
-      '5': 0.8
+      '4': 0.95
+      '5': 0.9
   article_evidence:
     visibility:
       low: 1.1
@@ -175,11 +175,11 @@ condition_factors:
       '4': 0.90
       '5': 0.80
     extenuating_factors:
-      '1': 1.10
-      '2': 1.05
+      '1': 1.06
+      '2': 1.03
       '3': 1.0
-      '4': 0.9
-      '5': 0.8
+      '4': 0.95
+      '5': 0.9
 
 ui_tooltips:
   visibility: How visible is the search target expected to be? Consider clothing color, camouflage, exposure vs concealment, and environmental contrast.
