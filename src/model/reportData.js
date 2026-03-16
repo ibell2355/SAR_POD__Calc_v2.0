@@ -9,7 +9,7 @@ import { clamp } from '../utils/math.js';
 
 /* ---- Label maps (display names for report output) ---- */
 
-const SEARCH_FOR = { missing_person: 'Missing Person', historical_article: 'Historical', evidence: 'Article/Evidence' };
+const SEARCH_FOR = { missing_person: 'Missing Person', historical: 'Historical', article_evidence: 'Article/Evidence' };
 const VISIBILITY = { low: 'Low', medium: 'Medium', high: 'High' };
 const AUDITORY = { none: 'Not Expected', possible: 'Possible', likely: 'Likely' };
 const VISUAL = { evade: 'Expected to Evade', none: 'Not Expected', possible: 'Possible', likely: 'Likely' };
@@ -111,7 +111,7 @@ function computeCoefficientImpacts(r, isMissing) {
   }
 
   const actualPOD = r.POD;
-  const spacing = r.actual_spacing_m;
+  const spacing = r.effective_spacing_m ?? r.actual_spacing_m;
   const base = r.base_sweep_width_m;
   const bMin = r.w_eff_min;
   const bMax = r.w_eff_max;

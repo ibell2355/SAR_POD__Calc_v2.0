@@ -11,16 +11,66 @@ search_types:
   missing_person:
     label: Missing Person
     base_sweep_width_m: 6
-  historical_article:
+  historical:
     label: Historical
     base_sweep_width_m: 1
-  evidence:
+  article_evidence:
     label: Article/Evidence
     base_sweep_width_m: 3
 
 w_eff_bounds_m:
   min: 0.0
   max: 100
+
+spacing_limits:
+  missing_person:
+    vegetation_1:
+      lower_spacing_limit: 3
+      upper_spacing_limit: 40
+    vegetation_2:
+      lower_spacing_limit: 3
+      upper_spacing_limit: 40
+    vegetation_3:
+      lower_spacing_limit: 3
+      upper_spacing_limit: 40
+    vegetation_4:
+      lower_spacing_limit: 3
+      upper_spacing_limit: 40
+    vegetation_5:
+      lower_spacing_limit: 3
+      upper_spacing_limit: 40
+  historical:
+    vegetation_1:
+      lower_spacing_limit: 3
+      upper_spacing_limit: 40
+    vegetation_2:
+      lower_spacing_limit: 3
+      upper_spacing_limit: 40
+    vegetation_3:
+      lower_spacing_limit: 3
+      upper_spacing_limit: 40
+    vegetation_4:
+      lower_spacing_limit: 3
+      upper_spacing_limit: 40
+    vegetation_5:
+      lower_spacing_limit: 3
+      upper_spacing_limit: 40
+  article_evidence:
+    vegetation_1:
+      lower_spacing_limit: 3
+      upper_spacing_limit: 40
+    vegetation_2:
+      lower_spacing_limit: 3
+      upper_spacing_limit: 40
+    vegetation_3:
+      lower_spacing_limit: 3
+      upper_spacing_limit: 40
+    vegetation_4:
+      lower_spacing_limit: 3
+      upper_spacing_limit: 40
+    vegetation_5:
+      lower_spacing_limit: 3
+      upper_spacing_limit: 40
 
 response_model:
   enabled_for:
@@ -51,24 +101,24 @@ condition_factors:
       rain: 0.9
       snow: 0.80
     vegetation_density:
-      '1': 1.20
-      '2': 1.10
+      '1': 1.40
+      '2': 1.20
       '3': 1.0
-      '4': 0.85
-      '5': 0.7
+      '4': 0.8
+      '5': 0.6
     micro_terrain_complexity:
-      '1': 1.20
-      '2': 1.10
+      '1': 1.10
+      '2': 1.05
       '3': 1.0
-      '4': 0.85
-      '5': 0.7
+      '4': 0.90
+      '5': 0.80
     extenuating_factors:
-      '1': 1.20
-      '2': 1.10
+      '1': 1.10
+      '2': 1.05
       '3': 1.0
-      '4': 0.85
-      '5': 0.7
-  historical_article:
+      '4': 0.9
+      '5': 0.8
+  historical:
     visibility:
       low: 1.1
       medium: 1.6
@@ -81,25 +131,25 @@ condition_factors:
       clear: 1.0
       rain: 0.9
       snow: 0.80
-    vegetation_density:
-      '1': 1.20
-      '2': 1.10
+   vegetation_density:
+      '1': 1.40
+      '2': 1.20
       '3': 1.0
-      '4': 0.85
-      '5': 0.7
+      '4': 0.8
+      '5': 0.6
     micro_terrain_complexity:
-      '1': 1.20
-      '2': 1.10
+      '1': 1.10
+      '2': 1.05
       '3': 1.0
-      '4': 0.85
-      '5': 0.7
+      '4': 0.90
+      '5': 0.80
     extenuating_factors:
-      '1': 1.20
-      '2': 1.10
+      '1': 1.10
+      '2': 1.05
       '3': 1.0
-      '4': 0.85
-      '5': 0.7
-  evidence:
+      '4': 0.9
+      '5': 0.8
+  article_evidence:
     visibility:
       low: 1.1
       medium: 1.6
@@ -112,24 +162,24 @@ condition_factors:
       clear: 1.0
       rain: 0.9
       snow: 0.80
-    vegetation_density:
-      '1': 1.20
-      '2': 1.10
+   vegetation_density:
+      '1': 1.40
+      '2': 1.20
       '3': 1.0
-      '4': 0.85
-      '5': 0.7
+      '4': 0.8
+      '5': 0.6
     micro_terrain_complexity:
-      '1': 1.20
-      '2': 1.10
+      '1': 1.10
+      '2': 1.05
       '3': 1.0
-      '4': 0.85
-      '5': 0.7
+      '4': 0.90
+      '5': 0.80
     extenuating_factors:
-      '1': 1.20
-      '2': 1.10
+      '1': 1.10
+      '2': 1.05
       '3': 1.0
-      '4': 0.85
-      '5': 0.7
+      '4': 0.9
+      '5': 0.8
 
 ui_tooltips:
   visibility: How visible is the search target expected to be? Consider clothing color, camouflage, exposure vs concealment, and environmental contrast.
@@ -146,7 +196,7 @@ formulas:
   effective_sweep_width:
     text: "W_eff = clamp(base_sweep_width_m * K_vis * K_time * K_weather * K_veg * K_terrain * K_ext_or_burial * M_resp, min, max)\n"
   coverage_factor:
-    text: "coverage_factor = W_eff / actual_spacing_m\n"
+    text: "coverage_factor = W_eff / clamp(actual_spacing_m, lower_spacing_limit, upper_spacing_limit)\n"
   final_pod:
     text: "POD = clamp(1 - exp(-coverage_factor), 0, 0.99)\n"
 
@@ -162,6 +212,7 @@ calibration:
   - Do not allow POD to reach 1.00 (model clamps at 0.99).
   - 'Implementation note: numeric condition factor keys are strings ''1''..''5''; cast input to string for lookup.'
   - 'Implementation note: apply response_model only for search types listed in enabled_for; otherwise M_resp = 1.0.'
+  - 'Spacing limits are per search type and vegetation density level. Clamp actual_spacing_m before computing coverage_factor.'
 
 audit:
   save_inputs: true

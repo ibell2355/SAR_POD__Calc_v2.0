@@ -537,10 +537,16 @@ function migrateState(raw) {
     if (searchLevel.type_of_search === 'active_missing_person') {
       searchLevel.search_for = 'missing_person';
     } else if (searchLevel.type_of_search === 'evidence_historical') {
-      searchLevel.search_for = 'evidence';
+      searchLevel.search_for = 'article_evidence';
     }
   }
-  if (!['missing_person', 'historical_article', 'evidence'].includes(searchLevel.search_for)) {
+  // Migrate old search type keys to corrected names
+  if (searchLevel.search_for === 'historical_article') {
+    searchLevel.search_for = 'historical';
+  } else if (searchLevel.search_for === 'evidence') {
+    searchLevel.search_for = 'article_evidence';
+  }
+  if (!['missing_person', 'historical', 'article_evidence'].includes(searchLevel.search_for)) {
     searchLevel.search_for = 'missing_person';
   }
 

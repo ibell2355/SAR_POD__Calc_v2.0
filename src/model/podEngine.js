@@ -31,6 +31,15 @@ function wEffBounds(config) {
   };
 }
 
+function spacingLimits(config, searchType, vegDensity) {
+  const key = `vegetation_${vegDensity}`;
+  const limits = config?.spacing_limits?.[searchType]?.[key];
+  return {
+    lower: Number(limits?.lower_spacing_limit ?? 3),
+    upper: Number(limits?.upper_spacing_limit ?? 40)
+  };
+}
+
 function responseModel(config) {
   const rm = config?.response_model || {};
   return {
@@ -107,12 +116,21 @@ export function computePOD({ config, searchLevel, segment }) {
   const w_eff_max = bounds.max;
   const W_eff = clamp(base_sweep_width_m * C_t * M_resp, w_eff_min, w_eff_max);
 
-  // 4. Coverage factor and POD
+  // 4. Spacing limits (per search type + vegetation density)
+  const vegLevel = segment?.vegetation_density ?? 3;
+  const sLimits = spacingLimits(config, searchType, vegLevel);
+  const spacing_lower_limit = sLimits.lower;
+  const spacing_upper_limit = sLimits.upper;
+
+  // 5. Coverage factor and POD
   const actual_spacing_m = Number(segment?.actual_spacing_m || 0);
+  const effective_spacing_m = actual_spacing_m > 0
+    ? clamp(actual_spacing_m, spacing_lower_limit, spacing_upper_limit)
+    : 0;
   let coverage_factor = 0;
   let POD = 0;
-  if (actual_spacing_m > 0) {
-    coverage_factor = W_eff / actual_spacing_m;
+  if (effective_spacing_m > 0) {
+    coverage_factor = W_eff / effective_spacing_m;
     POD = clamp(1 - Math.exp(-coverage_factor), 0, 0.99);
   }
 
@@ -127,6 +145,9 @@ export function computePOD({ config, searchLevel, segment }) {
     response_cap: response.cap,
     W_eff, w_eff_min, w_eff_max,
     actual_spacing_m,
+    effective_spacing_m,
+    spacing_lower_limit,
+    spacing_upper_limit,
     coverage_factor,
     POD
   };
