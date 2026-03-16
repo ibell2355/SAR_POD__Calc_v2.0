@@ -10,13 +10,13 @@ units:
 search_types:
   missing_person:
     label: Missing Person
-    base_sweep_width_m: 6
+    base_sweep_width_m: 10
   historical_article:
-    label: Historical Article
-    base_sweep_width_m: 6
+    label: Historical
+    base_sweep_width_m: 2
   evidence:
-    label: Evidence
-    base_sweep_width_m: 6
+    label: Article/Evidence
+    base_sweep_width_m: 5
 
 w_eff_bounds_m:
   min: 0.0
@@ -25,15 +25,15 @@ w_eff_bounds_m:
 response_model:
   enabled_for:
   - missing_person
-  auditory_bonus:
-    none: 0.0
-    possible: 0.0
-    likely: 0.0
-  visual_bonus:
-    evade: 0.0
-    none: 0.0
-    possible: 0.0
-    likely: 0.0
+  auditory_multiplier:
+    none: 1.0
+    possible: 1.0
+    likely: 1.0
+  visual_multiplier:
+    evade: 1.0
+    none: 1.0
+    possible: 1.0
+    likely: 1.0
   max_total_multiplier: 1.25
 
 condition_factors:
@@ -158,7 +158,7 @@ calibration:
   - All base sweep widths set to 10m as temporary calibration values.
   - 'Visibility coefficients calibrated: high=1.8, medium=1.6, low=1.1. All other coefficients at 1.0 pending calibration.'
   - 'Adjust in order: base_sweep_width_m per search type, then condition_factors per axis.'
-  - Keep response bonuses small; they scale W_eff directly.
+  - Keep response multipliers close to 1.0; they scale W_eff directly.
   - Do not allow POD to reach 1.00 (model clamps at 0.99).
   - 'Implementation note: numeric condition factor keys are strings ''1''..''5''; cast input to string for lookup.'
   - 'Implementation note: apply response_model only for search types listed in enabled_for; otherwise M_resp = 1.0.'

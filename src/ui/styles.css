@@ -573,6 +573,15 @@ textarea:disabled {
   color: var(--muted);
 }
 
+/* ---- Spacing helpers (estimated spacing for target POD) ---- */
+
+.spacing-helpers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 6px;
+}
+
 /* ---- Utility ---- */
 
 .hidden { display: none; }

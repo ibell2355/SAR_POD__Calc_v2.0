@@ -4,7 +4,7 @@ import { buildSegmentReportData, segmentReportText, segmentUploadPayload, segmen
 import { getValue, setValue, clearAll } from './storage/db.js';
 import {
   renderHome, renderSegment, renderReportList, renderSegmentReport,
-  podResultHtml, segmentListHtml, esc
+  podResultHtml, spacingHelpersHtml, segmentListHtml, esc
 } from './ui/render.js';
 
 /* Signal that all module imports resolved successfully */
@@ -254,6 +254,9 @@ function handleInput(el) {
 
         const podEl = document.getElementById('pod-result');
         if (podEl) podEl.innerHTML = podResultHtml(seg, { result: seg.result, qaWarnings: seg.qaWarnings });
+
+        const helpersEl = document.getElementById('spacing-helpers');
+        if (helpersEl) helpersEl.innerHTML = spacingHelpersHtml(seg.result);
 
         debounceSave();
         return;

@@ -1,3 +1,5 @@
+import { spacingForTargetPOD } from '../model/podEngine.js';
+
 export const LABELS = {
   time_of_day: { day: 'Day', dusk_dawn: 'Dusk/Dawn', night: 'Night' },
   weather: { clear: 'Clear', rain: 'Raining', snow: 'Snowing' },
@@ -126,6 +128,10 @@ export function renderSegment(root, segment, computed, savedLabel, configValid, 
 
       <h3>Spacing</h3>
       ${numField('Actual Spacing Used (m)', 'actual_spacing_m', segment.actual_spacing_m, '0.1', tooltip(config, 'actual_spacing'), 0.1)}
+      <span class="hint">Estimated spacing for target POD under current conditions</span>
+      <div id="spacing-helpers" class="spacing-helpers">
+        ${spacingHelpersHtml(computed.result)}
+      </div>
 
       <h3>Time of Day</h3>
       ${radioChips('time_of_day', LABELS.time_of_day, segment.time_of_day)}
@@ -178,6 +184,21 @@ export function podResultHtml(segment, computed) {
   }
 
   return html;
+}
+
+/* ================================================================
+   Spacing helpers — estimated spacing for target POD thresholds
+   ================================================================ */
+
+export function spacingHelpersHtml(result) {
+  if (!result || result.W_eff <= 0) {
+    return '<div class="computed-output">63% POD: \u2014</div><div class="computed-output">83% POD: \u2014</div>';
+  }
+  const s63 = spacingForTargetPOD(result.W_eff, 0.63);
+  const s83 = spacingForTargetPOD(result.W_eff, 0.83);
+  const fmt63 = s63 != null ? `${Math.round(s63)} m` : '\u2014';
+  const fmt83 = s83 != null ? `${Math.round(s83)} m` : '\u2014';
+  return `<div class="computed-output">63% POD: ${fmt63}</div><div class="computed-output">83% POD: ${fmt83}</div>`;
 }
 
 /* ================================================================

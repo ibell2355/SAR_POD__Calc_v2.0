@@ -106,8 +106,8 @@ function computeCoefficientImpacts(r, isMissing) {
   }
 
   if (isMissing) {
-    factors.push({ name: 'Auditory Responsiveness', value: 1 + (r.auditory_bonus || 0), isResponse: true });
-    factors.push({ name: 'Visual Responsiveness', value: 1 + (r.visual_bonus || 0), isResponse: true });
+    factors.push({ name: 'Auditory Responsiveness', value: r.auditory_multiplier ?? 1, isResponse: true });
+    factors.push({ name: 'Visual Responsiveness', value: r.visual_multiplier ?? 1, isResponse: true });
   }
 
   const actualPOD = r.POD;

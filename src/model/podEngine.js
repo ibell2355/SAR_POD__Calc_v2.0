@@ -35,8 +35,8 @@ function responseModel(config) {
   const rm = config?.response_model || {};
   return {
     enabled_for: rm.enabled_for || ['missing_person'],
-    auditory_bonus: rm.auditory_bonus || { none: 0, possible: 0, likely: 0 },
-    visual_bonus: rm.visual_bonus || { evade: 0, none: 0, possible: 0, likely: 0 },
+    auditory_multiplier: rm.auditory_multiplier || { none: 1, possible: 1, likely: 1 },
+    visual_multiplier: rm.visual_multiplier || { evade: 1, none: 1, possible: 1, likely: 1 },
     max_total_multiplier: Number(rm.max_total_multiplier ?? 1.25)
   };
 }
@@ -51,9 +51,9 @@ export function responseMultiplier(searchLevel, config) {
 
   if (!rm.enabled_for.includes(searchType)) return 1;
 
-  const aud = Number(rm.auditory_bonus[searchLevel?.auditory || 'none'] ?? 0);
-  const vis = Number(rm.visual_bonus[searchLevel?.visual || 'none'] ?? 0);
-  return Math.min(rm.max_total_multiplier, 1 + aud + vis);
+  const aud = Number(rm.auditory_multiplier[searchLevel?.auditory || 'none'] ?? 1);
+  const vis = Number(rm.visual_multiplier[searchLevel?.visual || 'none'] ?? 1);
+  return Math.min(rm.max_total_multiplier, aud * vis);
 }
 
 export function responseComponents(searchLevel, config) {
@@ -61,13 +61,13 @@ export function responseComponents(searchLevel, config) {
   const searchType = searchLevel?.search_for || 'missing_person';
 
   if (!rm.enabled_for.includes(searchType)) {
-    return { auditory_bonus: 0, visual_bonus: 0, cap: rm.max_total_multiplier, M_resp: 1 };
+    return { auditory_multiplier: 1, visual_multiplier: 1, cap: rm.max_total_multiplier, M_resp: 1 };
   }
 
-  const auditory_bonus = Number(rm.auditory_bonus[searchLevel?.auditory || 'none'] ?? 0);
-  const visual_bonus = Number(rm.visual_bonus[searchLevel?.visual || 'none'] ?? 0);
+  const auditory_multiplier = Number(rm.auditory_multiplier[searchLevel?.auditory || 'none'] ?? 1);
+  const visual_multiplier = Number(rm.visual_multiplier[searchLevel?.visual || 'none'] ?? 1);
   const cap = rm.max_total_multiplier;
-  return { auditory_bonus, visual_bonus, cap, M_resp: Math.min(cap, 1 + auditory_bonus + visual_bonus) };
+  return { auditory_multiplier, visual_multiplier, cap, M_resp: Math.min(cap, auditory_multiplier * visual_multiplier) };
 }
 
 /* ================================================================
@@ -122,14 +122,24 @@ export function computePOD({ config, searchLevel, segment }) {
     K_visibility, K_time, K_weather, K_veg, K_terrain, K_extenuating, K_burial,
     C_t,
     M_resp,
-    auditory_bonus: response.auditory_bonus,
-    visual_bonus: response.visual_bonus,
+    auditory_multiplier: response.auditory_multiplier,
+    visual_multiplier: response.visual_multiplier,
     response_cap: response.cap,
     W_eff, w_eff_min, w_eff_max,
     actual_spacing_m,
     coverage_factor,
     POD
   };
+}
+
+/* ================================================================
+   Reverse calculation — spacing for a target POD
+   spacing = W_eff / -ln(1 - targetPOD)
+   ================================================================ */
+
+export function spacingForTargetPOD(wEff, targetPOD) {
+  if (wEff <= 0 || targetPOD <= 0 || targetPOD >= 1) return null;
+  return wEff / (-Math.log(1 - targetPOD));
 }
 
 /* ================================================================
