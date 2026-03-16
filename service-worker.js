@@ -7,7 +7,7 @@
  *   Cross-origin       → network only
  */
 
-const CACHE_NAME = 'psar-pod-v16';
+const CACHE_NAME = 'psar-pod-v17';
 
 const APP_SHELL = [
   './',
@@ -15,6 +15,7 @@ const APP_SHELL = [
   './src/main.js',
   './src/ui/render.js',
   './src/ui/styles.css',
+  './src/ui/imageViewer.js',
   './src/model/podEngine.js',
   './src/model/reportData.js',
   './src/model/configLoader.js',
@@ -27,7 +28,11 @@ const APP_SHELL = [
   './assets/psar_logo.svg',
   './assets/icon-192.png',
   './assets/icon-512.png',
-  './assets/qrcode.png'
+  './assets/qrcode.png',
+  './assets/Vegetation%20density/low_vegetation_density_1.jpg',
+  './assets/Vegetation%20density/low_vegetation_density_2.jpg',
+  './assets/Vegetation%20density/low_vegetation_density_3.jpg',
+  './assets/Vegetation%20density/low_vegetation_density_4.jpg'
 ];
 
 /* ---- Install: pre-cache app shell ---- */

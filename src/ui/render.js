@@ -138,7 +138,10 @@ export function renderSegment(root, segment, computed, savedLabel, configValid, 
       <h3>Weather</h3>
       ${radioChips('weather', LABELS.weather, segment.weather)}
 
-      <h3>Vegetation Density</h3>
+      <div class="row align-center gap-sm">
+        <h3 style="margin:10px 0 6px">Vegetation Density</h3>
+        ${refImageButton('vegetation_density')}
+      </div>
       ${tooltip(config, 'vegetation_density')}
       ${radioChips('vegetation_density', VEGETATION_DENSITY_LABELS, String(segment.vegetation_density || 3), 'tight')}
       ${noteSection('vegetation_density', segment)}
@@ -396,6 +399,14 @@ function noteSection(fieldName, segment) {
         <textarea name="note_${fieldName}" placeholder="Add a note\u2026">${esc(note)}</textarea>
       </div>
     </div>`;
+}
+
+/* ---- Reference image button ---- */
+
+function refImageButton(category) {
+  return `<button class="btn-ref-images" data-action="view-ref-images" data-category="${category}" title="View reference images">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+  </button>`;
 }
 
 /* ---- Form field generators ---- */

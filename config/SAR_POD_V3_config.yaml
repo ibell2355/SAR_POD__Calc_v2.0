@@ -10,13 +10,13 @@ units:
 search_types:
   missing_person:
     label: Missing Person
-    base_sweep_width_m: 10
+    base_sweep_width_m: 6
   historical_article:
     label: Historical
-    base_sweep_width_m: 2
+    base_sweep_width_m: 1
   evidence:
     label: Article/Evidence
-    base_sweep_width_m: 5
+    base_sweep_width_m: 3
 
 w_eff_bounds_m:
   min: 0.0
@@ -27,13 +27,13 @@ response_model:
   - missing_person
   auditory_multiplier:
     none: 1.0
-    possible: 1.0
-    likely: 1.0
+    possible: 1.10
+    likely: 1.20
   visual_multiplier:
-    evade: 1.0
+    evade: 0.5
     none: 1.0
-    possible: 1.0
-    likely: 1.0
+    possible: 1.05
+    likely: 1.10
   max_total_multiplier: 1.25
 
 condition_factors:
@@ -44,30 +44,30 @@ condition_factors:
       high: 1.8
     time_of_day:
       day: 1.0
-      dusk_dawn: 1.0
-      night: 1.0
+      dusk_dawn: 0.8
+      night: 0.5
     weather:
       clear: 1.0
-      rain: 1.0
-      snow: 1.0
+      rain: 0.9
+      snow: 0.80
     vegetation_density:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.4
+      '2': 1.2
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.8
+      '5': 0.6
     micro_terrain_complexity:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.4
+      '2': 1.2
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.8
+      '5': 0.6
     extenuating_factors:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.4
+      '2': 1.2
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.8
+      '5': 0.6
   historical_article:
     visibility:
       low: 1.1
@@ -75,30 +75,30 @@ condition_factors:
       high: 1.8
     time_of_day:
       day: 1.0
-      dusk_dawn: 1.0
-      night: 1.0
+      dusk_dawn: 0.8
+      night: 0.5
     weather:
       clear: 1.0
-      rain: 1.0
-      snow: 1.0
+      rain: 0.9
+      snow: 0.80
     vegetation_density:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.4
+      '2': 1.2
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.8
+      '5': 0.6
     micro_terrain_complexity:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.4
+      '2': 1.2
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
-    burial_or_cover:
-      '1': 1.0
-      '2': 1.0
+      '4': 0.8
+      '5': 0.6
+    extenuating_factors:
+      '1': 1.4
+      '2': 1.2
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.8
+      '5': 0.6
   evidence:
     visibility:
       low: 1.1
@@ -106,30 +106,30 @@ condition_factors:
       high: 1.8
     time_of_day:
       day: 1.0
-      dusk_dawn: 1.0
-      night: 1.0
+      dusk_dawn: 0.8
+      night: 0.5
     weather:
       clear: 1.0
-      rain: 1.0
-      snow: 1.0
+      rain: 0.9
+      snow: 0.80
     vegetation_density:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.4
+      '2': 1.2
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.8
+      '5': 0.6
     micro_terrain_complexity:
-      '1': 1.0
-      '2': 1.0
+      '1': 1.4
+      '2': 1.2
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
-    burial_or_cover:
-      '1': 1.0
-      '2': 1.0
+      '4': 0.8
+      '5': 0.6
+    extenuating_factors:
+      '1': 1.4
+      '2': 1.2
       '3': 1.0
-      '4': 1.0
-      '5': 1.0
+      '4': 0.8
+      '5': 0.6
 
 ui_tooltips:
   visibility: How visible is the search target expected to be? Consider clothing color, camouflage, exposure vs concealment, and environmental contrast.

@@ -2,6 +2,7 @@ import { loadConfig } from './model/configLoader.js';
 import { computePOD, generateQaWarnings } from './model/podEngine.js';
 import { buildSegmentReportData, segmentReportText, segmentUploadPayload, segmentKey } from './model/reportData.js';
 import { getValue, setValue, clearAll } from './storage/db.js';
+import { openImageViewer } from './ui/imageViewer.js';
 import {
   renderHome, renderSegment, renderReportList, renderSegmentReport,
   podResultHtml, spacingHelpersHtml, segmentListHtml, esc
@@ -285,6 +286,11 @@ function handleInput(el) {
    ================================================================ */
 
 function handleAction(action, id, btn) {
+  if (action === 'view-ref-images') {
+    openImageViewer(btn.dataset.category);
+    return;
+  }
+
   if (action === 'toggle-note') {
     const field = btn.dataset.field;
     const wrap = document.getElementById(`note-wrap-${field}`);
