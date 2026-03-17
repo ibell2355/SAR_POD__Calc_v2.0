@@ -226,13 +226,19 @@ export function renderReportList(root, segments) {
       }).join('')
     : '<p class="subtle">No segments to report.</p>';
 
+  const hasSegments = segments.length > 0;
+
   root.innerHTML = `
     <div class="row between align-center" style="margin-bottom:12px">
       <button class="btn" data-action="go-home">\u2190 Back</button>
     </div>
 
     <section class="panel">
-      <h2>Segment Reports</h2>
+      <div class="row between align-center">
+        <h2>Segment Reports</h2>
+        ${hasSegments ? '<button class="btn btn-primary" data-action="upload-all" id="upload-all-btn">Upload All</button>' : ''}
+      </div>
+      <div id="upload-all-status"></div>
       <div class="segment-list">${segCards}</div>
     </section>
   `;

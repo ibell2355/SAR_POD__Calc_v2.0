@@ -390,6 +390,12 @@ function handleAction(action, id, btn) {
     return;
   }
 
+  // Upload all segments sequentially
+  if (action === 'upload-all') {
+    uploadAllSegments(btn);
+    return;
+  }
+
   if (action === 'new-session') {
     if (!confirm('Clear all data and start a new session? This cannot be undone.')) return;
     state.session = { your_name: '', search_name: '', team_name: '' };
@@ -453,6 +459,70 @@ async function uploadSegment(seg, btn) {
   } finally {
     btn.textContent = origText;
     btn.disabled = false;
+  }
+}
+
+async function uploadAllSegments(btn) {
+  if (!state.segments.length) return;
+
+  const statusEl = document.getElementById('upload-all-status');
+  const total = state.segments.length;
+  let successes = 0;
+  const failed = [];
+
+  btn.disabled = true;
+  btn.textContent = 'Uploading\u2026';
+
+  for (let i = 0; i < total; i++) {
+    const seg = state.segments[i];
+    const segName = seg.name || `Segment ${i + 1}`;
+
+    if (statusEl) {
+      statusEl.textContent = `Uploading ${i + 1} of ${total}: ${segName}\u2026`;
+    }
+
+    const data = buildSegmentReportData(state, seg, formatReportDate(new Date(seg.created_at)));
+    const text = segmentReportText(data);
+    const payload = segmentUploadPayload(data, text, seg.report_id);
+
+    console.log('[PSAR POD] Upload All:', `${i + 1}/${total}`, {
+      report_id: seg.report_id,
+      segment_name: segName,
+      segment_key: payload.segment_key,
+    });
+
+    try {
+      const resp = await fetch(UPLOAD_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (resp.ok) {
+        successes++;
+      } else {
+        let detail = '';
+        try { const body = await resp.json(); detail = body.error || ''; } catch { /* ignore */ }
+        console.error(`[PSAR POD] Upload All failed for "${segName}": ${resp.status}`, detail);
+        failed.push(segName);
+      }
+    } catch (err) {
+      console.error(`[PSAR POD] Upload All failed for "${segName}":`, err);
+      failed.push(segName);
+    }
+  }
+
+  btn.textContent = 'Upload All';
+  btn.disabled = false;
+
+  if (failed.length === 0) {
+    if (statusEl) statusEl.textContent = '';
+    showToast(`Uploaded ${successes} of ${total} successfully`);
+  } else {
+    const summary = `Uploaded ${successes} of ${total}. Failed: ${failed.join(', ')}`;
+    if (statusEl) {
+      statusEl.innerHTML = `<p style="color:var(--danger);margin:8px 0;font-size:0.9rem">${esc(summary)}</p>`;
+    }
+    showToast(summary, 4000);
   }
 }
 
