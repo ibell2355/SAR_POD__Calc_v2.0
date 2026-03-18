@@ -142,6 +142,7 @@ export function renderSegment(root, segment, computed, savedLabel, configValid, 
       <h3>Time of Day</h3>
       ${radioChips('time_of_day', LABELS.time_of_day, segment.time_of_day)}
       <h3>Weather</h3>
+      ${tooltip(config, 'weather')}
       ${radioChips('weather', LABELS.weather, segment.weather)}
 
       <h3>Vegetation Density</h3>
@@ -159,7 +160,7 @@ export function renderSegment(root, segment, computed, savedLabel, configValid, 
       ${noteSection('burial_or_cover', segment)}
       ` : `
       <h3>Extenuating Factors</h3>
-      ${tooltip(config, 'extenuating_factors')}
+      ${extenuatingHint()}
       ${radioChips('extenuating_factors', EXTENUATING_FACTORS_LABELS, String(segment.extenuating_factors || 3), 'tight')}
       ${noteSection('extenuating_factors', segment)}
       `}
@@ -312,7 +313,7 @@ export function renderSegmentReport(root, reportData) {
 
     <section class="panel report-panel">
       <article>
-        <h2>SAR POD Calculator \u2014 Segment Report</h2>
+        <h2>PSAR POD Field Assistant \u2014 Segment Report</h2>
         <p class="subtle">Generated: ${esc(d.generated_at)}</p>
 
         <h3>Search Information</h3>
@@ -386,6 +387,12 @@ function impactBadgeFromImpact(imp) {
 function searchSurvey(s, config) {
   return `
     <div class="survey-group" id="search-survey" data-search-type="${s.search_for}">
+      <h3>Environment</h3>
+      <div class="chip-row">
+        <label class="chip"><input type="radio" name="environment" value="wilderness" checked><span>Wilderness</span></label>
+        <label class="chip chip-disabled"><input type="radio" name="environment" value="urban" disabled><span>Urban <small class="chip-coming-soon">(coming soon)</small></span></label>
+      </div>
+
       <h3>Search For</h3>
       ${radioChips('search_for', LABELS.search_for, s.search_for)}
 
@@ -415,6 +422,19 @@ function configNotice(valid, error) {
 function tooltip(config, key) {
   const text = config?.ui_tooltips?.[key] || '';
   return text ? `<span class="hint">${esc(text)}</span>` : '';
+}
+
+function extenuatingHint() {
+  return `<div class="hint hint-list">
+    <p>Catch-all for conditions not covered above. Consider:</p>
+    <ul>
+      <li>Heavy smoke, dust, or fog</li>
+      <li>Noise masking (wind, water, aircraft)</li>
+      <li>Altered landscape (fire, flood, slides)</li>
+      <li>Searcher experience and fatigue</li>
+    </ul>
+    <p>Leave at Neutral if nothing unusual applies.</p>
+  </div>`;
 }
 
 /* ---- Note toggle + textarea ---- */

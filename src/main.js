@@ -22,6 +22,7 @@ const UPLOAD_ENDPOINT = 'https://little-river-e034.ian-bell-personal.workers.dev
    ================================================================ */
 
 const defaultSearch = {
+  environment: 'wilderness',
   search_for: 'missing_person',
   auditory: 'none',
   visual: 'none',
@@ -272,7 +273,7 @@ function handleInput(el) {
     }
   }
 
-  if (['search_for', 'auditory', 'visual', 'visibility'].includes(name)) {
+  if (['environment', 'search_for', 'auditory', 'visual', 'visibility'].includes(name)) {
     state.searchLevel[name] = value;
 
     if (name === 'search_for') {
@@ -403,7 +404,7 @@ function handleAction(action, id, btn) {
     if (!seg) return;
     const text = getSegmentReportText(seg);
     if (navigator.share) {
-      navigator.share({ title: `SAR POD \u2014 ${seg.name || 'Segment Report'}`, text }).catch(() => {});
+      navigator.share({ title: `PSAR POD Field Assistant \u2014 ${seg.name || 'Segment Report'}`, text }).catch(() => {});
     } else {
       copyToClipboard(text);
       showToast('Report copied to clipboard');

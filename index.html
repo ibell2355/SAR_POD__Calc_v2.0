@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#183859">
-  <title>PSAR POD Calculator</title>
+  <title>PSAR POD Field Assistant</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./assets/icon-192.png">
   <link rel="apple-touch-icon" href="./assets/icon-192.png">
@@ -16,12 +16,13 @@
       <img class="logo" src="./assets/psar_logo.svg" alt="PSAR Logo">
       <div class="header-title">
         <div>
-          <h1>PSAR POD Calculator</h1>
+          <h1>PSAR POD Field Assistant</h1>
           <p class="subtle">Random Search Model &middot; (v<span id="app-version">&hellip;</span>)</p>
         </div>
         <img class="header-qr" id="header-qr" src="./assets/qrcode.png" alt="QR Code" role="button" tabindex="0">
       </div>
       <div class="header-controls">
+        <button class="theme-toggle" id="about-btn">About This Tool</button>
         <button class="theme-toggle" id="theme-toggle-btn">Dark Mode</button>
       </div>
     </header>
@@ -61,6 +62,26 @@
       overlay.innerHTML = '<img src="./assets/qrcode.png" alt="QR Code">';
       document.body.appendChild(overlay);
       overlay.addEventListener('click', function () { overlay.remove(); });
+    });
+    /* About This Tool overlay */
+    document.getElementById('about-btn').addEventListener('click', function () {
+      if (document.getElementById('about-overlay')) return;
+      var overlay = document.createElement('div');
+      overlay.id = 'about-overlay';
+      overlay.innerHTML =
+        '<div class="about-panel">' +
+          '<h2>About This Tool</h2>' +
+          '<ul>' +
+            '<li>A field aid to support consistent POD assessment across teams and segments</li>' +
+            '<li>Provides a structured way to record conditions, spacing, and POD-related notes for reporting back to command</li>' +
+            '<li>Designed to support field judgment, not replace it</li>' +
+          '</ul>' +
+          '<button class="btn about-close">Close</button>' +
+        '</div>';
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay || e.target.classList.contains('about-close')) overlay.remove();
+      });
     });
   </script>
 </body>

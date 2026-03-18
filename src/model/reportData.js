@@ -158,7 +158,7 @@ function computeCoefficientImpacts(r, isMissing) {
 
 export function segmentReportText(d) {
   const lines = [
-    'SAR POD Calculator \u2014 Segment Report',
+    'PSAR POD Field Assistant \u2014 Segment Report',
     `Generated: ${d.generated_at}`,
     '',
     'Search Information',

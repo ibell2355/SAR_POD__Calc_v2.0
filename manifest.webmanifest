@@ -1,7 +1,7 @@
 {
-  "name": "PSAR POD Calculator",
+  "name": "PSAR POD Field Assistant",
   "short_name": "PSAR POD",
-  "description": "Offline-first SAR Probability of Detection calculator (Random Search Model)",
+  "description": "Offline-first SAR Probability of Detection field assistant (Random Search Model)",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f0ebe3",
