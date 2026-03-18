@@ -5,7 +5,7 @@ import { getValue, setValue, clearAll } from './storage/db.js';
 import { openImageViewer } from './ui/imageViewer.js';
 import {
   renderHome, renderSegment, renderReportList, renderSegmentReport,
-  podResultHtml, spacingHelpersHtml, segmentListHtml, uploadBadgeHtml, esc
+  podResultHtml, spacingHelpersHtml, segmentListHtml, esc
 } from './ui/render.js';
 
 /* Signal that all module imports resolved successfully */
@@ -223,7 +223,7 @@ function handleInput(el) {
       if (name === 'segment_note') {
         seg.segment_note = value;
         markSegmentEdited(seg);
-        updateUploadBadge(seg);
+
         debounceSave();
         return;
       }
@@ -233,7 +233,7 @@ function handleInput(el) {
         if (!seg.notes) seg.notes = {};
         seg.notes[noteField] = value;
         markSegmentEdited(seg);
-        updateUploadBadge(seg);
+
         debounceSave();
         return;
       }
@@ -265,7 +265,7 @@ function handleInput(el) {
         const helpersEl = document.getElementById('spacing-helpers');
         if (helpersEl) helpersEl.innerHTML = spacingHelpersHtml(seg.result);
 
-        updateUploadBadge(seg);
+
         debounceSave();
         return;
       }
@@ -473,7 +473,6 @@ async function uploadSegment(seg, btn) {
     if (resp.ok) {
       seg.upload_status = 'uploaded';
       debounceSave();
-      updateUploadBadge(seg);
       showToast('Upload successful');
     } else {
       let detail = '';
@@ -481,14 +480,12 @@ async function uploadSegment(seg, btn) {
       console.error(`[PSAR POD] Upload failed: ${resp.status}`, detail);
       seg.upload_status = 'failed';
       debounceSave();
-      updateUploadBadge(seg);
       showToast(`Upload failed (${resp.status}${detail ? ': ' + detail : ''})`);
     }
   } catch (err) {
     console.error('[PSAR POD] Upload failed:', err);
     seg.upload_status = 'failed';
     debounceSave();
-    updateUploadBadge(seg);
     if (err instanceof TypeError) {
       showToast('Upload failed \u2014 server unreachable or CORS blocked');
     } else {
@@ -592,10 +589,7 @@ function markSegmentEdited(seg) {
   }
 }
 
-function updateUploadBadge(seg) {
-  const el = document.getElementById('upload-status-badge');
-  if (el) el.innerHTML = uploadBadgeHtml(seg.upload_status);
-}
+
 
 /* ================================================================
    Persistence
