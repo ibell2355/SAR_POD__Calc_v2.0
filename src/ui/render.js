@@ -54,6 +54,8 @@ export function renderHome(root, state, savedLabel, configValid, configError, co
   root.innerHTML = `
     ${configNotice(configValid, configError)}
 
+    ${connectivityBarHtml()}
+
     <section class="panel">
       <div class="row between align-center">
         <h2>Search Details</h2>
@@ -101,7 +103,8 @@ export function segmentListHtml(segments) {
           </div>
           <span class="pod-badge">${pod}</span>
         </button>
-        <button class="btn btn-danger btn-sm segment-delete" data-action="delete-segment" data-id="${esc(seg.id)}" title="Delete segment">\u00d7</button>
+        <button class="btn btn-sm segment-action-btn segment-duplicate" data-action="duplicate-segment" data-id="${esc(seg.id)}" title="Duplicate segment">\u29c9</button>
+        <button class="btn btn-danger btn-sm segment-action-btn segment-delete" data-action="delete-segment" data-id="${esc(seg.id)}" title="Delete segment">\u00d7</button>
       </div>`;
   }).join('');
 }
@@ -118,6 +121,8 @@ export function renderSegment(root, segment, computed, savedLabel, configValid, 
       <button class="btn" data-action="go-home">\u2190 Back</button>
       <span id="save-indicator" class="subtle">${esc(savedLabel)}</span>
     </div>
+
+    ${connectivityBarHtml()}
 
     <section class="panel">
       <h2>Edit Segment</h2>
@@ -216,6 +221,7 @@ export function renderReportList(root, segments) {
               <strong>${esc(seg.name || `Segment ${i + 1}`)}</strong>
               <span class="pod-badge">${pod}</span>
             </div>
+            <div style="margin:4px 0">${uploadBadgeHtml(seg.upload_status)}</div>
             <div class="report-seg-actions">
               <button class="btn btn-sm" data-action="view-segment-report" data-id="${esc(seg.id)}">View Report</button>
               <button class="btn btn-sm" data-action="share-segment-report" data-id="${esc(seg.id)}">Share</button>
@@ -232,6 +238,8 @@ export function renderReportList(root, segments) {
     <div class="row between align-center" style="margin-bottom:12px">
       <button class="btn" data-action="go-home">\u2190 Back</button>
     </div>
+
+    ${connectivityBarHtml()}
 
     <section class="panel">
       <div class="row between align-center">
@@ -328,6 +336,35 @@ export function renderSegmentReport(root, reportData) {
       </article>
     </section>
   `;
+}
+
+/* ================================================================
+   Connectivity bar (placed above content panels)
+   ================================================================ */
+
+export function connectivityBarHtml() {
+  const online = typeof navigator !== 'undefined' ? navigator.onLine : true;
+  return `
+    <div class="connectivity-bar" id="connectivity-bar">
+      <div id="connectivity-pill" class="connectivity-pill ${online ? 'online' : 'offline'}">${online ? 'Online / Offline ready' : 'Offline'}</div>
+      <p class="offline-hint" id="offline-hint" ${online ? 'style="display:none"' : ''}>No signal detected. Your inputs are safe and can be uploaded when connection returns.</p>
+    </div>`;
+}
+
+/* ================================================================
+   Upload status badge
+   ================================================================ */
+
+const UPLOAD_STATUS = {
+  none:     { label: 'Not uploaded', cls: 'upload-none' },
+  uploaded: { label: 'Uploaded',     cls: 'upload-ok' },
+  updated:  { label: 'Updated since upload', cls: 'upload-warn' },
+  failed:   { label: 'Upload failed', cls: 'upload-fail' },
+};
+
+export function uploadBadgeHtml(status) {
+  const s = UPLOAD_STATUS[status] || UPLOAD_STATUS.none;
+  return `<span class="upload-badge ${s.cls}">${s.label}</span>`;
 }
 
 /* ================================================================

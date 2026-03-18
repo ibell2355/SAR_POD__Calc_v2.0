@@ -5,7 +5,7 @@ import { getValue, setValue, clearAll } from './storage/db.js';
 import { openImageViewer } from './ui/imageViewer.js';
 import {
   renderHome, renderSegment, renderReportList, renderSegmentReport,
-  podResultHtml, spacingHelpersHtml, segmentListHtml, esc
+  podResultHtml, spacingHelpersHtml, segmentListHtml, uploadBadgeHtml, esc
 } from './ui/render.js';
 
 /* Signal that all module imports resolved successfully */
@@ -44,6 +44,7 @@ function newSegment() {
     actual_spacing_m: 10,
     segment_note: '',
     notes: {},
+    upload_status: 'none',
     result: null,
     qaWarnings: []
   };
@@ -221,6 +222,8 @@ function handleInput(el) {
     if (seg) {
       if (name === 'segment_note') {
         seg.segment_note = value;
+        markSegmentEdited(seg);
+        updateUploadBadge(seg);
         debounceSave();
         return;
       }
@@ -229,6 +232,8 @@ function handleInput(el) {
         const noteField = name.slice(5);
         if (!seg.notes) seg.notes = {};
         seg.notes[noteField] = value;
+        markSegmentEdited(seg);
+        updateUploadBadge(seg);
         debounceSave();
         return;
       }
@@ -251,6 +256,7 @@ function handleInput(el) {
           seg[name] = value;
         }
 
+        markSegmentEdited(seg);
         recomputeSegment(seg);
 
         const podEl = document.getElementById('pod-result');
@@ -259,6 +265,7 @@ function handleInput(el) {
         const helpersEl = document.getElementById('spacing-helpers');
         if (helpersEl) helpersEl.innerHTML = spacingHelpersHtml(seg.result);
 
+        updateUploadBadge(seg);
         debounceSave();
         return;
       }
@@ -317,6 +324,28 @@ function handleAction(action, id, btn) {
 
   if (action === 'edit-segment') {
     location.hash = `#/segment/${id}`;
+    return;
+  }
+
+  if (action === 'duplicate-segment') {
+    const src = state.segments.find((s) => s.id === id);
+    if (!src) return;
+    const dup = newSegment();
+    dup.time_of_day = src.time_of_day;
+    dup.weather = src.weather;
+    dup.vegetation_density = src.vegetation_density;
+    dup.micro_terrain_complexity = src.micro_terrain_complexity;
+    dup.extenuating_factors = src.extenuating_factors;
+    dup.burial_or_cover = src.burial_or_cover;
+    dup.num_searchers = src.num_searchers;
+    dup.actual_spacing_m = src.actual_spacing_m;
+    dup.segment_note = src.segment_note;
+    dup.notes = structuredClone(src.notes);
+    recomputeSegment(dup);
+    const idx = state.segments.indexOf(src);
+    state.segments.splice(idx + 1, 0, dup);
+    debounceSave();
+    location.hash = `#/segment/${dup.id}`;
     return;
   }
 
@@ -442,15 +471,24 @@ async function uploadSegment(seg, btn) {
       body: JSON.stringify(payload),
     });
     if (resp.ok) {
+      seg.upload_status = 'uploaded';
+      debounceSave();
+      updateUploadBadge(seg);
       showToast('Upload successful');
     } else {
       let detail = '';
       try { const body = await resp.json(); detail = body.error || ''; } catch { /* ignore */ }
       console.error(`[PSAR POD] Upload failed: ${resp.status}`, detail);
+      seg.upload_status = 'failed';
+      debounceSave();
+      updateUploadBadge(seg);
       showToast(`Upload failed (${resp.status}${detail ? ': ' + detail : ''})`);
     }
   } catch (err) {
     console.error('[PSAR POD] Upload failed:', err);
+    seg.upload_status = 'failed';
+    debounceSave();
+    updateUploadBadge(seg);
     if (err instanceof TypeError) {
       showToast('Upload failed \u2014 server unreachable or CORS blocked');
     } else {
@@ -498,29 +536,37 @@ async function uploadAllSegments(btn) {
         body: JSON.stringify(payload),
       });
       if (resp.ok) {
+        seg.upload_status = 'uploaded';
         successes++;
       } else {
         let detail = '';
         try { const body = await resp.json(); detail = body.error || ''; } catch { /* ignore */ }
         console.error(`[PSAR POD] Upload All failed for "${segName}": ${resp.status}`, detail);
+        seg.upload_status = 'failed';
         failed.push(segName);
       }
     } catch (err) {
       console.error(`[PSAR POD] Upload All failed for "${segName}":`, err);
+      seg.upload_status = 'failed';
       failed.push(segName);
     }
   }
 
+  debounceSave();
   btn.textContent = 'Upload All';
   btn.disabled = false;
 
+  // Re-render report list to show updated upload badges
+  const root = document.getElementById('view-root');
+  if (root && location.hash === '#/reports') renderReportList(root, state.segments);
+
   if (failed.length === 0) {
-    if (statusEl) statusEl.textContent = '';
     showToast(`Uploaded ${successes} of ${total} successfully`);
   } else {
     const summary = `Uploaded ${successes} of ${total}. Failed: ${failed.join(', ')}`;
-    if (statusEl) {
-      statusEl.innerHTML = `<p style="color:var(--danger);margin:8px 0;font-size:0.9rem">${esc(summary)}</p>`;
+    const freshStatusEl = document.getElementById('upload-all-status');
+    if (freshStatusEl) {
+      freshStatusEl.innerHTML = `<p style="color:var(--danger);margin:8px 0;font-size:0.9rem">${esc(summary)}</p>`;
     }
     showToast(summary, 4000);
   }
@@ -538,6 +584,17 @@ function recomputeSegment(seg) {
   const cfg = config || {};
   seg.result = computePOD({ config: cfg, searchLevel: state.searchLevel, segment: seg });
   seg.qaWarnings = generateQaWarnings(seg, cfg);
+}
+
+function markSegmentEdited(seg) {
+  if (seg.upload_status === 'uploaded') {
+    seg.upload_status = 'updated';
+  }
+}
+
+function updateUploadBadge(seg) {
+  const el = document.getElementById('upload-status-badge');
+  if (el) el.innerHTML = uploadBadgeHtml(seg.upload_status);
 }
 
 /* ================================================================
@@ -656,6 +713,7 @@ function migrateState(raw) {
     next.extenuating_factors = clampNum(Number(next.extenuating_factors), 1, 5, 3);
     next.burial_or_cover = clampNum(Number(next.burial_or_cover), 1, 5, 3);
     if (!next.notes || typeof next.notes !== 'object') next.notes = {};
+    if (!['none', 'uploaded', 'updated', 'failed'].includes(next.upload_status)) next.upload_status = 'none';
 
     delete next.critical_spacing_m;
     delete next.area_coverage_pct;
@@ -699,6 +757,10 @@ function updateConnectivity() {
   if (pill) {
     pill.textContent = online ? 'Online / Offline ready' : 'Offline';
     pill.className = `connectivity-pill ${online ? 'online' : 'offline'}`;
+  }
+  const hint = document.getElementById('offline-hint');
+  if (hint) {
+    hint.style.display = online ? 'none' : '';
   }
 }
 
