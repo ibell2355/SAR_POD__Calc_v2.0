@@ -495,6 +495,9 @@ async function uploadSegment(seg, btn) {
   } finally {
     btn.textContent = origText;
     btn.disabled = false;
+    // Re-render report list to show updated upload badge
+    const root = document.getElementById('view-root');
+    if (root && location.hash === '#/reports') renderReportList(root, state.segments);
   }
 }
 
