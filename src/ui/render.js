@@ -284,7 +284,7 @@ export function renderSegmentReport(root, reportData) {
 
   const segInputHtml = [
     `<li><strong>Searchers:</strong> ${seg.num_searchers}</li>`,
-    `<li><strong>Actual Spacing:</strong> ${seg.actual_spacing_m} m</li>`,
+    `<li><strong>Actual Spacing:</strong> ${seg.actual_spacing_m} m${impactBadge(seg.coefficient_impacts, 'Actual Spacing')}</li>`,
     ...segFactors.flatMap(([label, value]) => {
       const items = [`<li><strong>${esc(label)}:</strong> ${esc(value)}${impactBadge(seg.coefficient_impacts, label)}</li>`];
       const noteKey = NOTE_KEY_MAP[label];

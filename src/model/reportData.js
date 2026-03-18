@@ -116,7 +116,7 @@ function computeCoefficientImpacts(r, isMissing) {
   const bMin = r.w_eff_min;
   const bMax = r.w_eff_max;
 
-  return factors.map((f) => {
+  const impacts = factors.map((f) => {
     let C_t_adj, M_resp_adj;
     if (f.isResponse) {
       C_t_adj = r.C_t;
@@ -136,6 +136,20 @@ function computeCoefficientImpacts(r, isMissing) {
       impact_percent: Math.round(impact * 10) / 10,
     };
   });
+
+  // Actual Spacing baseline contribution: residual so that
+  // Actual Spacing + all coefficient impacts = final POD (integer %)
+  const finalPodInt = Math.round(actualPOD * 100);
+  const sumImpacts = Math.round(impacts.reduce((s, i) => s + i.impact_percent, 0) * 10) / 10;
+  const spacingContribution = Math.round((finalPodInt - sumImpacts) * 10) / 10;
+
+  impacts.unshift({
+    name: 'Actual Spacing',
+    value: null,
+    impact_percent: spacingContribution,
+  });
+
+  return impacts;
 }
 
 /* ================================================================
@@ -172,7 +186,8 @@ export function segmentReportText(d) {
     lines.push(`  Segment Note: ${d.segment.segment_note}`);
   }
   lines.push(`  Searchers: ${d.segment.num_searchers}`);
-  lines.push(`  Actual Spacing: ${d.segment.actual_spacing_m} m`);
+  const spacingImpact = findImpact(d.segment.coefficient_impacts, 'Actual Spacing');
+  lines.push(`  Actual Spacing: ${d.segment.actual_spacing_m} m${fmtImpact(spacingImpact)}`);
 
   const segFactors = [
     ['Time of Day', d.segment.time_of_day],
@@ -236,6 +251,7 @@ export function segmentUploadPayload(d, reportText, persistentReportId) {
   const searchInputDetails = buildInputDetails(impacts, searchInputRows);
 
   const segInputRows = [
+    ['Actual Spacing', `${d.segment.actual_spacing_m} m`],
     ['Time of Day', d.segment.time_of_day],
     ['Weather', d.segment.weather],
     ['Vegetation Density', d.segment.vegetation_density],
