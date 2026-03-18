@@ -99,7 +99,7 @@ export function segmentListHtml(segments) {
       <div class="segment-row">
         <button class="segment-card" data-action="edit-segment" data-id="${esc(seg.id)}">
           <div>
-            <strong>${esc(seg.name || `Segment ${i + 1}`)}</strong>
+            <strong>${esc(seg.name || 'Unnamed')}</strong>
           </div>
           <span class="pod-badge">${pod}</span>
         </button>
@@ -219,7 +219,7 @@ export function renderReportList(root, segments) {
         return `
           <div class="report-seg-card">
             <div class="row between align-center">
-              <strong>${esc(seg.name || `Segment ${i + 1}`)}</strong>
+              <strong>${esc(seg.name || 'Unnamed')}</strong>
               <span class="pod-badge">${pod}</span>
             </div>
             <div style="margin:4px 0">${uploadBadgeHtml(seg.upload_status)}</div>

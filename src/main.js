@@ -34,7 +34,7 @@ function newSegment() {
     id: uid(),
     report_id: 'rpt-' + uid(),
     created_at: new Date().toISOString(),
-    name: '',
+    name: 'Unnamed',
     time_of_day: 'day',
     weather: 'clear',
     vegetation_density: 3,
@@ -511,7 +511,7 @@ async function uploadAllSegments(btn) {
 
   for (let i = 0; i < total; i++) {
     const seg = state.segments[i];
-    const segName = seg.name || `Segment ${i + 1}`;
+    const segName = seg.name || 'Unnamed';
 
     if (statusEl) {
       statusEl.textContent = `Uploading ${i + 1} of ${total}: ${segName}\u2026`;
