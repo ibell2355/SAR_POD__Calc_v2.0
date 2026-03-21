@@ -442,8 +442,10 @@ function extenuatingHint() {
 function segmentNoteSection(segment) {
   const note = segment.segment_note || '';
   const open = note.length > 0;
+  const addLabel = 'Add Segment-Wide Note';
+  const label = open ? 'Hide Note' : addLabel;
   return `<div class="note-section">
-      <button class="btn btn-note-toggle" data-action="toggle-note" data-field="segment_note">${open ? 'Hide Segment Note' : 'Add Segment-Wide Note'}</button>
+      <button class="btn btn-note-toggle" data-action="toggle-note" data-field="segment_note" data-add-label="${esc(addLabel)}">${label}</button>
       <span class="hint">Segment level notes (for example, any unsearched areas and/or challenges in the segment). Should be POD related notes only, not to replace proper documentation or CalTopo marking of hazards, etc.</span>
       <div class="note-input" id="note-wrap-segment_note" style="${open ? '' : 'display:none'}">
         <textarea name="segment_note" placeholder="Add a segment-wide note\u2026">${esc(note)}</textarea>
@@ -454,8 +456,10 @@ function segmentNoteSection(segment) {
 function noteSection(fieldName, segment) {
   const note = (segment.notes && segment.notes[fieldName]) || '';
   const open = note.length > 0;
+  const addLabel = 'Add Note';
+  const label = open ? 'Hide Note' : addLabel;
   return `<div class="note-section">
-      <button class="btn btn-note-toggle" data-action="toggle-note" data-field="${fieldName}">${open ? 'Hide note' : 'Add note'}</button>
+      <button class="btn btn-note-toggle" data-action="toggle-note" data-field="${fieldName}" data-add-label="${esc(addLabel)}">${label}</button>
       <div class="note-input" id="note-wrap-${fieldName}" style="${open ? '' : 'display:none'}">
         <textarea name="note_${fieldName}" placeholder="Add a note\u2026">${esc(note)}</textarea>
       </div>

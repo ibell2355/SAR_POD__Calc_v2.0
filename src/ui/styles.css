@@ -459,6 +459,13 @@ textarea:disabled {
   padding: 4px 10px;
   min-height: auto;
   border-radius: 8px;
+  color: var(--primary);
+  border-color: var(--primary);
+}
+.btn-note-toggle:hover {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
 }
 .note-input { margin-top: 4px; }
 .note-input textarea {
@@ -775,6 +782,16 @@ textarea:disabled {
   .action-grid { grid-template-columns: 1fr; }
   .grid-2 { grid-template-columns: 1fr; }
   .grid-3 { grid-template-columns: 1fr; }
+  .report-seg-actions {
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+  .report-seg-actions .btn-sm {
+    padding: 4px 6px;
+    font-size: 0.75rem;
+    min-height: 32px;
+    flex: 1 1 0;
+  }
 }
 
 @media (max-width: 480px) {

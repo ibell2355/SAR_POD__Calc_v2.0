@@ -213,6 +213,7 @@ function handleInput(el) {
 
   if (['your_name', 'search_name', 'team_name'].includes(name)) {
     state.session[name] = value;
+    state.segments.forEach(markSegmentEdited);
     debounceSave();
     return;
   }
@@ -281,6 +282,7 @@ function handleInput(el) {
       if (survey) survey.dataset.searchType = value;
     }
 
+    state.segments.forEach(markSegmentEdited);
     recomputeAllSegments();
     const listEl = document.getElementById('segment-list');
     if (listEl) listEl.innerHTML = segmentListHtml(state.segments);
@@ -305,10 +307,14 @@ function handleAction(action, id, btn) {
     if (wrap) {
       const isHidden = wrap.style.display === 'none';
       wrap.style.display = isHidden ? '' : 'none';
-      btn.textContent = isHidden ? 'Hide note' : 'Add note';
       if (isHidden) {
+        btn.textContent = 'Hide Note';
         const ta = wrap.querySelector('textarea');
         if (ta) ta.focus();
+      } else {
+        const ta = wrap.querySelector('textarea');
+        const hasContent = ta && ta.value.trim().length > 0;
+        btn.textContent = hasContent ? 'Display Note' : (btn.dataset.addLabel || 'Add Note');
       }
     }
     return;
