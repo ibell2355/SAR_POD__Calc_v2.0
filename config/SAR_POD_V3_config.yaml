@@ -194,7 +194,7 @@ ui_tooltips:
   visual: Likelihood the missing person will signal visually or be actively trying to be seen.
   vegetation_density: Line-of-sight blockers such as tree and bush density, tall grass/brush, thick understory, canopy layering, slash/deadfall, and other vegetation that reduces effective sweep width.
   micro_terrain_complexity: Terrain features that reduce effective sweep width, like rocks/boulder fields, gullies, cutbanks, root wads, deadfall piles, depressions, and uneven ground.
-  weather: Only change from Clear if conditions are actively affecting detection. Light rain or overcast alone is not enough.
+  weather: Only change from clear if conditions are actively affecting detection. Light rain or overcast alone is not enough.
   extenuating_factors: Catch-all for anything not already covered that makes detection easier or harder, such as heavy smoke/dust/fog, noise masking, altered landscape, or searcher experience/fatigue.
   burial_or_cover: Degree of burial or concealment by debris, snow, duff, or other covering material.
   num_searchers: Number of searchers operating in this segment.

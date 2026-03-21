@@ -160,6 +160,8 @@ function route() {
   const hash = location.hash || '#/';
   const root = document.getElementById('view-root');
 
+  window.scrollTo(0, 0);
+
   if (hash.startsWith('#/segment/')) {
     const id = hash.slice('#/segment/'.length);
     const seg = state.segments.find((s) => s.id === id);
