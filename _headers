@@ -1,0 +1,42 @@
+# Cloudflare Pages headers
+# Syntax: https://developers.cloudflare.com/pages/configuration/headers/
+#
+# Goals:
+#   1. Service worker must update promptly — never cache it.
+#   2. PWA manifest should refresh reasonably often, with correct Content-Type.
+#   3. App-shell HTML must revalidate so SW/cache-bust changes propagate.
+#   4. Versioned static assets (icons, images, css, js) can be cached longer.
+#   5. Runtime config (YAML) must revalidate so tuning changes ship promptly.
+
+# Service worker — never cache, always revalidate
+/service-worker.js
+  Cache-Control: no-cache, no-store, must-revalidate
+  Service-Worker-Allowed: /
+
+# PWA manifest — short cache, correct type
+/manifest.webmanifest
+  Cache-Control: public, max-age=300, must-revalidate
+  Content-Type: application/manifest+json
+
+# App-shell HTML — must revalidate so SW updates are picked up
+/index.html
+  Cache-Control: no-cache, must-revalidate
+
+/
+  Cache-Control: no-cache, must-revalidate
+
+# Runtime YAML config — must revalidate so tuning updates ship
+/config/*
+  Cache-Control: public, max-age=300, must-revalidate
+
+# package.json is fetched at runtime for the version stamp — keep it fresh
+/package.json
+  Cache-Control: public, max-age=300, must-revalidate
+
+# Long-lived static assets (icons, reference images, logos)
+/assets/*
+  Cache-Control: public, max-age=86400, must-revalidate
+
+# Source modules and styles — revalidate; SW handles offline copies
+/src/*
+  Cache-Control: public, max-age=3600, must-revalidate

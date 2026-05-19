@@ -7,7 +7,7 @@
  *   Cross-origin       → network only
  */
 
-const CACHE_NAME = 'psar-pod-v18';
+const CACHE_NAME = 'psar-pod-v19-cf-launch';
 
 const APP_SHELL = [
   './',
